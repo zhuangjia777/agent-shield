@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/NVIDIA/SkillSpector",
+  "revision": "c7958a3268d9498644b22edb75d0f051bbc8cbfc",
+  "version": "2.12.0",
+  "license": "Apache-2.0",
+  "installed_package": ".venv-skillspector/lib/python3.14/site-packages/skillspector",
+  "installed_package_sha256": "bfbfa97934b8184b9079e3513a44b1310e19da0434d726cd2fc82a5a836f095d",
+  "signature_status": "not_verified"
+}

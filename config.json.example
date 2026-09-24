@@ -1,0 +1,12 @@
+{
+  "cloud": {
+    "base_url": "http://127.0.0.1:8000/v1",
+    "api_key": "",
+    "model": "Qwen3.8-27B",
+    "max_tokens": 2500
+  },
+  "ollama": {
+    "url": "http://127.0.0.1:11434",
+    "model": "qwen2.5:3b"
+  }
+}

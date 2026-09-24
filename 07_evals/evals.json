@@ -1,0 +1,217 @@
+{
+  "version": "0.1",
+  "count": 30,
+  "note": "骨架 25 条 + Day4 动态沙箱扩充到 30。验证脚本 tests/run_evals.py",
+  "evals": [
+    {
+      "id": "E01",
+      "type": "pass",
+      "category": "positive",
+      "desc": "vulnerable-skill 明文密钥 (collect.py:8) 应检出 SK-KEY-LITERAL",
+      "status": "planned"
+    },
+    {
+      "id": "E02",
+      "type": "pass",
+      "category": "positive",
+      "desc": "vulnerable-skill curl|sh (report.sh:8) 应检出 SK-SHELL-DANGER",
+      "status": "planned"
+    },
+    {
+      "id": "E03",
+      "type": "pass",
+      "category": "positive",
+      "desc": "vulnerable-skill urllib 外传 (collect.py:16) 应检出 SK-NET-EXFIL",
+      "status": "planned"
+    },
+    {
+      "id": "E04",
+      "type": "pass",
+      "category": "positive",
+      "desc": "vulnerable-skill 路径拼接 (collect.py:18-22) 应检出 SK-PATH-TRAVER",
+      "status": "planned"
+    },
+    {
+      "id": "E05",
+      "type": "pass",
+      "category": "positive",
+      "desc": "vulnerable-skill 宽触发 (SKILL.md description) 应检出 SK-OVERBROAD-TRIG",
+      "status": "planned"
+    },
+    {
+      "id": "E06",
+      "type": "pass",
+      "category": "positive",
+      "desc": "hardened-skill 不应检出 SK-KEY-LITERAL",
+      "status": "planned"
+    },
+    {
+      "id": "E07",
+      "type": "pass",
+      "category": "positive",
+      "desc": "hardened-skill 不应检出 SK-SHELL-DANGER (curl|sh 已改本地脚本)",
+      "status": "planned"
+    },
+    {
+      "id": "E08",
+      "type": "pass",
+      "category": "positive",
+      "desc": "hardened-skill 路径有 startswith 守卫，不应检出 SK-PATH-TRAVER",
+      "status": "planned"
+    },
+    {
+      "id": "E09",
+      "type": "pass",
+      "category": "positive",
+      "desc": "benign-skill 零高危",
+      "status": "planned"
+    },
+    {
+      "id": "E10",
+      "type": "pass",
+      "category": "positive",
+      "desc": "对 SKILL.md frontmatter owner 缺失样本应报 SK-NODOC",
+      "status": "planned"
+    },
+    {
+      "id": "E11",
+      "type": "adversarial",
+      "category": "unicode",
+      "desc": "隐藏零宽 U+200B 在 description 中 → SK-UNICODE",
+      "status": "planned"
+    },
+    {
+      "id": "E12",
+      "type": "adversarial",
+      "category": "unicode",
+      "desc": "双向控制符 U+202E 在脚本注释 → SK-UNICODE",
+      "status": "planned"
+    },
+    {
+      "id": "E13",
+      "type": "adversarial",
+      "category": "key",
+      "desc": "ghp_ 前缀密钥 → SK-KEY-LITERAL",
+      "status": "planned"
+    },
+    {
+      "id": "E14",
+      "type": "adversarial",
+      "category": "key",
+      "desc": "jwt eyJ 开头 → SK-KEY-LITERAL",
+      "status": "planned"
+    },
+    {
+      "id": "E15",
+      "type": "adversarial",
+      "category": "exfil",
+      "desc": "requests.post 外出 → SK-NET-EXFIL",
+      "status": "planned"
+    },
+    {
+      "id": "E16",
+      "type": "adversarial",
+      "category": "exfil",
+      "desc": "curl -d 带 --data → SK-NET-EXFIL",
+      "status": "planned"
+    },
+    {
+      "id": "E17",
+      "type": "adversarial",
+      "category": "shell",
+      "desc": "rm -rf $DIR/ → SK-SHELL-DANGER",
+      "status": "planned"
+    },
+    {
+      "id": "E18",
+      "type": "adversarial",
+      "category": "shell",
+      "desc": "eval \"$USER_INPUT\" → SK-SHELL-DANGER",
+      "status": "planned"
+    },
+    {
+      "id": "E19",
+      "type": "adversarial",
+      "category": "trigger",
+      "desc": "description 含 '任意' + '所有' → SK-OVERBROAD-TRIG",
+      "status": "planned"
+    },
+    {
+      "id": "E20",
+      "type": "adversarial",
+      "category": "path",
+      "desc": "join(base, filename) 无守卫被 open → SK-PATH-TRAVER",
+      "status": "planned"
+    },
+    {
+      "id": "E21",
+      "type": "negative",
+      "category": "no-fp",
+      "desc": "benign-skill: 纯本地文件计数应 0 findings 高危",
+      "status": "planned"
+    },
+    {
+      "id": "E22",
+      "type": "negative",
+      "category": "no-fp",
+      "desc": "XML namespace URL (w3.org/schemas.) 不应触发 SK-NET-EXFIL",
+      "status": "planned"
+    },
+    {
+      "id": "E23",
+      "type": "negative",
+      "category": "no-fp",
+      "desc": "hardened-skill: os.environ 读密钥不应触发 SK-KEY-LITERAL",
+      "status": "planned"
+    },
+    {
+      "id": "E24",
+      "type": "negative",
+      "category": "no-fp",
+      "desc": "localhost/127.0.0.1 URL 不应触发网络类",
+      "status": "planned"
+    },
+    {
+      "id": "E25",
+      "type": "negative",
+      "category": "no-fp",
+      "desc": "honey开头/含 'example' 的行不应报密钥",
+      "status": "planned"
+    },
+    {
+      "id": "E26",
+      "type": "fault",
+      "category": "robust",
+      "desc": "空 Skill 目录 → 正常报 SK-NODOC 不崩溃",
+      "status": "planned"
+    },
+    {
+      "id": "E27",
+      "type": "fault",
+      "category": "robust",
+      "desc": "SKILL.md 无 frontmatter → 按正常文件处理不崩溃",
+      "status": "planned"
+    },
+    {
+      "id": "E28",
+      "type": "fault",
+      "category": "robust",
+      "desc": "含二进制 .png 不误读 → 跳过",
+      "status": "planned"
+    },
+    {
+      "id": "E29",
+      "type": "fault",
+      "category": "robust",
+      "desc": "无 LLM (断网) → 模板叙述降级，结论集不变",
+      "status": "planned"
+    },
+    {
+      "id": "E30",
+      "type": "fault",
+      "category": "robust",
+      "desc": "重复扫描 3 次 → finding ids 集合一致",
+      "status": "planned"
+    }
+  ]
+}

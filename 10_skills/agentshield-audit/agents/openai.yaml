@@ -1,0 +1,4 @@
+interface:
+  display_name: "AgentShield 安全审查"
+  short_description: "审查本地 Agent Skill，分别核对官方扫描与规则证据并解释覆盖边界"
+  default_prompt: "使用 $agentshield-audit 审查我指定的 Skill，先给易懂结论，再列证据与覆盖限制。"

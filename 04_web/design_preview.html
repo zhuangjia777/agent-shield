@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AgentShield · Design Spec Preview v1.1</title>
+<style>
+/* ============ Tokens · v1.1（厚重板材 + 银灰全息，全部 achromatic） ============ */
+:root {
+  --bg: #f5f5f5; --card: #ffffff; --fg: #111111; --muted: #787878;
+  --line: #dcdcdc; --accent: #111111; --accent-soft: #ebebeb;
+  --code: #f1f1f1; --fill: #ffffff; --field-line: #c8c8c8;
+  --overlay: rgba(0,0,0,.45);
+  /* 深度栈 */
+  --sh-1: 0 1px 2px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.08);
+  --sh-2: 0 2px 4px rgba(0,0,0,.12), 0 10px 24px rgba(0,0,0,.14);
+  --sh-3: 0 4px 8px rgba(0,0,0,.16), 0 24px 64px rgba(0,0,0,.22);
+  --bevel: inset 0 1px 0 #ffffff;
+  --btn-ledge: 0 2px 0 #c8c8c8;
+  --ledge-dark: 0 2px 0 rgba(0,0,0,.35);
+  --obs-inset: inset 0 1px 3px rgba(0,0,0,.08);
+  /* 全息设备层（纯灰阶） */
+  --sweep: linear-gradient(115deg, transparent 30%, rgba(0,0,0,.05) 46%, rgba(0,0,0,.10) 50%, rgba(0,0,0,.05) 54%, transparent 70%);
+  --scanline: repeating-linear-gradient(0deg, rgba(0,0,0,.025) 0 1px, transparent 1px 3px);
+  --echo: 3px 3px 0 rgba(17,17,17,.10);
+  --glow: 0 0 22px rgba(17,17,17,.08);
+  --r: 0px;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #171717; --card: #1e1e1e; --fg: #ececec; --muted: #8f8f8f;
+  --line: #333333; --accent: #ececec; --accent-soft: #2a2a2a;
+  --code: #242424; --fill: #1e1e1e; --field-line: #4a4a4a;
+  --overlay: rgba(0,0,0,.60);
+  --sh-1: 0 1px 0 rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.35);
+  --sh-2: 0 1px 0 rgba(0,0,0,.6), 0 2px 4px rgba(0,0,0,.45), 0 10px 28px rgba(0,0,0,.5);
+  --sh-3: 0 2px 0 rgba(0,0,0,.6), 0 4px 8px rgba(0,0,0,.5), 0 24px 72px rgba(0,0,0,.6);
+  --bevel: inset 0 1px 0 rgba(255,255,255,.06);
+  --btn-ledge: 0 2px 0 #000000;
+  --ledge-dark: 0 2px 0 #000000;
+  --obs-inset: inset 0 1px 4px rgba(0,0,0,.45);
+  --sweep: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.10) 50%, rgba(255,255,255,.05) 54%, transparent 70%);
+  --scanline: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
+  --echo: 3px 3px 0 rgba(236,236,236,.14);
+  --glow: 0 0 26px rgba(236,236,236,.22);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+
+/* ---- L0 全息幕布：全屏扫描线 + 呼吸 ---- */
+html::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: var(--scanline); animation: screenbreath 9s ease-in-out infinite;
+}
+@keyframes screenbreath { 0%,100% { opacity: .45; } 50% { opacity: .9; } }
+
+body { font: 15px/1.65 -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
+       color: var(--fg); max-width: 920px; margin: 0 auto; padding: 28px 20px 80px;
+       position: relative; z-index: 1; }
+code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line); }
+a:hover { border-bottom-color: var(--fg); }
+
+/* ---- Topbar：双线重影，顶栏比内容厚 ---- */
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px;
+          padding: 0 0 14px; border-bottom: 1px solid var(--fg); box-shadow: 0 1px 0 var(--fg); }
+.brand { font-weight: 800; font-size: 18px; letter-spacing: .5px; text-transform: uppercase;
+         text-shadow: var(--echo); }
+.brand small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 8px;
+               text-transform: none; letter-spacing: 0; text-shadow: none; }
+.status { display: inline-flex; align-items: center; gap: 7px; font-family: ui-monospace, "SF Mono", monospace;
+          font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.dot { width: 7px; height: 7px; background: var(--fg); display: inline-block;
+       animation: flicker 2.2s steps(2, jump-none) infinite; }
+@keyframes flicker { 0%,100% { opacity: 1; } 41% { opacity: 1; } 42% { opacity: .3; } 43% { opacity: 1; } 78% { opacity: .45; } 79% { opacity: 1; } }
+
+/* ---- 机械按钮 ---- */
+button { font: inherit; cursor: pointer; }
+.btn { border: 1px solid var(--field-line); background: var(--fill); color: var(--fg);
+       padding: 7px 14px; border-radius: var(--r); font-size: 13px;
+       box-shadow: var(--bevel), var(--btn-ledge);
+       transition: border-color .08s, background .08s; }
+.btn:hover { border-color: var(--fg); }
+.btn:active { transform: translateY(2px); box-shadow: var(--bevel), 0 0 0 transparent; }
+.btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
+.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg);
+               box-shadow: var(--bevel), var(--ledge-dark); }
+.btn.primary:hover { background: var(--accent); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); box-shadow: none; }
+.btn.ghost:hover { color: var(--fg); border-color: var(--line); box-shadow: none; transform: none; }
+.btn.small { padding: 4px 10px; font-size: 12px; box-shadow: var(--bevel), 0 1px 0 var(--field-line); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ---- 板材（v1.1 核心：bevel + 阴影分级） ---- */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
+        padding: 16px 18px; box-shadow: var(--bevel), var(--sh-1); }   /* L1 静态板 */
+.card.l2 { border: 1px solid var(--line); box-shadow: var(--bevel), var(--sh-2); position: relative; } /* L2 可交互板 */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin: 0; }
+.report-card { display: block; color: inherit; overflow: hidden; }
+.report-card:hover { border-color: var(--fg); text-decoration: none; }
+.report-card .rid { font-size: 12px; color: var(--muted); }
+.report-card .sc { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+.report-card .sc span { font-size: 13px; font-weight: 400; color: var(--muted); }
+
+/* ---- 掠光（仅 holo 响应体：可点卡 + modal + 输入区） ---- */
+.holo-sweep { position: relative; overflow: hidden; }
+.holo-sweep::after { content: ""; position: absolute; top: -20%; bottom: -20%; left: 0; width: 45%;
+          background: var(--sweep); transform: translateX(-140%) skewX(-8deg); pointer-events: none;
+          opacity: 0; transition: opacity .2s; }
+.holo-sweep:hover::after { opacity: 1; animation: sweep 1.6s ease-out forwards; }
+@keyframes sweep { from { transform: translateX(-140%) skewX(-8deg); } to { transform: translateX(340%) skewX(-8deg); } }
+
+/* ---- severity（凹组 inset） ---- */
+.sev { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 2px;
+       letter-spacing: .5px; border: 1px solid transparent; text-transform: uppercase;
+       box-shadow: var(--obs-inset); }
+.sev.critical { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.sev.high { background: var(--accent-soft); color: var(--fg); border-color: var(--fg); }
+.sev.medium { background: var(--fill); color: var(--fg); border-color: var(--fg); }
+.sev.low { background: var(--accent-soft); color: var(--muted); border-color: var(--line); }
+.sev.info { background: var(--code); color: var(--muted); border-color: var(--line); }
+:root[data-theme="dark"] .sev.high { background: #6f6f6f; color: #fff; border-color: #6f6f6f; }
+.sevrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* ---- 表单 ---- */
+label { font-size: 12px; font-weight: 700; color: var(--muted); display: block; margin: 10px 0 4px;
+        letter-spacing: .5px; text-transform: uppercase; }
+input[type=text] {
+  width: 100%; font: inherit; font-size: 13.5px; padding: 8px 10px; border: 1px solid var(--field-line);
+  border-radius: var(--r); background: var(--fill); color: var(--fg);
+  box-shadow: var(--obs-inset); }                       /* 内嵌凹槽 */
+input:focus { outline: none; border-color: var(--fg); }
+.fieldrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ---- agent trace ---- */
+.step { border-left: 2px solid var(--line); padding: 6px 0 6px 14px; margin: 8px 0; font-size: 13.5px; }
+.step .lbl { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.step .lbl.tool { color: var(--fg); }
+.think { color: var(--muted); font-style: italic; }
+.obs { background: var(--code); border: 1px solid var(--line); border-radius: var(--r);
+       box-shadow: var(--obs-inset), inset 0 -1px 0 rgba(255,255,255,.35);
+       padding: 8px 10px; margin-top: 4px;
+       font-family: ui-monospace, "SF Mono", monospace; font-size: 12px; max-height: 140px;
+       overflow: auto; white-space: pre-wrap; word-break: break-all; color: var(--fg); opacity: .88; }
+:root[data-theme="dark"] .obs { box-shadow: var(--obs-inset), inset 0 -1px 0 rgba(0,0,0,.5); }
+.answer { background: var(--card); border: 1px solid var(--fg); border-left: 3px solid var(--fg);
+          border-radius: var(--r); padding: 12px 16px; margin: 10px 0;
+          box-shadow: var(--bevel), var(--sh-2); }
+
+/* ---- holo 大分（echo 双曝光 + 唯一 glow 位） ---- */
+.scorehead { display: flex; gap: 22px; align-items: center; padding: 6px 4px 14px; }
+.scorehead .big { font-size: 58px; font-weight: 800; letter-spacing: -2px; line-height: 1;
+                  text-shadow: var(--echo), var(--glow); }    /* 全页 glow 唯一允许位 */
+.scorehead .big span { font-size: 16px; font-weight: 400; color: var(--muted); text-shadow: none; }
+
+/* ---- modal · L3 板材 + reticle 角标 ---- */
+.overlay { position: fixed; inset: 0; background: var(--overlay); display: flex;
+           align-items: center; justify-content: center; z-index: 50; }
+.overlay[hidden] { display: none; }
+.modal { background: var(--card); border: 1px solid var(--fg); border-radius: var(--r);
+         width: min(680px, 92vw); max-height: 86vh; display: flex; flex-direction: column;
+         box-shadow: var(--bevel), var(--sh-3); position: relative; }
+.overlay:not([hidden]) .modal { animation: lockin .22s ease-out; }
+@keyframes lockin { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }
+.modal .mhead { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px;
+                border-bottom: 1px solid var(--fg); }
+.modal .mhead h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+                   text-shadow: var(--echo); }
+.modal .mbody { padding: 16px 18px; overflow: auto; }
+.modal .mfoot { padding: 12px 18px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px; }
+/* reticle 角标：瞄准框语汇 */
+.reticle { position: absolute; width: 12px; height: 12px; pointer-events: none; }
+.reticle.tl { top: -7px; left: -7px; border-top: 2px solid var(--fg); border-left: 2px solid var(--fg); }
+.reticle.tr { top: -7px; right: -7px; border-top: 2px solid var(--fg); border-right: 2px solid var(--fg); }
+.reticle.bl { bottom: -7px; left: -7px; border-bottom: 2px solid var(--fg); border-left: 2px solid var(--fg); }
+.reticle.br { bottom: -7px; right: -7px; border-bottom: 2px solid var(--fg); border-right: 2px solid var(--fg); }
+
+/* ---- agent 输入区 · L2 板材 ---- */
+.agentinput { display: flex; gap: 8px; align-items: center; margin-top: 16px; padding: 12px 14px;
+              border: 1px solid var(--line); border-top: 2px solid var(--fg);
+              background: var(--card); box-shadow: var(--bevel), var(--sh-2); }
+.agentinput input { flex: 1; box-shadow: var(--obs-inset); }
+
+/* ---- 层次对照面板 ---- */
+.zrow { display: grid; grid-template-columns: 120px 1fr 180px; gap: 14px; align-items: center;
+        padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.zrow .spec { font-family: ui-monospace, "SF Mono", monospace; color: var(--muted); font-size: 11.5px; }
+.zplate { border: 1px solid var(--line); background: var(--card); padding: 8px 12px; font-size: 12px; font-weight: 700; }
+.zv1 { box-shadow: var(--bevel), var(--sh-1); }
+.zv2 { box-shadow: var(--bevel), var(--sh-2); }
+.zv3 { box-shadow: var(--bevel), var(--sh-3); }
+.zv0 { box-shadow: var(--obs-inset); }
+
+/* ---- footer ---- */
+footer { margin-top: 44px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--fg);
+         box-shadow: 0 -1px 0 var(--line); padding-top: 12px; }
+
+/* ---- 入场 stagger（首屏一次） ---- */
+section { margin: 40px 0; animation: rise .4s ease-out backwards; }
+section:nth-of-type(1) { animation-delay: .0s; } section:nth-of-type(2) { animation-delay: .08s; }
+section:nth-of-type(3) { animation-delay: .16s; } section:nth-of-type(4) { animation-delay: .24s; }
+section:nth-of-type(5) { animation-delay: .32s; } section:nth-of-type(6) { animation-delay: .40s; }
+section:nth-of-type(7) { animation-delay: .48s; } section:nth-of-type(8) { animation-delay: .56s; }
+section:nth-of-type(9) { animation-delay: .64s; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ---- HOLO OFF 验收开关：一条规则全灭设备层，页面必须仍成立 ---- */
+html[data-holo="off"]::before { opacity: 0 !important; animation: none !important; }
+html[data-holo="off"] .holo-sweep::after { display: none !important; animation: none !important; }
+html[data-holo="off"] .dot { animation: none !important; }
+html[data-holo="off"] .brand, html[data-holo="off"] .scorehead .big, html[data-holo="off"] .modal .mhead h3 { text-shadow: none !important; }
+html[data-holo="off"] section { animation: none !important; }
+
+h2 { font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+     color: var(--muted); margin: 0 0 14px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+h2 .idx { color: var(--fg); margin-right: 8px; font-family: ui-monospace, "SF Mono", monospace; }
+.tip { font-size: 13px; color: var(--muted); }
+
+@media (max-width: 640px) { .fieldrow { grid-template-columns: 1fr; } .zrow { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  html::before { animation: none; opacity: .7; }
+  .dot { animation: none; }
+  .holo-sweep::after { display: none; }
+  section, .modal { animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">AgentShield <small>DESIGN SPEC v1.1 · 厚重 × 全息</small></div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <span class="status"><i class="dot"></i>SYSTEM ONLINE</span>
+    <button class="btn small" id="holoBtn" onclick="toggleHolo()">HOLO ON</button>
+    <button class="btn small" id="themeBtn" onclick="toggleTheme()">DARK</button>
+    <button class="btn primary small" onclick="openModal()">OPEN MODAL</button>
+  </div>
+</div>
+
+<section>
+  <h2><span class="idx">01</span>Principles · v1.1 增量</h2>
+  <div class="card">
+    <p style="margin:0 0 8px"><b>厚重</b> = 阴影层级差被看见：L1 静态板 / L2 可交互板 / L3 浮窗三级板材，每块带 1px 上缘受光边（bevel），内凹槽只往里收；按钮改机械式，底缘 2px 硬投影，按下吃掉底缘。<br>
+    <b>全息</b> = 纯银灰设备层：扫描幕布呼吸、可点击体掠光、瞄准框 reticle、echo 双曝光字、CRT step 闪烁点。glow 全页只允许出现在大分数字一处。</p>
+    <p class="tip" style="margin:0">验收：右上 <b>HOLO OFF</b> 一键全灭设备层后，页面信息结构必须仍然成立。</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">02</span>Elevation 板材等级对照（当前主题实际渲染）</h2>
+  <div class="card">
+    <div class="zrow"><div class="spec">L0 · 环境<br>--scanline</div><div class="zplate" style="background:var(--bg);border-color:var(--line);box-shadow:none">环境底 · 扫描幕布</div><div class="spec">无投影 · 只有底纹</div></div>
+    <div class="zrow"><div class="spec">L1 · 静态板<br>--sh-1 + bevel</div><div class="zplate zv1">STATIC PLATE</div><div class="spec">原则卡 / 表单卡 / 输入槽</div></div>
+    <div class="zrow"><div class="spec">L2 · 可交互板<br>--sh-2 + bevel</div><div class="zplate zv2">INTERACTIVE PLATE</div><div class="spec">报告卡 / 输入区 / toast</div></div>
+    <div class="zrow"><div class="spec">L3 · 浮窗<br>--sh-3 + bevel</div><div class="zplate zv3">FLOATING PLATE</div><div class="spec">modal / 悬浮窗（最厚）</div></div>
+    <div class="zrow" style="border-bottom:none"><div class="spec">concave · 凹槽<br>inset</div><div class="zplate zv0" style="background:var(--code)">RECESSED SLOT</div><div class="spec">.obs 代码槽 / 输入内嵌</div></div>
+    <p class="tip" style="margin:10px 0 0">同底色，只换阴影 → 层级差 100% 来自深度栈。相邻异层板材间距 ≥ 16px，投影要"落"得到。</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">03</span>Tokens 色板（light / dark 对照）</h2>
+  <div class="card">
+    <style>.pgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; } .pcol h4 { font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin:0 0 8px; } .sw { display:grid; grid-template-columns:34px 88px 1fr; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:12px; } .sw i { width:34px; height:22px; border:1px solid var(--line); } .sw b { font-family:ui-monospace,"SF Mono",monospace; font-weight:400; font-size:12px; } .sw span { color:var(--muted); font-size:11.5px; } @media(max-width:640px){ .pgrid{grid-template-columns:1fr} }</style>
+    <div class="pgrid">
+      <div class="pcol">
+        <h4>Light · 现行</h4>
+        <div class="sw"><i style="background:#f5f5f5"></i><b>#f5f5f5</b><span>--bg 页面底色</span></div>
+        <div class="sw"><i style="background:#ffffff"></i><b>#ffffff</b><span>--card / --fill 表面</span></div>
+        <div class="sw"><i style="background:#111111"></i><b>#111111</b><span>--fg / --accent 主墨</span></div>
+        <div class="sw"><i style="background:#787878"></i><b>#787878</b><span>--muted 次要文字</span></div>
+        <div class="sw"><i style="background:#dcdcdc"></i><b>#dcdcdc</b><span>--line 分隔线</span></div>
+        <div class="sw"><i style="background:#ebebeb"></i><b>#ebebeb</b><span>--accent-soft 浅填</span></div>
+        <div class="sw"><i style="background:#f1f1f1"></i><b>#f1f1f1</b><span>--code 代码底</span></div>
+      </div>
+      <div class="pcol">
+        <h4>Dark · 设计稿</h4>
+        <div class="sw"><i style="background:#171717"></i><b>#171717</b><span>--bg 页面底色</span></div>
+        <div class="sw"><i style="background:#1e1e1e"></i><b>#1e1e1e</b><span>--card / --fill 表面</span></div>
+        <div class="sw"><i style="background:#ececec"></i><b>#ececec</b><span>--fg / --accent 近白墨</span></div>
+        <div class="sw"><i style="background:#8f8f8f"></i><b>#8f8f8f</b><span>--muted 次要文字</span></div>
+        <div class="sw"><i style="background:#333333"></i><b>#333333</b><span>--line 分隔线</span></div>
+        <div class="sw"><i style="background:#2a2a2a"></i><b>#2a2a2a</b><span>--accent-soft 深填</span></div>
+        <div class="sw"><i style="background:#242424"></i><b>#242424</b><span>--code 代码底</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">04</span>Type 字阶 + Echo</h2>
+  <div class="card">
+    <div style="font-weight:800;font-size:18px;letter-spacing:.5px;text-transform:uppercase;text-shadow:var(--echo)">AgentShield <span style="font-weight:400;color:var(--muted);font-size:12px;text-transform:none;letter-spacing:0;text-shadow:none">wordmark · 800 · 18px（echo 位）</span></div>
+    <div style="font-size:58px;font-weight:800;letter-spacing:-2px;line-height:1;text-shadow:var(--echo),var(--glow)">72<span style="font-size:16px;font-weight:400;color:var(--muted);text-shadow:none"> /100 · 大分（glow 唯一允许位）</span></div>
+    <div style="font-size:30px;font-weight:800;letter-spacing:-1px">72<span style="font-size:13px;font-weight:400;color:var(--muted)"> /100 · 卡片分（无 echo）</span></div>
+    <div style="font-size:15px">正文 body · 15px / 1.65 · 系统无衬线 PingFang SC</div>
+    <div class="mono" style="color:var(--muted)">nvidia-20260924-155415-9bc694 · 2026-09-24 15:54:15 · score = 0.82×0.95×1.0 = 0.78</div>
+    <p class="tip" style="margin:8px 0 0;font-size:12px">echo 只给 wordmark / 大分 / modal 标题三者；halo 在 light 下压到 0.08 几乎不见（白底上 glow 无意义），dark 下才显形。</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">05</span>Buttons 机械式</h2>
+  <div class="card" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+    <button class="btn">DEFAULT</button>
+    <button class="btn primary">PRIMARY</button>
+    <button class="btn ghost">GHOST</button>
+    <button class="btn small">SMALL</button>
+    <button class="btn" disabled>DISABLED</button>
+    <span class="tip">底缘 2px 硬投影 = "可按下"暗示；按下 translateY(2px) 吃掉底缘。stable hover 不动，ledge 在。</span>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">06</span>Severity 浓度五档（凹组 inset）</h2>
+  <div class="card sevrow">
+    <span class="sev critical">CRITICAL</span>
+    <span class="sev high">HIGH</span>
+    <span class="sev medium">MEDIUM</span>
+    <span class="sev low">LOW</span>
+    <span class="sev info">INFO</span>
+    <span class="tip">整组 inset 硬阴影 = 嵌进面板，与凸出的板材方向相反。</span>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">07</span>Report Cards · L2 板材 + 掠光（悬停可见）</h2>
+  <div class="grid">
+    <a class="card l2 holo-sweep report-card" href="#" onclick="return false">
+      <div class="rid mono">nvidia-20260924-155415-9bc694</div>
+      <div class="sc">87<span> /100</span></div>
+      <div class="tip">2026-09-24 15:54:15 · findings 3 · gpt-4o</div>
+    </a>
+    <a class="card l2 holo-sweep report-card" href="#" onclick="return false">
+      <div class="rid mono">eval_vulnerable-skill</div>
+      <div class="sc">42<span> /100</span></div>
+      <div class="tip">2026-09-24 15:20:03 · findings 7 · claude-4.5</div>
+    </a>
+    <a class="card l2 holo-sweep report-card" href="#" onclick="return false">
+      <div class="rid mono">project-review-20260924</div>
+      <div class="sc">–<span> /100</span></div>
+      <div class="tip">2026-09-24 14:08:51 · findings 0 · offline</div>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">08</span>Forms + Agent Trace</h2>
+  <div class="card" style="margin-bottom:16px">
+    <label>Target Repo</label>
+    <input type="text" value="NousResearch/hermes-agent" spellcheck="false">
+    <div class="fieldrow">
+      <div><label>Model</label><input type="text" value="gpt-4o" spellcheck="false"></div>
+      <div><label>Max Findings</label><input type="text" value="20" spellcheck="false"></div>
+    </div>
+    <p class="tip" style="margin:10px 0 0">输入槽 = 凹槽（inset 阴影往里收），表单卡本体 = L1 凸板。凹槽/凸板成对出现。</p>
+  </div>
+  <div class="card">
+    <div class="step"><span class="lbl tool">TOOL · terminal</span>
+      <div>git clone https://github.com/NousResearch/hermes-agent</div>
+      <div class="obs">Cloning into 'hermes-agent'...
+remote: Enumerating objects: 48211, done.
+Receiving objects: 100% (48211/48211), 38.21 MiB | 6.4 MiB/s, done.</div>
+    </div>
+    <div class="step"><span class="lbl">STEP 02 · 分析</span>
+      <div class="think">先扫描 10_skills/ 目录，确认 SKILL.md 是否声明了外部命令…</div>
+    </div>
+    <div class="answer"><b>FINDING · HIGH</b> — <code>skill: reddit-reading</code> 调用了未声明的 curl 拉取外部 URL，建议加入 io-policy allowlist。<br>
+    <span class="mono" style="font-size:12px;color:var(--muted)">score = 0.82(sev) × 0.95(conf) × 1.0(exploit) = 0.78</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">09</span>Holo 设备 · 大分 glow / 输入区 / Modal reticle</h2>
+  <div class="scorehead"><div class="big">72<span> /100</span></div>
+    <div><span class="sev high">HIGH</span><br><span class="tip mono" style="font-size:12px">score = 0.82×0.95×1.0=0.78</span></div>
+  </div>
+  <div class="agentinput holo-sweep">
+    <input type="text" placeholder="对报告提问，或下达新扫描指令…" spellcheck="false">
+    <button class="btn primary">SEND</button>
+  </div>
+  <p class="tip" style="margin-top:12px">OPEN MODAL（顶栏）打开 L3 板材：全页最厚投影 + 四角瞄准框 reticle + 标题 echo + "成像凝固"入场（scale .985→1）。动效预算 5 处封顶：幕布呼吸 / 掠光 / flicker 点 / 入场 stagger / modal 定形，一个不多。</p>
+</section>
+
+<footer>AGENTSHIELD DESIGN SPEC v1.1 · 单一事实来源: 04_web/app.py BASE_CSS（待并入） · 银灰全息，无一个彩色相</footer>
+
+<div class="overlay" id="ovl" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+    <span class="reticle tl"></span><span class="reticle tr"></span><span class="reticle bl"></span><span class="reticle br"></span>
+    <div class="mhead"><h3 id="mtitle">Modal · 新扫描</h3><button class="btn small ghost" onclick="closeModal()">✕</button></div>
+    <div class="mbody">
+      <label>Target Repo</label>
+      <input type="text" value="NousResearch/hermes-agent" spellcheck="false">
+      <div class="fieldrow">
+        <div><label>Model</label><input type="text" value="gpt-4o"></div>
+        <div><label>Timeout</label><input type="text" value="300s"></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" onclick="closeModal()">CANCEL</button>
+      <button class="btn primary" onclick="closeModal()">RUN SCAN</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var root = document.documentElement, tbtn = document.getElementById('themeBtn'), hbtn = document.getElementById('holoBtn');
+  function apply(t){ root.setAttribute('data-theme', t); tbtn.textContent = t === 'dark' ? 'LIGHT' : 'DARK'; localStorage.setItem('as-theme', t); }
+  function applyHolo(on){ root.setAttribute('data-holo', on ? 'on' : 'off'); hbtn.textContent = on ? 'HOLO ON' : 'HOLO OFF'; hbtn.classList.toggle('primary', on); localStorage.setItem('as-holo', on ? 'on' : 'off'); }
+  var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  apply(localStorage.getItem('as-theme') || sys);
+  applyHolo(localStorage.getItem('as-holo') !== 'off');
+})();
+function toggleTheme(){ var r = document.documentElement; apply(r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+function toggleHolo(){ var r = document.documentElement; applyHolo(r.getAttribute('data-holo') !== 'off'); }
+function openModal(){ document.getElementById('ovl').hidden = false; }
+function closeModal(){ document.getElementById('ovl').hidden = true; }
+document.getElementById('ovl').addEventListener('click', function(e){ if (e.target === this) closeModal(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>

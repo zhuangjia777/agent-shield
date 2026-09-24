@@ -1,0 +1,18 @@
+{
+  "vulnerable-skill": {
+    "planted": 5,
+    "mapping": {
+      "KEY-LITERAL": "SK-KEY-LITERAL",
+      "NET-EXFIL": "SK-NET-EXFIL",
+      "PATH-TRAVER": "SK-PATH-TRAVER",
+      "SUPPLY-CHAIN": "SK-SHELL-DANGER",
+      "OVERBROAD-TRIGGER": "SK-OVERBROAD-TRIG"
+    }
+  },
+  "hardened-skill": {
+    "max_high_findings": 0
+  },
+  "benign-skill": {
+    "max_high_findings": 0
+  }
+}
