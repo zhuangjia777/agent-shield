@@ -27,7 +27,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from queue import Queue, Empty
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "02_scan"))
@@ -38,6 +38,7 @@ PY = sys.executable or "python3"
 
 import llm as llm_mod   # noqa: E402
 import agent as agent_mod  # noqa: E402
+import agents as arena_agents
 import simulator as arena_mod  # noqa: E402
 from external_reports import external_html  # noqa: E402
 import nvidia_scan  # noqa: E402
@@ -57,7 +58,7 @@ def nvidia_html():
 <label><input type="checkbox" id="use-model"> 添加私有 Qwen 语义分析</label>
 <p class="tip">默认静态扫描不调用模型。启用语义分析会将所选合成样本交给配置的私有模型，约需数十秒至数分钟。扫描不执行样本脚本。</p>
 <button class="btn primary" id="scan">开始官方引擎审查</button><p id="status" role="status" aria-live="polite"></p><a id="result" class="btn" hidden>查看完整报告</a></div>
-<p class="tip">SkillSpector 风险分越高风险越大；AgentShield 规则健康分越高越好，两者分开展示。来源 commit 与内容哈希已记录；来源签名尚未验证。DGX Spark / OpenShell 未接入。</p>
+<p class="tip">SkillSpector 风险分越高风险越大；AgentShield 规则健康分越高越好，两者分开展示。来源 commit 与内容哈希已记录；OMS 发布者签名会随扫描单独验证，未签名不会显示为通过。OpenShell 隔离执行与 Tier 3 对照评测提供独立入口，配置方法见使用说明。</p>
 <script>
 const sampleHint=new URLSearchParams(location.search).get('sample');
 if(['vulnerable-skill','hardened-skill','benign-skill'].includes(sampleHint)) document.getElementById('sample').value=sampleHint;
@@ -75,9 +76,12 @@ document.getElementById('scan').onclick=async()=>{
 
 def arena_review(result):
     """Two independent, read-only role contexts; the rule verdict is immutable."""
-    c = llm_mod.cloud_cfg()
-    if not c.get("base_url") or not c.get("api_key"):
-        raise RuntimeError("请先配置私有模型。")
+    cfg = llm_mod.load_config()
+    main = llm_mod.cloud_cfg(cfg)
+    configs = {role: llm_mod.role_cloud_cfg(role, cfg, main) for role in ("black", "red")}
+    for role, c in configs.items():
+        if not c.get("base_url") or not c.get("model"):
+            raise RuntimeError(("黑方" if role == "black" else "红方") + "模型尚未配置完整。")
     evidence = json.dumps({"scenario": result["scenario"], "mode": result["mode"], "assumptions": result["assumptions"],
                            "before": result["before"]["outcomes"],
                            "after": result["after"]["outcomes"],
@@ -86,10 +90,11 @@ def arena_review(result):
     reviews = []
     for role, task in (("black", "你是黑方黑客的演练分析员。解释哪些预设目标成功、哪些前提受阻，以及未覆盖的场景假设。"),
                        ("red", "你是红方白帽分析员。解释修复为什么有效、谁能实施、业务副作用和复测局限。")):
+        c = configs[role]
         messages = [{"role": "system", "content": task + "这是合成的" + result.get("scenario_name", result["scenario"]) + "规则演练。用中文，先给普通用户两句结论，再给专业人士两条证据解读。总计不超过300字。不得声称进行了实网攻击或执行了工具，不生成命令，不修改规则裁判计数，不虚构日志。"},
                     {"role": "user", "content": evidence}]
         parts = []
-        for kind, value in llm_mod._cloud_stream(messages, 0.2, timeout=35):
+        for kind, value in llm_mod._cloud_stream(messages, 0.2, timeout=35, config=c):
             if kind == "content":
                 parts.append(value)
                 if sum(map(len, parts)) >= 8000:
@@ -97,7 +102,8 @@ def arena_review(result):
         content = "".join(parts).strip()
         if not content:
             raise RuntimeError("模型未返回解读。")
-        reviews.append({"role": role, "text": content, "model": c["model"]})
+        reviews.append({"role": role, "text": content, "model": c["model"],
+                        "config_source": "main" if cfg.get("arena_models", {}).get(role, {}).get("inherit_main", True) else "independent"})
     return {"ok": True, "run_id": result["run_id"], "reviews": reviews,
             "advisory_only": True, "execution": "independent_read_only_contexts"}
 
@@ -151,6 +157,9 @@ BASE_CSS = """
 }
 
 * { box-sizing: border-box; }
+/* Hide only the outer page scrollbar; nested panels keep native scrolling UI. */
+html, body { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
 html { background: var(--bg); }
 
 /* ---- L0 全息幕布：静态立体方柱背景 ---- */
@@ -341,13 +350,10 @@ html[data-holo="off"] .scorehead.holo-frame{background:none}
 html[data-holo="on"] :is(.card,.metric,.config,.details-card,.topology,.lane,.guide-main,.scorehead,.answer,.agentinput,.event){
  box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1))}
 html[data-holo="on"] :is(.report-card,.lane){--holo-base-shadow:var(--sh-2)}
-html[data-holo="on"] .holo-surface{transition:transform .16s ease-out,box-shadow .16s ease-out,border-color .12s}
+html[data-holo="on"] .holo-surface{transition:box-shadow .16s ease-out}
 html[data-holo="on"][data-holo-motion="on"] .holo-active:not(:disabled):not([aria-disabled="true"]){
- border-color:var(--field-line);
- transition:transform .10s ease-out,box-shadow .10s ease-out,border-color .10s}
-html[data-holo="on"][data-holo-motion="on"] .holo-active[data-holo-tilt="true"]{
- transform:perspective(1000px) translateY(-1px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg))}
-html[data-holo="on"][data-holo-motion="on"] :is(.btn,.agent-launcher).holo-active:not(:disabled):not([aria-disabled="true"]){transform:translateY(-.5px)}
+ box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1)),0 4px 12px rgba(0,0,0,var(--holo-shadow));
+ transition:box-shadow .10s ease-out}
 html[data-holo="on"] :is(.btn,.agent-launcher):not(:disabled):not([aria-disabled="true"]):active{
  transform:translateY(1px);box-shadow:var(--bevel),0 1px 2px rgba(0,0,0,.2);transition:transform .05s}
 html[data-holo="on"][data-holo-motion="on"] :is(.btn,.agent-launcher).holo-active:active{transform:translateY(1px)}
@@ -357,6 +363,8 @@ html[data-holo="off"] .holo-fx{display:none}
 @media print{.holo-fx{display:none!important}html[data-holo] .holo-surface{transform:none!important;background-image:none!important}}
 
 
+.role-settings{margin:16px 0;padding:14px;border:1px solid var(--line)}
+.role-settings legend{font-weight:700}.modal .role-inherit{display:flex;gap:8px;align-items:center}.modal .role-inherit input{width:auto}.role-settings>.btn{margin-top:12px}
 /* Shared navigation remains still, including in HOLO mode. */
 html{scroll-padding-top:calc(var(--nav-height,140px) + 16px)}
 .site-header{position:sticky;top:0;z-index:48;background:var(--bg);padding:12px 0 0;margin-bottom:18px;border-bottom:1px solid var(--fg);box-shadow:0 3px 0 var(--line)}
@@ -364,7 +372,7 @@ html{scroll-padding-top:calc(var(--nav-height,140px) + 16px)}
 .nav-history,.nav-utility{display:flex;gap:10px;align-items:center}
 .site-header .brand{font-size:17px;margin-right:auto;white-space:nowrap}
 .site-header .display-controls{margin-left:0;gap:10px}
-.site-navigation{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 8px}
+.site-navigation{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;padding:0 0 8px}
 .nav-link{padding:8px 14px;border:0;border-bottom:2px solid transparent;font-size:13px;color:var(--muted)}
 .nav-link:hover{color:var(--fg);background:var(--accent-soft)}
 .nav-link[aria-current]{font-weight:700;color:var(--fg);border-bottom-color:var(--fg)}
@@ -374,8 +382,8 @@ html[data-holo] .btn.nav-control:active,html[data-holo] .site-header .btn:active
 .report-actions{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}
 body.guide-page aside{top:calc(var(--nav-height,140px) + 16px)}
 @media(max-width:640px){
- .site-header .topbar{gap:8px;justify-content:flex-start}.site-header .brand{font-size:15px;margin-right:0;flex:1;text-align:right}
- .nav-history{gap:8px}.nav-utility{order:2;margin-right:auto;gap:8px}.site-header .display-controls{order:3;gap:8px}.site-header .nav-toggle{display:inline-flex;order:4;width:100%;margin-top:2px}
+ .site-header .topbar{gap:8px;justify-content:flex-start}.site-header .brand{font-size:15px;margin-right:0;flex:1;text-align:left}
+ .nav-history{gap:8px}.nav-utility{order:2;margin-left:auto;gap:8px}.site-header .display-controls{order:3;gap:8px}.site-header .nav-toggle{display:inline-flex;order:4;width:100%;margin-top:2px}
  .site-header .btn{padding:6px 10px;min-height:44px;font-size:12px}.site-navigation{display:none}
  .site-header[data-nav-open="true"] .site-navigation{display:grid;grid-template-columns:1fr 1fr;gap:4px}.nav-link{min-height:44px;padding:10px}
  body.guide-page aside{position:static}
@@ -648,18 +656,25 @@ def _explain_stream(finding: dict):
         yield {"type": "done"}
 
 
-def _llm_test_stream():
+def _llm_test_stream(role="main"):
     try:
-        for kind, piece in llm_mod.chat_stream([
-            {"role": "system", "content": "测试连接。只输出一句话确认你在。"},
-            {"role": "user", "content": "确认"},
-        ], temperature=0.2):
+        messages = [{"role": "system", "content": "测试连接。只输出一句话确认你在。"},
+                    {"role": "user", "content": "确认"}]
+        if role == "main":
+            stream = llm_mod.chat_stream(messages, temperature=0.2)
+        else:
+            config = llm_mod.role_cloud_cfg(role)
+            if not config.get("base_url") or not config.get("model"):
+                raise ValueError("模型配置不完整")
+            stream = llm_mod._cloud_stream(messages, 0.2, timeout=35, config=config)
+        for kind, piece in stream:
             if kind == "content":
                 yield {"type": "token", "text": piece}
-        yield {"type": "done"}
-    except Exception as e:
-        yield {"type": "error", "text": str(e)[:200]}
-        yield {"type": "done"}
+        yield {"type": "done", "ok": True}
+    except Exception:
+        yield {"type": "error", "text": "连接失败，请检查已保存的接口、模型名称和密钥。"}
+        yield {"type": "done", "ok": False}
+
 
 
 def _fix_for(finding: dict) -> dict:
@@ -772,11 +787,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/style.css":
                 return self._send(200, BASE_CSS, "text/css")
             if path == "/api/config":
-                cfg = json.loads(json.dumps(llm_mod.load_config()))
-                key = cfg.get("cloud", {}).pop("api_key", "")
-                if key:
-                    cfg["cloud"]["api_key_masked"] = key[:6] + "…" + key[-4:]
-                return self._json(200, cfg)
+                return self._json(200, llm_mod.public_config(llm_mod.load_config()))
             m = re.fullmatch(r"/report/([^/]+)/files/(\w+\.html|\w+\.md|\w+\.json)", path)
             if m:
                 d = self._safe_report_dir(m.group(1))
@@ -803,7 +814,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self._sse(_explain_stream(finding))
             m = re.fullmatch(r"/api/llm-test", path)
             if m:
-                return self._sse(_llm_test_stream())
+                role = parse_qs(urlparse(self.path).query).get("role", ["main"])[0]
+                if role not in ("main", "black", "red"):
+                    return self._json(400, {"ok": False, "msg": "未知模型角色。"})
+                return self._sse(_llm_test_stream(role))
             return self._json(404, {"ok": False, "msg": "not found"})
         except Exception as e:
             return self._json(500, {"ok": False, "msg": str(e)[:300]})
@@ -833,6 +847,34 @@ class Handler(BaseHTTPRequestHandler):
                 finally:
                     NVIDIA_SCAN_LOCK.release()
                 return self._json(200, result)
+            if path == "/api/arena/agents":
+                try:
+                    size = int(self.headers.get("Content-Length") or 0)
+                    if not 0 <= size <= 8192: raise ValueError()
+                    body = self._body()
+                    arena_mod.validate(body)
+                except (ValueError, TypeError):
+                    return self._json(400, {"ok":False,"msg":"仅接受内置场景与布尔防护开关。"})
+                if not ARENA_STREAM_LOCK.acquire(blocking=False):
+                    return self._json(429, {"ok":False,"msg":"已有演练进行中，请稍后重试。"})
+                stream = arena_agents.run(body)
+                try:
+                    first = next(stream)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+                    self.send_header("Cache-Control", "no-store")
+                    self.send_header("Connection", "close")
+                    self.end_headers(); self.close_connection = True
+                    self.wfile.write((json.dumps(first,ensure_ascii=False)+"\n").encode()); self.wfile.flush()
+                    for event in stream:
+                        self.wfile.write((json.dumps(event,ensure_ascii=False)+"\n").encode()); self.wfile.flush()
+                except ValueError:
+                    return self._json(400, {"ok":False,"msg":"请先配置双方模型。"})
+                except (BrokenPipeError,ConnectionResetError,OSError):
+                    pass
+                finally:
+                    stream.close(); ARENA_STREAM_LOCK.release()
+                return
             if path in ("/api/arena/run", "/api/arena/review", "/api/arena/stream"):
                 try:
                     size = int(self.headers.get("Content-Length") or 0)
@@ -877,14 +919,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/scan":
                 return self._api_scan(body)
             if path == "/api/config":
-                cur = json.loads(json.dumps(llm_mod.load_config()))
-                for k in ("cloud", "ollama"):
-                    if isinstance(body.get(k), dict):
-                        updates = dict(body[k])
-                        updates.pop("api_key_masked", None)
-                        if k == "cloud" and not updates.get("api_key"):
-                            updates.pop("api_key", None)
-                        cur.setdefault(k, {}).update(updates)
+                try:
+                    cur = llm_mod.merge_config(llm_mod.load_config(), body)
+                except ValueError as exc:
+                    return self._json(400, {"ok": False, "msg": str(exc)})
                 llm_mod.save_config(cur)
                 return self._json(200, {"ok": True})
             m = re.fullmatch(r"/api/fix/([^/]+)/([A-Za-z0-9_-]+)", path)
@@ -1001,48 +1039,74 @@ async function startScan() {
   }
 }
 // ---------- 设置 ----------
+function roleSettings(role, label, cfg, main) {
+  const inherit = cfg.inherit_main !== false;
+  return `<fieldset class="role-settings"><legend>${label}模型</legend>
+    <label class="role-inherit"><input id="${role}-inherit" type="checkbox" ${inherit?'checked':''} onchange="toggleRoleSettings('${role}')"> 沿用主模型</label>
+    <div id="${role}-fields" ${inherit?'hidden':''}>
+      <label for="${role}-url">API base_url（含 /v1）</label><input id="${role}-url" value="${escHtml(cfg.base_url||main.base_url||'')}">
+      <label for="${role}-key">API key${cfg.api_key_set?'（已保存）':''}</label><input id="${role}-key" type="password" autocomplete="new-password" placeholder="留空保留本角色密钥；新配置可使用免密接口">
+      <label class="role-inherit"><input id="${role}-clear" type="checkbox"> 清除本角色已保存密钥（免密接口）</label>
+      <div class="fieldrow"><div><label for="${role}-model">模型</label><input id="${role}-model" value="${escHtml(cfg.model||main.model||'')}"></div>
+      <div><label for="${role}-tok">max_tokens</label><input id="${role}-tok" type="number" min="64" max="32768" value="${Number(cfg.max_tokens||main.max_tokens)||2500}"></div></div>
+    </div>
+    <button class="btn outline small" type="button" onclick="testLLM('${role}')">测试${label}已保存配置</button>
+  </fieldset>`;
+}
+function toggleRoleSettings(role) {
+  const inherited = $('#'+role+'-inherit').checked;
+  $('#'+role+'-fields').hidden = inherited;
+  $('#'+role+'-fields').querySelectorAll('input').forEach(e=>e.disabled=inherited);
+}
+let settingsTest = null;
 function openSettings() {
-  fetch('/api/config').then(r=>r.json()).then(cfg => {
-    const c = cfg.cloud || {}, o = cfg.ollama || {};
+  fetch('/api/config').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(cfg => {
+    const c = cfg.cloud || {}, o = cfg.ollama || {}, roles = cfg.arena_models || {};
     $('#modal-host').innerHTML = `
     <div class="overlay" onclick="if(event.target===this)closeSettings()">
-      <div class="modal">
+      <div class="modal" role="dialog" aria-modal="true" aria-label="LLM 设置">
         <div class="mhead"><h3>设置 · LLM 后端</h3><button class="btn ghost small" onclick="closeSettings()">✕</button></div>
         <div class="mbody">
-          <div class="tip">优先使用配置的私有或兼容 API；失败时尝试 Ollama。报告支持模板降级。保存即生效。</div>
-          <label>API base_url（含 /v1）</label><input id="c-url" type="text" value="${escHtml(c.base_url)}">
-          <label>API key${c.api_key_masked?'（当前 '+escHtml(c.api_key_masked)+'）':''}</label>
-          <input id="c-key" type="password" placeholder="留空=不修改">
-          <div class="fieldrow">
-            <div><label>模型</label><input id="c-model" type="text" value="${escHtml(c.model)}"></div>
-            <div><label>max_tokens</label><input id="c-tok" type="number" value="${c.max_tokens||2500}"></div>
-          </div>
-          <label>Ollama URL</label><input id="o-url" type="text" value="${escHtml(o.url||'')}" placeholder="留空=不用 Ollama">
-          <label>Ollama 模型</label><input id="o-model" type="text" value="${escHtml(o.model||'')}">
+          <h4>主模型</h4><div class="tip">报告与助手使用主模型，失败时尝试 Ollama。修改后请先保存，再测试连接。</div>
+          <label for="c-url">API base_url（含 /v1）</label><input id="c-url" type="text" value="${escHtml(c.base_url)}">
+          <label for="c-key">API key${c.api_key_set?'（已保存）':''}</label><input id="c-key" type="password" autocomplete="new-password" placeholder="留空=不修改">
+          <div class="fieldrow"><div><label for="c-model">模型</label><input id="c-model" value="${escHtml(c.model)}"></div>
+          <div><label for="c-tok">max_tokens</label><input id="c-tok" type="number" value="${Number(c.max_tokens)||2500}"></div></div>
+          <label for="o-url">Ollama URL</label><input id="o-url" value="${escHtml(o.url||'')}" placeholder="留空=不用 Ollama">
+          <label for="o-model">Ollama 模型</label><input id="o-model" value="${escHtml(o.model||'')}">
+          <h4>红黑智能体与复盘</h4><p class="tip">红黑双方默认使用主模型的 API 配置。独立设置用于该方的智能体行动和模型复盘，模型需要支持 tools 工具调用。规则裁判仍独立判定结果。独立接口不会继承主模型密钥，失败也不会切换到其他模型。</p>
+          ${roleSettings('black','黑方 · 黑客',roles.black||{},c)}
+          ${roleSettings('red','红方 · 白帽',roles.red||{},c)}
         </div>
-        <div class="mfoot">
-          <button class="btn" id="btn-test" onclick="testLLM()">测试连接</button>
-          <button class="btn primary" onclick="saveSettings()">保存</button>
-        </div>
-        <div class="tip" id="test-out" style="padding:0 18px 14px;white-space:pre-wrap;max-height:140px;overflow:auto"></div>
+        <div class="mfoot"><button class="btn" id="btn-test" onclick="testLLM()">测试主模型已保存配置</button><button class="btn primary" onclick="saveSettings()">保存</button></div>
+        <div class="tip" id="test-out" role="status" style="padding:0 18px 14px;white-space:pre-wrap;max-height:140px;overflow:auto"></div>
       </div>
     </div>`;
-  });
+    ['black','red'].forEach(toggleRoleSettings);
+  }).catch(()=>flash('无法读取模型设置，请重试。'));
 }
-function closeSettings() { $('#modal-host').innerHTML = ''; }
+function closeSettings() { settingsTest?.close(); settingsTest=null; $('#modal-host').innerHTML = ''; }
 async function saveSettings() {
-  const cfg = { cloud: { base_url: $('#c-url').value.trim(), api_key: $('#c-key').value.trim(),
-    model: $('#c-model').value.trim(), max_tokens: Number($('#c-tok').value||2500) },
-    ollama: { url: $('#o-url').value.trim(), model: $('#o-model').value.trim() } };
-  const j = await api('/api/config', cfg);
-  closeSettings(); flash(j.ok ? '设置已保存' : '保存失败');
+  const cfg = {cloud:{base_url:$('#c-url').value.trim(),api_key:$('#c-key').value.trim(),model:$('#c-model').value.trim(),max_tokens:Number($('#c-tok').value||2500)},
+    ollama:{url:$('#o-url').value.trim(),model:$('#o-model').value.trim()},arena_models:{}};
+  for(const role of ['black','red']) {
+    const inherit=$('#'+role+'-inherit').checked;
+    cfg.arena_models[role]=inherit?{inherit_main:true}:{inherit_main:false,base_url:$('#'+role+'-url').value.trim(),
+      api_key:$('#'+role+'-key').value.trim(),model:$('#'+role+'-model').value.trim(),max_tokens:Number($('#'+role+'-tok').value),clear_api_key:$('#'+role+'-clear').checked};
+  }
+  try {
+    const j=await api('/api/config',cfg);
+    if(!j.ok){$('#test-out').textContent=j.msg||'保存失败';return;}
+    closeSettings();flash('设置已保存');openSettings();
+  } catch { const out=$('#test-out');if(out)out.textContent='保存失败，请检查服务连接。'; }
 }
-function testLLM() {
-  const out = $('#test-out'); out.textContent = '连接中…';
-  const es = sse('/api/llm-test', ev => {
-    if (ev.type === 'token') out.textContent += ev.text;
-    if (ev.type === 'error') out.textContent += '\n⚠ ' + ev.text;
-  }, () => { out.textContent += out.textContent.trim() ? '\n✓ 连接正常' : ''; });
+function testLLM(role='main') {
+  settingsTest?.close();
+  const out=$('#test-out');out.textContent=({main:'主模型',black:'黑方',red:'红方'}[role])+'：正在测试已保存配置…';
+  settingsTest=sse('/api/llm-test?role='+role,ev=>{
+    if(ev.type==='token')out.textContent+=ev.text;
+    if(ev.type==='error')out.textContent+='\n'+ev.text;
+  },ev=>{out.textContent+=ev.ok===true?'\n✓ 连接正常':'\n连接未通过，请检查配置。';settingsTest=null;});
 }
 // ---------- 发现：解释 / 帮我操作 ----------
 function explainFinding(fid, btn) {

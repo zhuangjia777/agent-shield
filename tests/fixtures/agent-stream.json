@@ -1,0 +1,993 @@
+[
+  {
+    "seq": 1,
+    "type": "start",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "mode": "llm_agents",
+    "total_events": 4,
+    "models": {
+      "black": {
+        "model": "synthetic-model",
+        "config_source": "main"
+      },
+      "red": {
+        "model": "synthetic-model",
+        "config_source": "main"
+      }
+    }
+  },
+  {
+    "seq": 2,
+    "type": "agent_state",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "side": "black",
+    "round": 1,
+    "state": "deciding",
+    "model": "synthetic-model"
+  },
+  {
+    "seq": 3,
+    "type": "event",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "phase": "agents",
+    "event": {
+      "id": "A1",
+      "tick": 1,
+      "side": "black",
+      "action": "observe",
+      "result": "observed",
+      "detail": "Synthetic browser fixture",
+      "evidence": {
+        "tool": "observe",
+        "arguments": {
+          "reason": "Synthetic browser fixture"
+        },
+        "output": {
+          "topology": [
+            {
+              "id": "black",
+              "name": "黑方 · 同网访客",
+              "address": "192.0.2.66"
+            },
+            {
+              "id": "ap",
+              "name": "咖啡店热点",
+              "address": "192.0.2.1"
+            },
+            {
+              "id": "client",
+              "name": "普通用户笔记本",
+              "address": "192.0.2.20"
+            },
+            {
+              "id": "share",
+              "name": "演示共享设备",
+              "address": "192.0.2.30"
+            },
+            {
+              "id": "service",
+              "name": "正常业务站点",
+              "address": "service.example"
+            }
+          ],
+          "own_attempts": []
+        },
+        "model": "synthetic-model",
+        "round": 1
+      },
+      "synthetic": true,
+      "model_selected": true
+    }
+  },
+  {
+    "seq": 4,
+    "type": "agent_state",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "side": "red",
+    "round": 1,
+    "state": "deciding",
+    "model": "synthetic-model"
+  },
+  {
+    "seq": 5,
+    "type": "event",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "phase": "agents",
+    "event": {
+      "id": "A2",
+      "tick": 2,
+      "side": "red",
+      "action": "inspect_alerts",
+      "result": "observed",
+      "detail": "Synthetic browser fixture",
+      "evidence": {
+        "tool": "inspect_alerts",
+        "arguments": {
+          "reason": "Synthetic browser fixture"
+        },
+        "output": {
+          "controls": {
+            "client_isolation": false,
+            "share_auth": true,
+            "arp_guard": false,
+            "https_only": true,
+            "vpn": false,
+            "verify_portal": false,
+            "detection": true
+          },
+          "alerts": []
+        },
+        "model": "synthetic-model",
+        "round": 1
+      },
+      "synthetic": true,
+      "model_selected": true
+    }
+  },
+  {
+    "seq": 6,
+    "type": "agent_state",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "side": "black",
+    "round": 2,
+    "state": "deciding",
+    "model": "synthetic-model"
+  },
+  {
+    "seq": 7,
+    "type": "event",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "phase": "agents",
+    "event": {
+      "id": "A3",
+      "tick": 3,
+      "side": "black",
+      "action": "attempt_goal",
+      "result": "success",
+      "detail": "Synthetic browser fixture",
+      "evidence": {
+        "tool": "attempt_goal",
+        "arguments": {
+          "reason": "Synthetic browser fixture",
+          "goal": "portal_phish"
+        },
+        "output": {
+          "id": "portal_phish",
+          "name": "伪造认证页诱导",
+          "goal": "取得用户主动提交的演示账号",
+          "success": true,
+          "detected": true,
+          "evidence_id": "E09",
+          "blocked_by": [],
+          "recommended_controls": [
+            "verify_portal"
+          ],
+          "status": "success"
+        },
+        "model": "synthetic-model",
+        "round": 2
+      },
+      "synthetic": true,
+      "model_selected": true
+    }
+  },
+  {
+    "seq": 8,
+    "type": "agent_state",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "side": "red",
+    "round": 2,
+    "state": "deciding",
+    "model": "synthetic-model"
+  },
+  {
+    "seq": 9,
+    "type": "event",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "phase": "agents",
+    "event": {
+      "id": "A4",
+      "tick": 4,
+      "side": "red",
+      "action": "set_control",
+      "result": "applied",
+      "detail": "Synthetic browser fixture",
+      "evidence": {
+        "tool": "set_control",
+        "arguments": {
+          "reason": "Synthetic browser fixture",
+          "control": "verify_portal"
+        },
+        "output": {
+          "control": "verify_portal",
+          "enabled": true,
+          "changed": true
+        },
+        "model": "synthetic-model",
+        "round": 2
+      },
+      "synthetic": true,
+      "model_selected": true
+    }
+  },
+  {
+    "seq": 10,
+    "type": "complete",
+    "scenario": "public_wifi",
+    "run_id": "44a3293b6a9a4d9f",
+    "result": {
+      "ok": true,
+      "run_id": "44a3293b6a9a4d9f",
+      "scenario": "public_wifi",
+      "scenario_name": "公共 Wi-Fi 同网攻防",
+      "mode": "llm_agents",
+      "environment": "synthetic_rules_world",
+      "network_packets_sent": 0,
+      "model_api_calls": 4,
+      "models": {
+        "black": {
+          "model": "synthetic-model",
+          "config_source": "main"
+        },
+        "red": {
+          "model": "synthetic-model",
+          "config_source": "main"
+        }
+      },
+      "assumptions": [
+        "这是规则推演，所有 IP、事件、文件与账号均为合成数据；不发送网络探测或攻击报文。",
+        "黑方已接入同一热点，未控制网关、终端或证书颁发机构；共享服务与访客处于同一二层域。",
+        "HTTP 窃听和 DNS 重定向都以伪造网关绑定成功为前提；不表示同 Wi-Fi 就能读取 HTTPS。",
+        "伪造认证页通过用户可见的诱导链接呈现，域名为独立假站点；不要求局域网直连，模拟用户是否提交。",
+        "全隧道 VPN 与网关校验均假定正确部署；未模拟无线破解、真实漏洞利用、恶意热点或管理员被攻陷。"
+      ],
+      "before": {
+        "controls": {
+          "client_isolation": false,
+          "share_auth": true,
+          "arp_guard": false,
+          "https_only": true,
+          "vpn": false,
+          "verify_portal": false,
+          "detection": true
+        },
+        "outcomes": [
+          {
+            "id": "share_read",
+            "name": "未授权共享访问",
+            "goal": "读取演示共享文件",
+            "success": false,
+            "detected": true,
+            "evidence_id": "E03",
+            "blocked_by": [
+              "share_auth"
+            ],
+            "recommended_controls": [
+              "client_isolation",
+              "share_auth"
+            ]
+          },
+          {
+            "id": "http_intercept",
+            "name": "明文流量泄露",
+            "goal": "取得演示 HTTP 会话标记",
+            "success": false,
+            "detected": true,
+            "evidence_id": "E05",
+            "blocked_by": [
+              "https_only"
+            ],
+            "recommended_controls": [
+              "client_isolation",
+              "arp_guard",
+              "https_only",
+              "vpn"
+            ]
+          },
+          {
+            "id": "dns_redirect",
+            "name": "DNS 重定向",
+            "goal": "业务请求到达伪造站点",
+            "success": false,
+            "detected": true,
+            "evidence_id": "E07",
+            "blocked_by": [
+              "https_only"
+            ],
+            "recommended_controls": [
+              "client_isolation",
+              "arp_guard",
+              "https_only",
+              "vpn"
+            ]
+          },
+          {
+            "id": "portal_phish",
+            "name": "伪造认证页诱导",
+            "goal": "取得用户主动提交的演示账号",
+            "success": true,
+            "detected": true,
+            "evidence_id": "E09",
+            "blocked_by": [],
+            "recommended_controls": [
+              "verify_portal"
+            ]
+          }
+        ],
+        "events": [
+          {
+            "id": "E01",
+            "tick": 1,
+            "side": "black",
+            "action": "观察同网设备",
+            "result": "reachable",
+            "detail": "可到达演示终端与共享设备。",
+            "evidence": {
+              "peer_reachable": true,
+              "source": "192.0.2.66",
+              "destination": "192.0.2.30"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E02",
+            "tick": 2,
+            "side": "black",
+            "action": "尝试改变网关绑定",
+            "result": "accepted",
+            "detail": "规则允许黑方成为模拟中间节点。",
+            "evidence": {
+              "gateway_binding_changed": true,
+              "rule": "peer_reachable AND NOT arp_guard"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E03",
+            "tick": 3,
+            "side": "black",
+            "action": "未授权共享访问",
+            "result": "blocked",
+            "detail": "读取演示共享文件：本轮未达成。",
+            "evidence": {
+              "goal": "读取演示共享文件",
+              "goal_achieved": false,
+              "active_barriers": [
+                "share_auth"
+              ],
+              "rule": "NOT ANY(client_isolation, share_auth)",
+              "anonymous_read": false,
+              "artifact": null
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E04",
+            "tick": 4,
+            "side": "red",
+            "action": "检测与核验 · 未授权共享访问",
+            "result": "alert",
+            "detail": "演示传感器记录尝试；告警不代表攻击已被阻止。",
+            "evidence": {
+              "related_event": "E03",
+              "alert": true,
+              "sensor": "synthetic service and endpoint telemetry"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E05",
+            "tick": 5,
+            "side": "black",
+            "action": "明文流量泄露",
+            "result": "blocked",
+            "detail": "取得演示 HTTP 会话标记：本轮未达成。",
+            "evidence": {
+              "goal": "取得演示 HTTP 会话标记",
+              "goal_achieved": false,
+              "active_barriers": [
+                "https_only"
+              ],
+              "rule": "NOT ANY(client_isolation, arp_guard, https_only, vpn)",
+              "on_path": true,
+              "plaintext_observed": false,
+              "artifact": null
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E06",
+            "tick": 6,
+            "side": "red",
+            "action": "检测与核验 · 明文流量泄露",
+            "result": "alert",
+            "detail": "演示传感器记录尝试；告警不代表攻击已被阻止。",
+            "evidence": {
+              "related_event": "E05",
+              "alert": true,
+              "sensor": "synthetic service and endpoint telemetry"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E07",
+            "tick": 7,
+            "side": "black",
+            "action": "DNS 重定向",
+            "result": "blocked",
+            "detail": "业务请求到达伪造站点：本轮未达成。",
+            "evidence": {
+              "goal": "业务请求到达伪造站点",
+              "goal_achieved": false,
+              "active_barriers": [
+                "https_only"
+              ],
+              "rule": "NOT ANY(client_isolation, arp_guard, https_only, vpn)",
+              "dns_answer_changed": true,
+              "request_reached_fake_service": false,
+              "certificate_checked": true
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E08",
+            "tick": 8,
+            "side": "red",
+            "action": "检测与核验 · DNS 重定向",
+            "result": "alert",
+            "detail": "演示传感器记录尝试；告警不代表攻击已被阻止。",
+            "evidence": {
+              "related_event": "E07",
+              "alert": true,
+              "sensor": "synthetic service and endpoint telemetry"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E09",
+            "tick": 9,
+            "side": "black",
+            "action": "伪造认证页诱导",
+            "result": "success",
+            "detail": "取得用户主动提交的演示账号：本轮达成。",
+            "evidence": {
+              "goal": "取得用户主动提交的演示账号",
+              "goal_achieved": true,
+              "active_barriers": [],
+              "rule": "NOT ANY(verify_portal)",
+              "lure_presented": true,
+              "site": "portal-login.example",
+              "user_submitted_demo_account": true,
+              "independent_of_local_peer_reachability": true
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E10",
+            "tick": 10,
+            "side": "red",
+            "action": "检测与核验 · 伪造认证页诱导",
+            "result": "alert",
+            "detail": "演示传感器记录尝试；告警不代表攻击已被阻止。",
+            "evidence": {
+              "related_event": "E09",
+              "alert": true,
+              "sensor": "synthetic service and endpoint telemetry"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E11",
+            "tick": 11,
+            "side": "judge",
+            "action": "访问正常 HTTPS 业务",
+            "result": "pass",
+            "detail": "策略模型保留网关出口；可信证书业务成功，无攻击告警。",
+            "evidence": {
+              "test_id": "normal_https",
+              "pass": true,
+              "attack_alert": false
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E12",
+            "tick": 12,
+            "side": "judge",
+            "action": "同网授权共享协作",
+            "result": "pass",
+            "detail": "授权用户可读取演示共享；匿名认证限制不影响其身份。",
+            "evidence": {
+              "test_id": "authorized_share",
+              "pass": true,
+              "attack_alert": false
+            },
+            "synthetic": true
+          }
+        ],
+        "business_checks": [
+          {
+            "id": "normal_https",
+            "name": "访问正常 HTTPS 业务",
+            "pass": true,
+            "evidence": "策略模型保留网关出口；可信证书业务成功，无攻击告警。"
+          },
+          {
+            "id": "authorized_share",
+            "name": "同网授权共享协作",
+            "pass": true,
+            "evidence": "授权用户可读取演示共享；匿名认证限制不影响其身份。"
+          }
+        ],
+        "metrics": {
+          "attack_goals_achieved": 1,
+          "attack_goals_total": 4,
+          "detected_attempts": 4,
+          "business_passed": 2,
+          "business_total": 2
+        }
+      },
+      "after": {
+        "controls": {
+          "client_isolation": false,
+          "share_auth": true,
+          "arp_guard": false,
+          "https_only": true,
+          "vpn": false,
+          "verify_portal": true,
+          "detection": true
+        },
+        "outcomes": [
+          {
+            "id": "share_read",
+            "name": "未授权共享访问",
+            "goal": "读取演示共享文件",
+            "success": false,
+            "detected": true,
+            "evidence_id": "E03",
+            "blocked_by": [
+              "share_auth"
+            ],
+            "recommended_controls": [
+              "client_isolation",
+              "share_auth"
+            ]
+          },
+          {
+            "id": "http_intercept",
+            "name": "明文流量泄露",
+            "goal": "取得演示 HTTP 会话标记",
+            "success": false,
+            "detected": true,
+            "evidence_id": "E05",
+            "blocked_by": [
+              "https_only"
+            ],
+            "recommended_controls": [
+              "client_isolation",
+              "arp_guard",
+              "https_only",
+              "vpn"
+            ]
+          },
+          {
+            "id": "dns_redirect",
+            "name": "DNS 重定向",
+            "goal": "业务请求到达伪造站点",
+            "success": false,
+            "detected": true,
+            "evidence_id": "E07",
+            "blocked_by": [
+              "https_only"
+            ],
+            "recommended_controls": [
+              "client_isolation",
+              "arp_guard",
+              "https_only",
+              "vpn"
+            ]
+          },
+          {
+            "id": "portal_phish",
+            "name": "伪造认证页诱导",
+            "goal": "取得用户主动提交的演示账号",
+            "success": false,
+            "detected": true,
+            "evidence_id": "E09",
+            "blocked_by": [
+              "verify_portal"
+            ],
+            "recommended_controls": [
+              "verify_portal"
+            ]
+          }
+        ],
+        "events": [
+          {
+            "id": "E01",
+            "tick": 1,
+            "side": "black",
+            "action": "观察同网设备",
+            "result": "reachable",
+            "detail": "可到达演示终端与共享设备。",
+            "evidence": {
+              "peer_reachable": true,
+              "source": "192.0.2.66",
+              "destination": "192.0.2.30"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E02",
+            "tick": 2,
+            "side": "black",
+            "action": "尝试改变网关绑定",
+            "result": "accepted",
+            "detail": "规则允许黑方成为模拟中间节点。",
+            "evidence": {
+              "gateway_binding_changed": true,
+              "rule": "peer_reachable AND NOT arp_guard"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E03",
+            "tick": 3,
+            "side": "black",
+            "action": "未授权共享访问",
+            "result": "blocked",
+            "detail": "读取演示共享文件：本轮未达成。",
+            "evidence": {
+              "goal": "读取演示共享文件",
+              "goal_achieved": false,
+              "active_barriers": [
+                "share_auth"
+              ],
+              "rule": "NOT ANY(client_isolation, share_auth)",
+              "anonymous_read": false,
+              "artifact": null
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E04",
+            "tick": 4,
+            "side": "red",
+            "action": "检测与核验 · 未授权共享访问",
+            "result": "alert",
+            "detail": "演示传感器记录尝试；告警不代表攻击已被阻止。",
+            "evidence": {
+              "related_event": "E03",
+              "alert": true,
+              "sensor": "synthetic service and endpoint telemetry"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E05",
+            "tick": 5,
+            "side": "black",
+            "action": "明文流量泄露",
+            "result": "blocked",
+            "detail": "取得演示 HTTP 会话标记：本轮未达成。",
+            "evidence": {
+              "goal": "取得演示 HTTP 会话标记",
+              "goal_achieved": false,
+              "active_barriers": [
+                "https_only"
+              ],
+              "rule": "NOT ANY(client_isolation, arp_guard, https_only, vpn)",
+              "on_path": true,
+              "plaintext_observed": false,
+              "artifact": null
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E06",
+            "tick": 6,
+            "side": "red",
+            "action": "检测与核验 · 明文流量泄露",
+            "result": "alert",
+            "detail": "演示传感器记录尝试；告警不代表攻击已被阻止。",
+            "evidence": {
+              "related_event": "E05",
+              "alert": true,
+              "sensor": "synthetic service and endpoint telemetry"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E07",
+            "tick": 7,
+            "side": "black",
+            "action": "DNS 重定向",
+            "result": "blocked",
+            "detail": "业务请求到达伪造站点：本轮未达成。",
+            "evidence": {
+              "goal": "业务请求到达伪造站点",
+              "goal_achieved": false,
+              "active_barriers": [
+                "https_only"
+              ],
+              "rule": "NOT ANY(client_isolation, arp_guard, https_only, vpn)",
+              "dns_answer_changed": true,
+              "request_reached_fake_service": false,
+              "certificate_checked": true
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E08",
+            "tick": 8,
+            "side": "red",
+            "action": "检测与核验 · DNS 重定向",
+            "result": "alert",
+            "detail": "演示传感器记录尝试；告警不代表攻击已被阻止。",
+            "evidence": {
+              "related_event": "E07",
+              "alert": true,
+              "sensor": "synthetic service and endpoint telemetry"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E09",
+            "tick": 9,
+            "side": "black",
+            "action": "伪造认证页诱导",
+            "result": "blocked",
+            "detail": "取得用户主动提交的演示账号：本轮未达成。",
+            "evidence": {
+              "goal": "取得用户主动提交的演示账号",
+              "goal_achieved": false,
+              "active_barriers": [
+                "verify_portal"
+              ],
+              "rule": "NOT ANY(verify_portal)",
+              "lure_presented": true,
+              "site": "portal-login.example",
+              "user_submitted_demo_account": false,
+              "independent_of_local_peer_reachability": true
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E10",
+            "tick": 10,
+            "side": "red",
+            "action": "检测与核验 · 伪造认证页诱导",
+            "result": "alert",
+            "detail": "演示传感器记录尝试；告警不代表攻击已被阻止。",
+            "evidence": {
+              "related_event": "E09",
+              "alert": true,
+              "sensor": "synthetic service and endpoint telemetry"
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E11",
+            "tick": 11,
+            "side": "judge",
+            "action": "访问正常 HTTPS 业务",
+            "result": "pass",
+            "detail": "策略模型保留网关出口；可信证书业务成功，无攻击告警。",
+            "evidence": {
+              "test_id": "normal_https",
+              "pass": true,
+              "attack_alert": false
+            },
+            "synthetic": true
+          },
+          {
+            "id": "E12",
+            "tick": 12,
+            "side": "judge",
+            "action": "同网授权共享协作",
+            "result": "pass",
+            "detail": "授权用户可读取演示共享；匿名认证限制不影响其身份。",
+            "evidence": {
+              "test_id": "authorized_share",
+              "pass": true,
+              "attack_alert": false
+            },
+            "synthetic": true
+          }
+        ],
+        "business_checks": [
+          {
+            "id": "normal_https",
+            "name": "访问正常 HTTPS 业务",
+            "pass": true,
+            "evidence": "策略模型保留网关出口；可信证书业务成功，无攻击告警。"
+          },
+          {
+            "id": "authorized_share",
+            "name": "同网授权共享协作",
+            "pass": true,
+            "evidence": "授权用户可读取演示共享；匿名认证限制不影响其身份。"
+          }
+        ],
+        "metrics": {
+          "attack_goals_achieved": 0,
+          "attack_goals_total": 4,
+          "detected_attempts": 4,
+          "business_passed": 2,
+          "business_total": 2
+        }
+      },
+      "repair": [
+        {
+          "control": "verify_portal",
+          "name": "核验认证页身份",
+          "owner": "设备使用者",
+          "description": "用户拒绝在未核验域名的认证页提交账号；HTTPS 本身不证明网站可信。"
+        }
+      ],
+      "agent_events": [
+        {
+          "id": "A1",
+          "tick": 1,
+          "side": "black",
+          "action": "observe",
+          "result": "observed",
+          "detail": "Synthetic browser fixture",
+          "evidence": {
+            "tool": "observe",
+            "arguments": {
+              "reason": "Synthetic browser fixture"
+            },
+            "output": {
+              "topology": [
+                {
+                  "id": "black",
+                  "name": "黑方 · 同网访客",
+                  "address": "192.0.2.66"
+                },
+                {
+                  "id": "ap",
+                  "name": "咖啡店热点",
+                  "address": "192.0.2.1"
+                },
+                {
+                  "id": "client",
+                  "name": "普通用户笔记本",
+                  "address": "192.0.2.20"
+                },
+                {
+                  "id": "share",
+                  "name": "演示共享设备",
+                  "address": "192.0.2.30"
+                },
+                {
+                  "id": "service",
+                  "name": "正常业务站点",
+                  "address": "service.example"
+                }
+              ],
+              "own_attempts": []
+            },
+            "model": "synthetic-model",
+            "round": 1
+          },
+          "synthetic": true,
+          "model_selected": true
+        },
+        {
+          "id": "A2",
+          "tick": 2,
+          "side": "red",
+          "action": "inspect_alerts",
+          "result": "observed",
+          "detail": "Synthetic browser fixture",
+          "evidence": {
+            "tool": "inspect_alerts",
+            "arguments": {
+              "reason": "Synthetic browser fixture"
+            },
+            "output": {
+              "controls": {
+                "client_isolation": false,
+                "share_auth": true,
+                "arp_guard": false,
+                "https_only": true,
+                "vpn": false,
+                "verify_portal": false,
+                "detection": true
+              },
+              "alerts": []
+            },
+            "model": "synthetic-model",
+            "round": 1
+          },
+          "synthetic": true,
+          "model_selected": true
+        },
+        {
+          "id": "A3",
+          "tick": 3,
+          "side": "black",
+          "action": "attempt_goal",
+          "result": "success",
+          "detail": "Synthetic browser fixture",
+          "evidence": {
+            "tool": "attempt_goal",
+            "arguments": {
+              "reason": "Synthetic browser fixture",
+              "goal": "portal_phish"
+            },
+            "output": {
+              "id": "portal_phish",
+              "name": "伪造认证页诱导",
+              "goal": "取得用户主动提交的演示账号",
+              "success": true,
+              "detected": true,
+              "evidence_id": "E09",
+              "blocked_by": [],
+              "recommended_controls": [
+                "verify_portal"
+              ],
+              "status": "success"
+            },
+            "model": "synthetic-model",
+            "round": 2
+          },
+          "synthetic": true,
+          "model_selected": true
+        },
+        {
+          "id": "A4",
+          "tick": 4,
+          "side": "red",
+          "action": "set_control",
+          "result": "applied",
+          "detail": "Synthetic browser fixture",
+          "evidence": {
+            "tool": "set_control",
+            "arguments": {
+              "reason": "Synthetic browser fixture",
+              "control": "verify_portal"
+            },
+            "output": {
+              "control": "verify_portal",
+              "enabled": true,
+              "changed": true
+            },
+            "model": "synthetic-model",
+            "round": 2
+          },
+          "synthetic": true,
+          "model_selected": true
+        }
+      ],
+      "attempts": [
+        {
+          "id": "portal_phish",
+          "name": "伪造认证页诱导",
+          "goal": "取得用户主动提交的演示账号",
+          "success": true,
+          "detected": true,
+          "evidence_id": "E09",
+          "blocked_by": [],
+          "recommended_controls": [
+            "verify_portal"
+          ],
+          "status": "success"
+        }
+      ],
+      "elapsed_s": 0.0,
+      "stop_reason": "turn_budget",
+      "limitations": "模型真实选择工具；工具仅操作虚拟环境。前后指标是规则裁判对全部预设目标的检查，不是智能体尝试成功率，也不是实网攻击。"
+    }
+  }
+]

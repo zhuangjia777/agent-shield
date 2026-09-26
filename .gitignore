@@ -18,3 +18,5 @@ logs/
 reports/
 .vendor/
 .venv-skillspector/
+.venv-integrations/
+.venv-evaluator/

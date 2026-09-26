@@ -1,0 +1,40 @@
+{
+  "score": 92,
+  "findings": [
+    {
+      "id": "SK-001",
+      "rule_id": "SK-NET-EXFIL",
+      "title": "外传线索",
+      "source": "skill",
+      "evidence": {
+        "file": "scripts/check.py",
+        "line": 7
+      },
+      "evidence_type": "static_observation"
+    }
+  ],
+  "external_assessments": [
+    {
+      "engine": "NVIDIA SkillSpector",
+      "status": "partial",
+      "risk_assessment": {
+        "score": 80,
+        "severity": "HIGH"
+      },
+      "metadata": {
+        "llm_calls_attempted": 3,
+        "llm_calls_succeeded": 0
+      },
+      "provenance": {
+        "signature_status": "unsigned",
+        "input_manifest": {
+          "input_hash": "synthetic-fixture-only"
+        },
+        "revision": "synthetic-fixture-only"
+      },
+      "analysis_completeness": {
+        "status": "partial"
+      }
+    }
+  ]
+}

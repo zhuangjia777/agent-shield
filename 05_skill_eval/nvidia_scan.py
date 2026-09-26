@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "02_scan"))
 sys.path.insert(0, str(ROOT / "03_ai"))
 from bundle_manifest import manifest
+from signature_verify import verify_snapshot
 from cmd_scan import run_skill_eval
 from findings import aggregate_score
 import report
@@ -83,6 +84,7 @@ def run_scan(skill_dir, use_llm=False, outdir=None, timeout=240):
             shutil.copyfile(source / entry["path"], dest, follow_symlinks=False)
         if manifest(snapshot)["input_hash"] != original["input_hash"]:
             raise ValueError("扫描输入在建立快照时发生变化。")
+        signature = verify_snapshot(snapshot)
         local = run_skill_eval(str(snapshot))
         raw_path = outdir.resolve() / "skillspector.json"
         io_path = outdir.resolve() / "io-policy.json"
@@ -118,7 +120,7 @@ def run_scan(skill_dir, use_llm=False, outdir=None, timeout=240):
                                                 if use_llm else None,
                       "network_policy": "model_endpoint_only" if use_llm else "deny_python_network",
                       "io_events": json.loads(io_path.read_text()),
-                      "signature_status": "not_verified", "transitive": False}
+                      "signature_status": signature["status"], "signature": signature, "transitive": False}
         raw = json.loads(raw_bytes)
         if raw.get("metadata", {}).get("skillspector_version") != lock["version"]:
             raise RuntimeError("官方运行版本与安装锁定版本不符。")

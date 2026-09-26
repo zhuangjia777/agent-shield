@@ -5,8 +5,8 @@ let catalogs, catalog, result, generation = 0, reviewing = false, lastReview = n
 let controller = null, running = false, packets = [], shown = 0, total = 0;
 let counters, currentPhase = 'before';
 const names = {black:'黑方 · 黑客', red:'红方 · 白帽', judge:'规则裁判'};
-const stages = {before:'初始对攻', repair:'红方加固', after:'同场景复测', complete:'结果复盘'};
-const verdicts = {success:'目标达成', blocked:'已阻断', skipped:'前置未满足', alert:'已检测', unobserved:'未监测', reachable:'可达', accepted:'生效', pass:'通过', regression:'业务受影响'};
+const stages = {agents:'智能体对攻',before:'初始对攻', repair:'红方加固', after:'同场景复测', complete:'结果复盘'};
+const verdicts = {applied:'已应用',observed:'已观察',finished:'本方结束',success:'目标达成', blocked:'已阻断', skipped:'前置未满足', alert:'已检测', unobserved:'未监测', reachable:'可达', accepted:'生效', pass:'通过', regression:'业务受影响'};
 const status = text => { $('#status').textContent = text; };
 async function post(url, body) {
   const response = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
@@ -17,10 +17,10 @@ async function post(url, body) {
 function controls() { return Object.fromEntries(Object.keys(catalog.controls).map(k => [k, $('#c-'+k).checked])); }
 function setRunning(value) {
   running = value; document.body.classList.toggle('running', value);
-  $('#run').disabled = value || !catalog; $('#scenario').disabled = value || !catalog; $('#stop').classList.toggle('hidden', !value);
+  $('#run').disabled = value || !catalog; $('#scenario').disabled = value || !catalog; $('#arena-mode').disabled=value; $('#stop').classList.toggle('hidden', !value);
   document.querySelectorAll('#controls input,[data-preset]').forEach(b => b.disabled = value || !catalog);
   document.querySelectorAll('[data-phase]').forEach(b => b.disabled = value || !packets.length);
-  $('#review').disabled = value || !result || reviewing; $('#export').disabled = value || !result;
+  $('#review').disabled = value || !result || reviewing || result.mode==='llm_agents'; $('#export').disabled = value || !result;
 }
 function emptyFeeds() { $('#black-feed').innerHTML = ''; $('#red-feed').innerHTML = ''; }
 function reset() {
@@ -55,10 +55,24 @@ function append(side, html) {
 }
 function setStage(phase) {
   currentPhase = phase;
-  const index = Object.keys(stages).indexOf(phase);
+  const index = ['before','repair','after','complete'].indexOf(phase);
   document.querySelectorAll('[data-stage]').forEach((s,i) => {s.classList.toggle('active', i === index);s.classList.toggle('done', i < index);});
   $('#black-state').textContent = phase === 'repair' ? '等待复测' : stages[phase];
   $('#red-state').textContent = stages[phase];
+}
+function toolSummary(e) {
+  const o=e.evidence.output||{};
+  if(e.action==='observe')return '观察到 '+(o.topology||[]).length+' 个虚拟节点；本方已有 '+(o.own_attempts||[]).length+' 次尝试。';
+  if(e.action==='inspect_alerts')return '当前有 '+(o.alerts||[]).length+' 条告警，'+Object.values(o.controls||{}).filter(Boolean).length+' 项防护已开启。';
+  if(e.action==='set_control')return (catalog.controls[o.control]?.name||o.control)+'：'+(o.changed?'已开启':'原本已开启')+'。';
+  if(e.action==='check_business')return '业务检查 '+(o.checks||[]).filter(c=>c.pass).length+' / '+(o.checks||[]).length+' 通过。'+(o.checks||[]).filter(c=>!c.pass).map(c=>c.name+'受影响').join('；');
+  if(e.action==='attempt_goal')return (catalog.attack_goals.find(g=>g.id===o.id)?.name||o.id)+'：'+(verdicts[o.status]||o.status)+(o.blocked_by?.length?'，防护措施：'+o.blocked_by.map(k=>catalog.controls[k]?.name||k).join('、'):'')+'。';
+  return '本方已结束本轮行动。';
+}
+function syncMode() {
+  const labels=$('#arena-mode').value==='agents'?['01 观察环境','02 自主决策','03 调用工具','04 裁判复测']:['01 初始对攻','02 红方加固','03 同场景复测','04 结果复盘'];
+  document.querySelectorAll('[data-stage]').forEach((e,i)=>e.textContent=labels[i]);
+  document.querySelectorAll('[data-phase]').forEach(e=>e.hidden=$('#arena-mode').value==='agents'&&e.dataset.phase!=='all');
 }
 function showPacket(packet) {
   if (packet.type === 'phase') {
@@ -68,16 +82,30 @@ function showPacket(packet) {
     append('red', `<article class="event"><div class="event-meta"><span>虚拟策略变更</span><span class="verdict">已应用</span></div><b>${escapeHTML(r.name)}</b><p>${escapeHTML(r.description)}</p><div class="correlation">实施角色：${escapeHTML(r.owner)}</div><pre class="expert-only">${escapeHTML(JSON.stringify(r,null,2))}</pre></article>`);
   } else if (packet.type === 'event') {
     const e = packet.event;
-    append(e.side, `<article class="event ${escapeHTML(e.side)}"><div class="event-meta"><span>${escapeHTML(stages[packet.phase])} / ${escapeHTML(e.id)} / 步 ${e.tick}</span><span class="verdict ${escapeHTML(e.result)}">${escapeHTML(verdicts[e.result] || e.result)}</span></div><b>${e.side === 'judge' ? '业务裁判 · ' : ''}${escapeHTML(e.action)}</b><p>${escapeHTML(e.detail)}</p>${e.evidence.related_event ? `<div class="correlation">↳ 对应黑方 ${escapeHTML(stages[packet.phase])} / ${escapeHTML(e.evidence.related_event)}</div>` : ''}<pre class="expert-only">${escapeHTML(JSON.stringify(e.evidence,null,2))}</pre></article>`);
+    append(e.side, `<article class="event ${escapeHTML(e.side)}"><div class="event-meta"><span>${escapeHTML(stages[packet.phase])} / ${escapeHTML(e.id)} / 步 ${e.tick}</span><span class="verdict ${escapeHTML(e.result)}">${escapeHTML(verdicts[e.result] || e.result)}</span></div><b>${e.side === 'judge' ? '业务裁判 · ' : ''}${escapeHTML(({observe:'观察环境',attempt_goal:'尝试目标',inspect_alerts:'核对告警',set_control:'应用防护',check_business:'检查业务',finish:'结束行动'})[e.action]||e.action)}</b><p>${escapeHTML(e.detail)}</p>${e.model_selected?`<div class="correlation">模型 ${escapeHTML(e.evidence.model)} · 第 ${e.evidence.round} 轮 · ${escapeHTML(toolSummary(e))}</div>`:''}${e.evidence.related_event ? `<div class="correlation">↳ 对应黑方 ${escapeHTML(stages[packet.phase])} / ${escapeHTML(e.evidence.related_event)}</div>` : ''}<pre class="expert-only">${escapeHTML(JSON.stringify(e.evidence,null,2))}</pre></article>`);
   }
 }
 function receive(packet) {
-  if (packet.type === 'start') { total = packet.total_events; $('#run-label').textContent = 'RUN / '+packet.run_id; return; }
+  if(packet.type==='error')throw new Error(packet.msg||'智能体执行未完成');
+  if(packet.type==='agent_state'){
+    document.querySelectorAll('[data-stage]').forEach((e,i)=>e.classList.toggle('active',i===1));
+    $('#'+packet.side+'-state').textContent='第 '+packet.round+' 轮 · 决策中';
+    status(names[packet.side]+' · '+packet.model+' 正在选择工具…');return;
+  }
+
+  if (packet.type === 'start') { total = packet.total_events; $('#run-label').textContent = 'RUN / '+packet.run_id; if(packet.mode==='llm_agents'){setStage('agents');status('红黑智能体已连接，等待首个决策…');} return; }
   if (packet.type === 'complete') {
     result = packet.result; setStage('complete');
     $('#progress-text').textContent = '已完成 · '+shown+' 条事件';
     $('#progress-fill').style.width = '100%'; $('#evidence').textContent = JSON.stringify(result,null,2);
     $('#repair-count').textContent = result.repair.length+' 项';
+    $('#before-count').textContent=result.before.metrics.attack_goals_achieved+' / '+catalog.attack_goals_total;
+    $('#after-count').textContent=result.after.metrics.attack_goals_achieved+' / '+catalog.attack_goals_total;
+    $('#business-count').textContent=result.after.metrics.business_passed+' / '+catalog.business_total;
+    if(result.mode==='llm_agents'){
+      status('智能体本轮结束 · '+result.model_api_calls+' 次模型决策 · '+(result.stop_reason==='turn_budget'?'达到轮次上限':'双方结束')+' · 可导出工具记录');return;
+    }
+
     status('演练完成 · 可比较前后结果、复盘或导出证据'); return;
   }
   packets.push(packet); showPacket(packet);
@@ -89,7 +117,8 @@ function receive(packet) {
     if (packet.type === 'repair') $('#repair-count').textContent = (++counters.repair)+' 项';
     if (packet.type === 'event') {
       const e = packet.event;
-      if (Object.hasOwn(e.evidence, 'goal_achieved')) {
+      if(packet.phase==='agents')document.querySelectorAll('[data-stage]').forEach((e,i)=>e.classList.toggle('active',i===2));
+      if (packet.phase!=='agents' && Object.hasOwn(e.evidence, 'goal_achieved')) {
         const c = counters[packet.phase]; c.checked++; c.achieved += Number(e.evidence.goal_achieved);
         $('#'+packet.phase+'-count').textContent = c.achieved+' / '+catalog.attack_goals_total;
       }
@@ -107,7 +136,7 @@ $('#run').onclick = async () => {
   $('.toolbar').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   controller = new AbortController(); status('正在连接演练事件流…');
   try {
-    const response = await fetch('/api/arena/stream', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:selectedScenario,controls:input}),signal:controller.signal});
+    const response = await fetch($('#arena-mode').value==='agents'?'/api/arena/agents':'/api/arena/stream', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:selectedScenario,controls:input}),signal:controller.signal});
     if (!response.ok) {const e = await response.json(); throw new Error(e.msg || '事件流不可用');}
     if (!response.body) throw new Error('当前浏览器不支持流式响应');
     const reader = response.body.getReader(), decoder = new TextDecoder(); let buffer = '', sequence = 0;
@@ -130,7 +159,7 @@ $('#run').onclick = async () => {
 $('#stop').onclick = () => {
   generation++; if (controller) controller.abort(); controller=null; result=null; setRunning(false);
   $('#black-state').textContent='已停止'; $('#red-state').textContent='已停止';
-  $('#progress-text').textContent='已停止 · '+shown+' 条事件'; status('展示已停止；保留已收到的事件，本轮未完成。');
+  $('#progress-text').textContent='已停止 · '+shown+' 条事件'; status('已停止接收新动作；正在进行的模型请求返回或超时后结束。保留已收到记录，本轮未完成。');
   $('#evidence').textContent=JSON.stringify({status:'cancelled',events:packets},null,2);
 };
 $('#depth').onchange = () => document.body.classList.toggle('expert', $('#depth').value === 'expert');
@@ -150,9 +179,9 @@ $('#review').onclick = async () => {
   try {
     const review=await post('/api/arena/review', {scenario:result.scenario,controls:result.before.controls});
     if (current !== generation) return; lastReview=review;
-    $('#reviews').innerHTML='<p class="tip">模型解读 · 仅供参考，裁判结果不变</p><div class="review-grid">'+review.reviews.map(r=>`<section><h3>${escapeHTML(names[r.role])}</h3><span class="tip">${escapeHTML(r.model)}</span><p class="review">${escapeHTML(r.text)}</p></section>`).join('')+'</div>';
+    $('#reviews').innerHTML='<p class="tip">模型解读 · 仅供参考，裁判结果不变</p><div class="review-grid">'+review.reviews.map(r=>`<section><h3>${escapeHTML(names[r.role])}</h3><span class="tip">${escapeHTML(r.model)} · ${r.config_source==='independent'?'独立配置':'沿用主模型'}</span><p class="review">${escapeHTML(r.text)}</p></section>`).join('')+'</div>';
   } catch(e) { if (current === generation) $('#reviews').textContent=e.message; }
-  finally { reviewing=false; $('#review').disabled=running || !result; }
+  finally { reviewing=false; $('#review').disabled=running || !result || result.mode==='llm_agents'; }
 };
 $('#export').onclick = () => {
   if (!result || running) return;
@@ -177,6 +206,8 @@ function selectScenario(key) {
   preset('everyday'); setRunning(false);
   document.dispatchEvent(new Event('agentshield:scenario-ready'));
 }
+$('#arena-mode').onchange=()=>{syncMode();invalidate();};
+syncMode();
 $('#scenario').onchange=()=>selectScenario($('#scenario').value);
 $('#controls').addEventListener('change',invalidate);
 fetch('/api/arena/scenarios').then(r=>{if(!r.ok)throw new Error('场景不可用');return r.json();}).then(data=>{

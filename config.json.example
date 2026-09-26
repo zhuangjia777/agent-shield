@@ -8,5 +8,13 @@
   "ollama": {
     "url": "http://127.0.0.1:11434",
     "model": "qwen2.5:3b"
+  },
+  "arena_models": {
+    "black": {
+      "inherit_main": true
+    },
+    "red": {
+      "inherit_main": true
+    }
   }
 }

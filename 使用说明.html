@@ -46,6 +46,9 @@
 }
 
 * { box-sizing: border-box; }
+/* Hide only the outer page scrollbar; nested panels keep native scrolling UI. */
+html, body { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
 html { background: var(--bg); }
 
 /* ---- L0 全息幕布：静态立体方柱背景 ---- */
@@ -236,13 +239,10 @@ html[data-holo="off"] .scorehead.holo-frame{background:none}
 html[data-holo="on"] :is(.card,.metric,.config,.details-card,.topology,.lane,.guide-main,.scorehead,.answer,.agentinput,.event){
  box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1))}
 html[data-holo="on"] :is(.report-card,.lane){--holo-base-shadow:var(--sh-2)}
-html[data-holo="on"] .holo-surface{transition:transform .16s ease-out,box-shadow .16s ease-out,border-color .12s}
+html[data-holo="on"] .holo-surface{transition:box-shadow .16s ease-out}
 html[data-holo="on"][data-holo-motion="on"] .holo-active:not(:disabled):not([aria-disabled="true"]){
- border-color:var(--field-line);
- transition:transform .10s ease-out,box-shadow .10s ease-out,border-color .10s}
-html[data-holo="on"][data-holo-motion="on"] .holo-active[data-holo-tilt="true"]{
- transform:perspective(1000px) translateY(-1px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg))}
-html[data-holo="on"][data-holo-motion="on"] :is(.btn,.agent-launcher).holo-active:not(:disabled):not([aria-disabled="true"]){transform:translateY(-.5px)}
+ box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1)),0 4px 12px rgba(0,0,0,var(--holo-shadow));
+ transition:box-shadow .10s ease-out}
 html[data-holo="on"] :is(.btn,.agent-launcher):not(:disabled):not([aria-disabled="true"]):active{
  transform:translateY(1px);box-shadow:var(--bevel),0 1px 2px rgba(0,0,0,.2);transition:transform .05s}
 html[data-holo="on"][data-holo-motion="on"] :is(.btn,.agent-launcher).holo-active:active{transform:translateY(1px)}
@@ -252,6 +252,8 @@ html[data-holo="off"] .holo-fx{display:none}
 @media print{.holo-fx{display:none!important}html[data-holo] .holo-surface{transform:none!important;background-image:none!important}}
 
 
+.role-settings{margin:16px 0;padding:14px;border:1px solid var(--line)}
+.role-settings legend{font-weight:700}.modal .role-inherit{display:flex;gap:8px;align-items:center}.modal .role-inherit input{width:auto}.role-settings>.btn{margin-top:12px}
 /* Shared navigation remains still, including in HOLO mode. */
 html{scroll-padding-top:calc(var(--nav-height,140px) + 16px)}
 .site-header{position:sticky;top:0;z-index:48;background:var(--bg);padding:12px 0 0;margin-bottom:18px;border-bottom:1px solid var(--fg);box-shadow:0 3px 0 var(--line)}
@@ -259,7 +261,7 @@ html{scroll-padding-top:calc(var(--nav-height,140px) + 16px)}
 .nav-history,.nav-utility{display:flex;gap:10px;align-items:center}
 .site-header .brand{font-size:17px;margin-right:auto;white-space:nowrap}
 .site-header .display-controls{margin-left:0;gap:10px}
-.site-navigation{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 8px}
+.site-navigation{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;padding:0 0 8px}
 .nav-link{padding:8px 14px;border:0;border-bottom:2px solid transparent;font-size:13px;color:var(--muted)}
 .nav-link:hover{color:var(--fg);background:var(--accent-soft)}
 .nav-link[aria-current]{font-weight:700;color:var(--fg);border-bottom-color:var(--fg)}
@@ -269,8 +271,8 @@ html[data-holo] .btn.nav-control:active,html[data-holo] .site-header .btn:active
 .report-actions{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}
 body.guide-page aside{top:calc(var(--nav-height,140px) + 16px)}
 @media(max-width:640px){
- .site-header .topbar{gap:8px;justify-content:flex-start}.site-header .brand{font-size:15px;margin-right:0;flex:1;text-align:right}
- .nav-history{gap:8px}.nav-utility{order:2;margin-right:auto;gap:8px}.site-header .display-controls{order:3;gap:8px}.site-header .nav-toggle{display:inline-flex;order:4;width:100%;margin-top:2px}
+ .site-header .topbar{gap:8px;justify-content:flex-start}.site-header .brand{font-size:15px;margin-right:0;flex:1;text-align:left}
+ .nav-history{gap:8px}.nav-utility{order:2;margin-left:auto;gap:8px}.site-header .display-controls{order:3;gap:8px}.site-header .nav-toggle{display:inline-flex;order:4;width:100%;margin-top:2px}
  .site-header .btn{padding:6px 10px;min-height:44px;font-size:12px}.site-navigation{display:none}
  .site-header[data-nav-open="true"] .site-navigation{display:grid;grid-template-columns:1fr 1fr;gap:4px}.nav-link{min-height:44px;padding:10px}
  body.guide-page aside{position:static}
@@ -372,7 +374,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
     const brand = link('AgentShield', '/', 'brand');
     const utility = document.createElement('div'); utility.className = 'nav-utility';
     utility.append(link('设置', '/?settings=1'), link('使用说明', '/help'));
-    top.append(actions, brand, utility);
+    top.append(brand, actions, utility);
     const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'btn outline small nav-control nav-toggle';
     toggle.textContent = '导航'; toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-controls', 'site-navigation');
     const nav = document.createElement('nav'); nav.id = 'site-navigation'; nav.className = 'site-navigation'; nav.setAttribute('aria-label', '主导航');
@@ -398,7 +400,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
     new ResizeObserver(measure).observe(header); measure();
     if (offline) return;
 
-    const allowed = '#scan-system,#scan-network,#autoscroll,#depth,#controls input[type="checkbox"],#sample,#use-model';
+    const allowed = '#scan-system,#scan-network,#autoscroll,#depth,#arena-mode,#controls input[type="checkbox"],#sample,#use-model';
     const remember = () => {
       const fields = {};
       for (const e of document.querySelectorAll(allowed)) if (e.id) fields[e.id] = e.type === 'checkbox' ? e.checked : e.value;
@@ -455,7 +457,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
     themeButton.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
     holoButton.textContent = holo ? 'HOLO ON' : 'HOLO OFF';
     holoButton.setAttribute('aria-pressed', String(holo));
-    holoButton.title = holo ? '关闭立体悬浮、方柱背景与背景波纹' : '开启立体悬浮、方柱背景与背景波纹';
+    holoButton.title = holo ? '关闭悬停阴影、方柱背景与背景波纹' : '开启悬停阴影、方柱背景与背景波纹';
   }
   system.addEventListener('change', e => {
     if (!chosen) { root.dataset.theme = e.matches ? 'dark' : 'light'; sync(); }
@@ -496,15 +498,12 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
     ripples.className = 'holo-ripples';
     layer.appendChild(ripples);
     document.body.appendChild(layer);
-    let enabled = false, frame = 0, pending = null, active = null, bounds = null;
+    let enabled = false, frame = 0, pending = null, active = null;
     const timers = new Map();
-    const variables = ['--holo-rx', '--holo-ry'];
     function release() {
       if (!active) return;
       active.classList.remove('holo-active');
-      active.removeAttribute('data-holo-tilt');
-      variables.forEach(name => active.style.removeProperty(name));
-      active = bounds = null;
+      active = null;
     }
     function clear() {
       if (frame) window.cancelAnimationFrame(frame);
@@ -526,7 +525,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
       frame = 0;
       const point = pending; pending = null;
       if (!enabled || !point || !point.target.isConnected) { release(); return; }
-      const {x, y, target} = point;
+      const {target} = point;
       if (target.closest('.site-header,.breadcrumbs,.nav-control')) { release(); return; }
       // Event delegation includes cards inserted by the live arena stream.
       const button = target.closest(buttons);
@@ -534,24 +533,14 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
       if (!surface || surface.matches(':disabled,[aria-disabled="true"]')) { release(); return; }
       if (surface !== active) {
         release();
-        bounds = surface.getBoundingClientRect();
         active = surface;
         active.classList.add('holo-surface', 'holo-active');
-        const stable = surface.matches('.lane,.guide-main,.config,.details-card,.event,.agentinput,.scorehead') ||
-          surface.closest('.modal') || surface.querySelector('input,textarea,select') || bounds.height > 460 || bounds.width > 1000;
-        active.dataset.holoTilt = !button && !stable ? 'true' : 'false';
       }
-      const localX = Math.max(0, Math.min(bounds.width, x - bounds.left));
-      const localY = Math.max(0, Math.min(bounds.height, y - bounds.top));
-      const nx = localX / Math.max(bounds.width, 1) * 2 - 1;
-      const ny = localY / Math.max(bounds.height, 1) * 2 - 1;
-      active.style.setProperty('--holo-rx', `${(-ny * .25).toFixed(2)}deg`);
-      active.style.setProperty('--holo-ry', `${(nx * .25).toFixed(2)}deg`);
     }
     document.addEventListener('pointermove', e => {
       if (!enabled || e.pointerType !== 'mouse') return;
       if (e.buttons) { clear(); return; } // Keep text selection and dragging still.
-      pending = {x:e.clientX, y:e.clientY, target:e.target};
+      pending = {target:e.target};
       if (!frame) frame = window.requestAnimationFrame(paint);
     }, {passive:true});
     document.addEventListener('pointerdown', e => {
@@ -604,19 +593,19 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <tr>
 <td>演示恶意 Skill / 提示注入防护</td>
 <td><a href="http://127.0.0.1:8787/arena?scenario=malicious_skill">Skill 攻防场景</a></td>
-<td>规则演练不需要；文字复盘需要</td>
+<td>规则演示不需要；智能体与复盘需要</td>
 <td>推演敏感工具请求与权限边界，不执行真实 Skill 或工具</td>
 </tr>
 <tr>
 <td>看懂公共 Wi-Fi 下的攻击与防护</td>
 <td><a href="http://127.0.0.1:8787/arena">红黑攻防演练</a></td>
-<td>规则演练不需要；文字复盘需要</td>
+<td>规则演示不需要；智能体与复盘需要</td>
 <td>在虚拟场景中推演、展示合成事件，不发送攻击报文</td>
 </tr>
 <tr>
 <td>比较内网、账号、API 和供应链防护</td>
 <td>第 4.6 节新场景入口</td>
-<td>规则演练不需要；文字复盘需要</td>
+<td>规则演示不需要；智能体与复盘需要</td>
 <td>展示攻击依赖、策略阻断与业务代价</td>
 </tr>
 <tr>
@@ -657,7 +646,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <pre><code class="language-sh">.venv/bin/python 04_web/app.py --port 8788 --open
 </code></pre>
 <p>此时本文所有网页链接中的 <code>8787</code> 应改为 <code>8788</code>。服务默认仅监听本机 <code>127.0.0.1</code>；把链接发给别人不会让对方访问到你的页面。</p>
-<p>网页右上方可切换浅色／深色主题，以及使用 <strong>HOLO ON / OFF</strong> 开关控制全息装饰。LIGHT 和 DARK 模式的填色按钮均使用黄色配黑字。选择会保存在当前浏览器，跨页面保持；关闭装饰不影响攻防结果与功能。HOLO 开启时，背景显示静态、低对比度的立体方柱，不显示跟随鼠标的光斑或纹理。小卡片最多抬高 1px、倾斜 0.25°，按钮悬停只抬高 0.5px，按钮按下时下沉，点击页面空白处会出现扩散波纹。长报告和攻防日志保持静止，只增强边框和阴影；滚动、拖选文字时会收起跟随效果。触屏仅保留按钮按压反馈。系统启用「减少动态效果」时，关闭跟随、位移和波纹，保留静态边缘层次。</p>
+<p>网页右上方可切换浅色／深色主题，以及使用 <strong>HOLO ON / OFF</strong> 开关控制全息装饰。LIGHT 和 DARK 模式的填色按钮均使用黄色配黑字。选择会保存在当前浏览器，跨页面保持；关闭装饰不影响攻防结果与功能。HOLO 开启时，背景显示静态、低对比度的立体方柱，不显示跟随鼠标的光斑或纹理。鼠标悬停时元素保持原位，只加深阴影，按钮按下时下沉，点击页面空白处会出现扩散波纹。长报告和攻防日志也保持静止，只增强阴影；滚动、拖选文字时会收起跟随效果。触屏仅保留按钮按压反馈。系统启用「减少动态效果」时，关闭跟随、位移和波纹，保留静态边缘层次。</p>
 <p>所有页面顶部都有「返回」和「首页」，下方可前往体检、攻防演练、Skill 审查和使用说明。顶栏滚动时保持可见，手机端点击「导航」展开功能入口。返回会优先回到刚才的站内页面，并恢复滚动位置和检查范围、场景防护等选择；直接打开报告时，会返回对应的体检或 Skill 审查页面。返回不会重新执行检查，也不会恢复上一轮演练事件。面包屑显示当前位置，设置入口固定在顶部。导航按钮不再下沉或倾斜，开始检查等操作按钮保留按压反馈。</p>
 <h2 id="section-3">3. 配置私有模型</h2>
 <p>现有项目已经配置模型，正常使用时无需重新输入密钥。</p>
@@ -732,6 +721,9 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 </tbody>
 </table></div>
 <p>高级用户注意：通用解释客户端支持 <code>OPENAI_*</code>、<code>OLLAMA_*</code> 环境变量覆盖；NVIDIA 子进程适配器读取项目配置并剥离继承的提供方配置。遇到不同入口调用了不同模型，先检查启动终端中的相关环境变量。</p>
+<h3>红黑双方使用不同模型</h3>
+<p>打开顶部「设置」，主模型下方有黑方与红方两组设置。默认勾选「沿用主模型」；取消后可单独填写 API 地址、模型名称、密钥和 max_tokens。保存后再点对应的测试按钮。空密钥输入会保留该角色原先的密钥；换接口时需重新填写密钥，或勾选清除密钥用于免密接口。独立配置不会继承主模型密钥，也不会在失败时切换到其他模型。</p>
+<p>双方配置用于智能体行动和规则演示后的文字复盘，智能体模式要求模型支持 OpenAI 兼容的 tools 工具调用。它们默认继承主模型的 API 配置，不继承 Ollama 兜底。</p>
 <h2 id="section-4">4. 使用左右分屏攻防演练</h2>
 <h3>4.1 完成第一轮</h3>
 <ol>
@@ -739,12 +731,13 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <li>展开「场景防护设置」，选择「日常配置」。也可以先保留默认设置。</li>
 <li>点击「开始实时演练」。页面会进入演练工作区，锁定本轮配置。</li>
 <li><strong>左侧黑方</strong>显示同网观察、路径尝试和四个攻击目标的结果；<strong>右侧红方</strong>显示对应监测、虚拟加固和正常业务检查。</li>
-<li>观察阶段条依次经过「初始对攻 → 红方加固 → 同场景复测 → 结果复盘」。</li>
+<li>在「运行方式」选择智能体或规则演示。智能体会依次显示模型决策与工具结果；规则演示按初始对攻、加固和复测顺序展示。</li>
 <li>出现「演练完成」后，使用「初始对攻」「修复后复测」切换记录，比较同一目标的变化。</li>
 </ol>
-<p>这里的“实时”指服务器逐条推送并展示规则仿真事件。底层先计算确定性结果，再按阅读节奏展示；不代表真实网络攻击、真实攻击耗时或两个自主智能体正在执行工具。</p>
+<p>默认选择「红黑智能体」：模型分别观察环境、选择本方工具、读取结果并继续行动，每方最多 4 次决策。黑方不能改防护，红方不能调用攻击工具；双方不共享内部对话。左侧显示黑方选择，右侧显示红方响应，易读视图给出操作摘要，专业视图保留参数和工具结果。模型连接失败会显示未完成，不改用固定流程代替。</p>
+<p>若选择「规则演示」，系统先计算固定流程，再逐条播放。两种模式都只操作合成环境，不发送攻击报文。上方前后指标是裁判检查所有预设目标的结果，不是模型实际尝试的成功率。</p>
 <h3>4.2 三种配置会看到什么</h3>
-<p>下表是公共 Wi-Fi 场景当前规则版本的预期结果，目标总数固定为 4：</p>
+<p>下表是选择「规则演示」时，公共 Wi-Fi 场景当前规则版本的预期结果，目标总数固定为 4：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -820,11 +813,11 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <h3>4.4 看进度、停下来与查看证据</h3>
 <ul>
 <li><strong>跟随最新事件</strong>：开启时两侧自动滚动到新记录；关闭后可以停留阅读旧事件。</li>
-<li><strong>停止展示</strong>：中止当前事件流，保留已收到的记录；本轮标为未完成，完整导出与模型复盘不可用。再次点击开始会建立新一轮展示。</li>
+<li><strong>停止演练</strong>：中止当前事件流；智能体正在进行的模型请求返回或超时后结束，再停止后续动作。保留已收到的记录；本轮标为未完成，完整导出与模型复盘不可用。再次点击开始会建立新一轮展示。</li>
 <li><strong>阅读深度 → 易读</strong>：只显示行为、影响与结果。</li>
 <li><strong>阅读深度 → 专业证据</strong>：额外显示判定字段和证据 JSON。右侧记录中的“对应黑方”指出同一阶段内的关联事件。</li>
 <li><strong>专业视图 · 判定规则与证据 JSON</strong>：运行中显示已收到事件，完成后显示完整结果。</li>
-<li><strong>私有模型 · 红黑复盘</strong>：在完整演练后，分别请求模型解释黑方和红方行为。模型解读不修改胜负与计数。</li>
+<li><strong>私有模型 · 红黑复盘</strong>：仅规则演示完成后可用，分别请求模型解释黑方和红方行为。智能体模式已经逐步给出行动目的和工具结果。模型解读不修改胜负与计数。</li>
 <li><strong>导出完整证据 JSON</strong>：把本轮结果下载到浏览器下载目录；若本轮已完成模型复盘，也会包含该复盘文本。</li>
 </ul>
 <p>修改场景设置会清除页面中的上一轮结果；需要留档时先导出。演练结果主要保存在当前页面，刷新页面前也应先导出。</p>
@@ -866,7 +859,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <p>理解结果时注意：外传依赖先取得合成凭据；单独禁止外发不解决本地越权读取；开启审计只增加记录；人工确认假设用户拒绝异常请求，独立授权校验假设由模型外的工具代理正确执行。这些都是当前规则模型的前提，不是对真实系统防护效果的保证。</p>
 <p>页面中的「打开 NVIDIA 样本审查」可跳转到植入漏洞样本的官方扫描入口；从该页「Skill 攻防演练」可以返回。两类功能目前通过导航衔接：本演练使用固定合成用例，不会读取某份 NVIDIA 报告并自动生成攻击，也不会把扫描发现直接算作攻击成功。</p>
 <h3>4.6 新增四种攻防场景</h3>
-<p>在页面顶部「演练场景」切换，或打开下表入口。每个场景都有四个攻击目标、两个业务检查，支持相同的左右分屏、停止展示、修复前后比较、专业证据、JSON 导出与私有模型复盘。</p>
+<p>在页面顶部「演练场景」切换，或打开下表入口。每个场景都有四个攻击目标、两个业务检查，支持相同的左右分屏、停止演练、修复前后比较、专业证据、JSON 导出与私有模型复盘。</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1027,7 +1020,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 </tr>
 </tbody>
 </table></div>
-<p>失败任务不一定拥有全部文件。目录中的哈希可用于核对内容一致性，但当前“来源签名：未验证”确实表示尚未完成签名验证。</p>
+<p>失败任务不一定拥有全部文件。目录中的哈希用于核对内容一致性；来源签名另行验证。新报告会显示未签名、验证失败、已通过或未完成，旧报告保留原来的未验证状态。签名通过仍需安全审查。</p>
 <p>如果将导出的 HTML 拷贝到别处并希望其中的原始结果下载链接仍可用，应把同目录 <code>skillspector.json</code> 一并保留。演练 JSON 与扫描报告是不同产物，前者通过演练页面单独导出。</p>
 <p>报告可能包含被测 Skill 的源代码片段和路径；体检报告可能包含本机或网络信息。分享前检查具体内容，不要连同 <code>config.json</code> 或真实密钥一起发送。</p>
 <h2 id="section-7">7. 专业用户：审查自己的 Skill</h2>
@@ -1127,7 +1120,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 </table></div>
 <h2 id="section-10">10. 演示顺序与当前能力范围</h2>
 <h3>10.1 当前场景与后续扩展</h3>
-<p>当前可直接运行六个场景：公共 Wi-Fi 同网攻防、恶意 Skill / 提示注入、办公内网横向移动、钓鱼与会话盗用、Web / API 越权访问、依赖供应链投毒。全部采用固定用例的规则仿真，详细入口与对比见第 4 节。</p>
+<p>当前可直接运行六个场景：公共 Wi-Fi 同网攻防、恶意 Skill / 提示注入、办公内网横向移动、钓鱼与会话盗用、Web / API 越权访问、依赖供应链投毒。均支持模型自主选择工具的智能体模式及固定规则演示。执行环境仍为合成场景，详细入口与对比见第 4 节。</p>
 <p>后续可以扩展 RAG 知识库污染、容器权限边界或隔离靶场执行；这些能力当前尚未实现。</p>
 <p>“恶意 Skill / 提示注入”现已提供“官方样本审查入口 → 左右分屏推演 → 虚拟策略修复 → 同用例复测”的导航与规则流程。静态扫描结果可以提供选题与线索，不能直接替代运行时成功或阻断证据。</p>
 <h3>10.2 推荐演示顺序</h3>
@@ -1140,7 +1133,8 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <li>私有模型可用时展示语义分析或红黑复盘，说明模型与规则各自负责什么。</li>
 </ol>
 <h3>10.3 已实现能力与维护验证</h3>
-<p>已经实现的 NVIDIA 运行组件是 <strong>SkillSpector 2.12.0</strong>。私有 Qwen 是当前模型后端。DGX Spark 实机部署、OpenShell 动态执行、SkillEvaluator Tier 3 对照评测、来源验签与官方治理卡仍属后续工作。</p>
+<p>NVIDIA SkillSpector 2.12.0 已运行接入。OMS 发布者验签已集成，严格校验内容与信任证书；OpenShell 已提供限定工具与策略适配，真实运行还需要隔离网关；SkillEvaluator Tier 3 已提供同模型对照任务与官方运行入口，完整效果结论要以实际实验为准。DGX Spark 实机部署仍待完成。</p>
+<p>命令和安装方法见项目 <code>09_integrations/README.md</code>。这三个流程的来源、权限和效果结论分开记录。</p>
 <p>当前红黑演练不包含真实 Wi-Fi 破解、中间人攻击执行或自主漏洞利用。自研 <code>10_skills/agentshield-audit</code> 是依赖本项目的 Skill 草稿；语法验证通过不等于独立分发、签名验证或完整技能评测通过。</p>
 <p>维护者复查时可运行：</p>
 <pre><code class="language-sh">.venv/bin/python tests/arena_simulation.py

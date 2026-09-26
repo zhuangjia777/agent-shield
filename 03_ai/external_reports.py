@@ -24,13 +24,13 @@ def external_html(rep, raw_prefix=""):
         details = {"revision": p.get("revision"), "input_hash": p.get("input_manifest", {}).get("input_hash"),
                    "raw_sha256": p.get("raw_sha256"), "network_policy": p.get("network_policy"),
                    "io_events": p.get("io_events"), "signature_status": p.get("signature_status"),
-                   "analysis_completeness": coverage}
+                   "signature": p.get("signature"), "analysis_completeness": coverage}
         blocks.append(f'''<section class="card" style="margin:18px 0;border-top:3px solid var(--fg)">
 <h2 style="font-size:18px;margin-top:0">{esc(assessment.get('engine'))} <small>{esc(assessment.get('version'))}</small></h2>
 <p><b>官方引擎风险分 {esc(risk.get('score'))}/100</b>（越高风险越大） · {esc(risk.get('severity'))} · {esc(risk.get('recommendation'))}</p>
 <p>{esc(status)} · {mode} · {len(assessment.get('issues', []))} 项线索</p>
 <p class="tip">与本地规则健康分分开。静态观察／模型线索不等于动态漏洞复现，零发现不代表安全。</p>
-<p class="tip">模型：{esc(p.get('model') or '未调用')} · 成功/尝试调用：{esc(meta.get('llm_calls_succeeded', 0))}/{esc(meta.get('llm_calls_attempted', 0))} · 来源签名：未验证</p>
+<p class="tip">模型：{esc(p.get('model') or '未调用')} · 成功/尝试调用：{esc(meta.get('llm_calls_succeeded', 0))}/{esc(meta.get('llm_calls_attempted', 0))} · 来源签名：{esc({'verified':'已通过，仍需安全检查','unsigned':'未签名','invalid':'验证失败','trust_error':'信任证书校验失败','unavailable':'验签器未安装','error':'验签未完成'}.get(p.get('signature_status'),'未验证'))}</p>
 <p><a href="{esc(raw_prefix + quote(str(p.get('raw_report', 'skillspector.json')), safe=''))}" download>下载官方原始 JSON</a></p>
 {''.join(issues) or '<p>本次没有官方引擎发现；请核对下方覆盖范围。</p>'}
 <details><summary>专业视图：版本、内容哈希与覆盖边界</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{esc(json.dumps(details,ensure_ascii=False,indent=2))}</pre></details>
@@ -42,6 +42,6 @@ def external_markdown(rep):
     lines = []
     for item in rep.get("external_assessments", []):
         lines += ["## NVIDIA SkillSpector 独立评估", "",
-                  "风险分越高风险越大；不并入本地规则健康分。未验证来源签名，不代表动态漏洞复现。", "",
+                  "风险分越高风险越大；不并入本地规则健康分。签名状态见下方 provenance；签名通过仍需安全检查，本扫描不代表动态漏洞复现。", "",
                   "```json", json.dumps(item, ensure_ascii=False, indent=2).replace("```", "\\u0060\\u0060\\u0060"), "```", ""]
     return "\n".join(lines)

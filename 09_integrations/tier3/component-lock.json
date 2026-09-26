@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/NVIDIA/SkillEvaluator",
+  "revision": "4dcbe371f562a8ac4bca63fce81370228a7579c7",
+  "version": "0.3.0",
+  "harbor": "0.13.2",
+  "agent": "opencode",
+  "transport": "Chat Completions via SkillEvaluatorGatewayOpenCode",
+  "installed_package": ".venv-evaluator/lib/python3.13/site-packages/skillevaluator",
+  "installed_package_sha256": "b632a33ab1e93f391a29d59e8b3fff9ca08a003784ff69d2ef43940bdd6fee5b"
+}

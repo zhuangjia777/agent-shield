@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import urllib.request
+from urllib.parse import urlsplit
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -30,14 +31,100 @@ def save_config(cfg: dict) -> None:
         fh.write(json.dumps(cfg, ensure_ascii=False, indent=2))
 
 
-def cloud_cfg() -> dict:
-    c = load_config().get("cloud", {})
+def cloud_cfg(config: dict | None = None) -> dict:
+    c = (load_config() if config is None else config).get("cloud", {})
     return {
         "base_url": os.environ.get("OPENAI_BASE_URL") or c.get("base_url", ""),
         "api_key": os.environ.get("OPENAI_API_KEY") or c.get("api_key", ""),
         "model": os.environ.get("OPENAI_MODEL") or c.get("model", "gpt-4o-mini"),
         "max_tokens": c.get("max_tokens", 2500),
     }
+
+
+
+def role_cloud_cfg(role: str, config: dict | None = None, main: dict | None = None) -> dict:
+    """Resolve one role without changing global configuration or sharing override keys."""
+    if role not in ("black", "red"):
+        raise ValueError("未知的攻防角色。")
+    cfg = load_config() if config is None else config
+    own = cfg.get("arena_models", {}).get(role, {})
+    if own.get("inherit_main", True):
+        return dict(cloud_cfg(cfg) if main is None else main)
+    return {"base_url": own.get("base_url", ""), "api_key": own.get("api_key", ""),
+            "model": own.get("model", ""), "max_tokens": own.get("max_tokens", 2500)}
+
+
+def public_config(config: dict) -> dict:
+    cfg = json.loads(json.dumps(config))
+    cfg.setdefault("cloud", {})
+    roles = cfg.setdefault("arena_models", {})
+    for role in ("black", "red"):
+        roles.setdefault(role, {}).setdefault("inherit_main", True)
+    for entry in [cfg["cloud"], roles["black"], roles["red"]]:
+        key = entry.pop("api_key", "")
+        entry.pop("api_key_masked", None)
+        entry["api_key_set"] = bool(key)
+        if key:
+            entry["api_key_masked"] = "已保存"
+    return cfg
+
+
+def merge_config(current: dict, updates: dict) -> dict:
+    """Merge settings. Empty key inputs preserve only the same backend's stored key."""
+    if not isinstance(updates, dict):
+        raise ValueError("设置格式不正确。")
+    cfg = json.loads(json.dumps(current))
+    for name in ("cloud", "ollama"):
+        if isinstance(updates.get(name), dict):
+            patch = {k:v for k,v in updates[name].items() if k not in ("api_key_masked", "api_key_set")}
+            if name == "cloud" and not patch.get("api_key"):
+                patch.pop("api_key", None)
+            cfg.setdefault(name, {}).update(patch)
+    if "arena_models" not in updates:
+        return cfg
+    roles = updates["arena_models"]
+    if not isinstance(roles, dict) or set(roles) - {"black", "red"}:
+        raise ValueError("仅支持红方与黑方模型配置。")
+    for role, patch in roles.items():
+        label = "黑方" if role == "black" else "红方"
+        if not isinstance(patch, dict) or set(patch) - {"inherit_main", "base_url", "api_key", "model", "max_tokens", "clear_api_key"}:
+            raise ValueError(label + "模型配置格式不正确。")
+        previous = cfg.setdefault("arena_models", {}).get(role, {})
+        own = dict(previous)
+        for flag in ("inherit_main", "clear_api_key"):
+            if flag in patch and type(patch[flag]) is not bool:
+                raise ValueError(label + "模型开关必须为布尔值。")
+        own["inherit_main"] = patch.get("inherit_main", own.get("inherit_main", True))
+        for field in ("base_url", "model", "api_key"):
+            if field in patch:
+                if not isinstance(patch[field], str):
+                    raise ValueError(label + "模型字段必须为文本。")
+                value = patch[field].strip()
+                if field != "api_key" or value:
+                    own[field] = value
+        if patch.get("clear_api_key"):
+            if patch.get("api_key", "").strip():
+                raise ValueError(label + "不能同时输入和清除密钥。")
+            own["api_key"] = ""
+        if (previous.get("api_key") and own.get("base_url", "").rstrip("/") != previous.get("base_url", "").rstrip("/")
+                and not patch.get("api_key", "").strip() and not patch.get("clear_api_key")):
+            raise ValueError(label + "接口地址已改变，请重新输入密钥；免密接口请勾选清除密钥。")
+        if "max_tokens" in patch:
+            value = patch["max_tokens"]
+            if type(value) is not int or not 64 <= value <= 32768:
+                raise ValueError(label + " max_tokens 需为 64–32768 的整数。")
+            own["max_tokens"] = value
+        if not own["inherit_main"]:
+            try:
+                parsed = urlsplit(own.get("base_url", ""))
+                valid = parsed.scheme in ("http", "https") and parsed.hostname and not (parsed.username or parsed.password or parsed.query or parsed.fragment)
+                parsed.port
+            except ValueError:
+                valid = False
+            if not valid or not own.get("model", "").strip():
+                raise ValueError(label + "独立配置需要有效的 HTTP(S) 接口地址和模型名称。")
+        cfg["arena_models"][role] = own
+    return cfg
 
 
 def ollama_cfg() -> dict:
@@ -112,9 +199,9 @@ def ollama_model_ok(cfg_model: str) -> bool:
         return False
 
 
-def _cloud_stream(messages, temperature, enable_thinking=False, timeout=600):
+def _cloud_stream(messages, temperature, enable_thinking=False, timeout=600, config=None):
     """云流式：真流式逐块 yield (kind, text)，失败原地抛异常。"""
-    c = cloud_cfg()
+    c = cloud_cfg() if config is None else config
     payload = {
         "model": c["model"], "stream": True, "temperature": temperature,
         "max_tokens": c["max_tokens"], "messages": messages,
@@ -123,7 +210,7 @@ def _cloud_stream(messages, temperature, enable_thinking=False, timeout=600):
     req = urllib.request.Request(
         c["base_url"].rstrip("/") + "/chat/completions", data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json",
-                 "Authorization": f"Bearer {c['api_key']}"})
+                 **({"Authorization": f"Bearer {c['api_key']}"} if c.get("api_key") else {})})
     got = False
     with urllib.request.urlopen(req, timeout=timeout) as r:
         for raw in r:

@@ -74,7 +74,7 @@ if (![base, debug].every(url => ['127.0.0.1','localhost'].includes(new URL(url).
     await navigate('/help');
     assert.equal(await evaluate(`document.documentElement.dataset.holoMotion`),'on');
     await move('.guide-main',.7,.01);
-    assert.equal(await evaluate(`document.querySelector('.guide-main').dataset.holoTilt`),'false');
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.guide-main')).transform`),'none');
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('.guide-main')).transform`),'none');
     assert.equal(await evaluate(`document.querySelector('.holo-light')`),null);
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('.guide-main')).backgroundImage`),'none');
@@ -96,10 +96,11 @@ if (![base, debug].every(url => ['127.0.0.1','localhost'].includes(new URL(url).
     await navigate('/');
     await evaluate(`(()=>{if(!document.querySelector('.report-card')){const e=document.createElement('a');e.className='card report-card';e.href='#';e.textContent='Synthetic report card';document.body.appendChild(e)}})()`);
     await move('.report-card');
-    assert.equal(await evaluate(`document.querySelector('.holo-active').dataset.holoTilt`),'true');
-    assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('.holo-active')).transform`),'none');
-    const tilt=await evaluate(`(()=>{const s=document.querySelector('.holo-active').style;return [parseFloat(s.getPropertyValue('--holo-rx')),parseFloat(s.getPropertyValue('--holo-ry'))]})()`);
-    assert(tilt.every(v=>Math.abs(v)<=.25));
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.holo-active')).transform`),'none');
+
+    const hoverShadow=await evaluate(`getComputedStyle(document.querySelector('.holo-active')).boxShadow`);
+    const restingShadow=await evaluate(`(()=>{const e=document.querySelector('.holo-active');e.classList.remove('holo-active');e.style.transition='none';const shadow=getComputedStyle(e).boxShadow;e.classList.add('holo-active');e.style.removeProperty('transition');return shadow})()`);
+    assert.notEqual(hoverShadow,restingShadow);
     assert.equal(await evaluate(`getComputedStyle(document.documentElement,'::before').animationName`),'none');
     assert((await evaluate(`getComputedStyle(document.documentElement,'::before').backgroundImage`)).includes('data:image/svg+xml'));
     await screenshot('home-hover');
@@ -109,9 +110,9 @@ if (![base, debug].every(url => ['127.0.0.1','localhost'].includes(new URL(url).
     assert.equal(await evaluate('window.__holoFrames'),beforeBurst+1);
     mark('Rapid pointer events are coalesced into one render frame');
     await move('.display-controls .btn:first-child');
-    assert.equal(await evaluate(`document.querySelectorAll('.holo-active').length`),0); mark('Small cards tilt; navigation controls remain still');
+    assert.equal(await evaluate(`document.querySelectorAll('.holo-active').length`),0); mark('Cards deepen shadows without moving; navigation controls remain still');
     await navigate('/checkup'); await move('.checkup-options label');
-    assert.equal(await evaluate(`document.querySelector('.holo-active').dataset.holoTilt`),'false');
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.holo-active')).transform`),'none');
     await move('#scan-start');
     assert.equal(await evaluate(`document.querySelectorAll('.holo-active').length`),1);
     assert.equal(await evaluate(`document.querySelector('.holo-active').id`),'scan-start');
@@ -120,13 +121,13 @@ if (![base, debug].every(url => ['127.0.0.1','localhost'].includes(new URL(url).
     assert.equal(await evaluate(`document.querySelectorAll('.holo-active').length`),0); mark('Forms stay still, nested buttons activate alone, disabled buttons do not lift');
     await navigate('/arena');
     await waitFor(`!document.querySelector('#run').disabled`);
-    await move('.metric'); assert.equal(await evaluate(`document.querySelector('.holo-active').dataset.holoTilt`),'true');
-    await move('.lane'); assert.equal(await evaluate(`document.querySelector('.holo-active').dataset.holoTilt`),'false');
+    await move('.metric'); assert.equal(await evaluate(`getComputedStyle(document.querySelector('.holo-active')).transform`),'none');
+    await move('.lane'); assert.equal(await evaluate(`getComputedStyle(document.querySelector('.holo-active')).transform`),'none');
     await screenshot('arena-hover');
     await evaluate(`(()=>{const e=document.createElement('div');e.className='event';e.id='holo-test-event';e.textContent='Synthetic UI test event';document.querySelector('.feed').prepend(e)})()`);
     await move('#holo-test-event');
     assert.equal(await evaluate(`document.querySelector('.holo-active').id`),'holo-test-event');
-    assert.equal(await evaluate(`document.querySelector('.holo-active').dataset.holoTilt`),'false'); mark('Arena metrics tilt; lanes and newly inserted log events keep text still');
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.holo-active')).transform`),'none'); mark('Arena metrics, lanes and newly inserted log events stay still');
     await evaluate(`document.dispatchEvent(new Event('scroll'))`);
     assert.equal(await evaluate(`document.querySelectorAll('.holo-active').length`),0);
     await evaluate(`(()=>{for(let i=0;i<8;i++)document.body.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerType:'mouse',button:0,clientX:30,clientY:280}))})()`);

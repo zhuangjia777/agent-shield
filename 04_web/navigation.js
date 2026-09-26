@@ -52,7 +52,7 @@
     const brand = link('AgentShield', '/', 'brand');
     const utility = document.createElement('div'); utility.className = 'nav-utility';
     utility.append(link('设置', '/?settings=1'), link('使用说明', '/help'));
-    top.append(actions, brand, utility);
+    top.append(brand, actions, utility);
     const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'btn outline small nav-control nav-toggle';
     toggle.textContent = '导航'; toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-controls', 'site-navigation');
     const nav = document.createElement('nav'); nav.id = 'site-navigation'; nav.className = 'site-navigation'; nav.setAttribute('aria-label', '主导航');
@@ -78,7 +78,7 @@
     new ResizeObserver(measure).observe(header); measure();
     if (offline) return;
 
-    const allowed = '#scan-system,#scan-network,#autoscroll,#depth,#controls input[type="checkbox"],#sample,#use-model';
+    const allowed = '#scan-system,#scan-network,#autoscroll,#depth,#arena-mode,#controls input[type="checkbox"],#sample,#use-model';
     const remember = () => {
       const fields = {};
       for (const e of document.querySelectorAll(allowed)) if (e.id) fields[e.id] = e.type === 'checkbox' ? e.checked : e.value;

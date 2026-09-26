@@ -19,7 +19,7 @@
     themeButton.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
     holoButton.textContent = holo ? 'HOLO ON' : 'HOLO OFF';
     holoButton.setAttribute('aria-pressed', String(holo));
-    holoButton.title = holo ? '关闭立体悬浮、方柱背景与背景波纹' : '开启立体悬浮、方柱背景与背景波纹';
+    holoButton.title = holo ? '关闭悬停阴影、方柱背景与背景波纹' : '开启悬停阴影、方柱背景与背景波纹';
   }
   system.addEventListener('change', e => {
     if (!chosen) { root.dataset.theme = e.matches ? 'dark' : 'light'; sync(); }
@@ -60,15 +60,12 @@
     ripples.className = 'holo-ripples';
     layer.appendChild(ripples);
     document.body.appendChild(layer);
-    let enabled = false, frame = 0, pending = null, active = null, bounds = null;
+    let enabled = false, frame = 0, pending = null, active = null;
     const timers = new Map();
-    const variables = ['--holo-rx', '--holo-ry'];
     function release() {
       if (!active) return;
       active.classList.remove('holo-active');
-      active.removeAttribute('data-holo-tilt');
-      variables.forEach(name => active.style.removeProperty(name));
-      active = bounds = null;
+      active = null;
     }
     function clear() {
       if (frame) window.cancelAnimationFrame(frame);
@@ -90,7 +87,7 @@
       frame = 0;
       const point = pending; pending = null;
       if (!enabled || !point || !point.target.isConnected) { release(); return; }
-      const {x, y, target} = point;
+      const {target} = point;
       if (target.closest('.site-header,.breadcrumbs,.nav-control')) { release(); return; }
       // Event delegation includes cards inserted by the live arena stream.
       const button = target.closest(buttons);
@@ -98,24 +95,14 @@
       if (!surface || surface.matches(':disabled,[aria-disabled="true"]')) { release(); return; }
       if (surface !== active) {
         release();
-        bounds = surface.getBoundingClientRect();
         active = surface;
         active.classList.add('holo-surface', 'holo-active');
-        const stable = surface.matches('.lane,.guide-main,.config,.details-card,.event,.agentinput,.scorehead') ||
-          surface.closest('.modal') || surface.querySelector('input,textarea,select') || bounds.height > 460 || bounds.width > 1000;
-        active.dataset.holoTilt = !button && !stable ? 'true' : 'false';
       }
-      const localX = Math.max(0, Math.min(bounds.width, x - bounds.left));
-      const localY = Math.max(0, Math.min(bounds.height, y - bounds.top));
-      const nx = localX / Math.max(bounds.width, 1) * 2 - 1;
-      const ny = localY / Math.max(bounds.height, 1) * 2 - 1;
-      active.style.setProperty('--holo-rx', `${(-ny * .25).toFixed(2)}deg`);
-      active.style.setProperty('--holo-ry', `${(nx * .25).toFixed(2)}deg`);
     }
     document.addEventListener('pointermove', e => {
       if (!enabled || e.pointerType !== 'mouse') return;
       if (e.buttons) { clear(); return; } // Keep text selection and dragging still.
-      pending = {x:e.clientX, y:e.clientY, target:e.target};
+      pending = {target:e.target};
       if (!frame) frame = window.requestAnimationFrame(paint);
     }, {passive:true});
     document.addEventListener('pointerdown', e => {

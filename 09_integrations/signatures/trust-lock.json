@@ -1,0 +1,10 @@
+{
+  "publisher": "NVIDIA",
+  "repository": "https://github.com/NVIDIA/skills",
+  "revision": "d8519c57da6db5d9bea274ec1724a4a7a56a3dee",
+  "source": "https://raw.githubusercontent.com/NVIDIA/skills/d8519c57da6db5d9bea274ec1724a4a7a56a3dee/nv-agent-root-cert.pem",
+  "certificate": "nvidia-root.crt",
+  "sha256": "fc15d9749a8933482b896e2b204fa59dc7bd86aac48e508d159a8c6dd14420fc",
+  "verifier": "model-signing",
+  "verifier_version": "1.1.1"
+}
