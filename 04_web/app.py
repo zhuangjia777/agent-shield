@@ -117,10 +117,10 @@ BASE_CSS = """
   --line: #dcdcdc; --accent: #111111; --accent-soft: #ebebeb;
   --code: #f1f1f1; --fill: #ffffff; --field-line: #c8c8c8;
   --overlay: rgba(0,0,0,.45);
-  /* 深度栈 */
-  --sh-1: 0 1px 2px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.08);
-  --sh-2: 0 2px 4px rgba(0,0,0,.12), 0 10px 24px rgba(0,0,0,.14);
-  --sh-3: 0 4px 8px rgba(0,0,0,.16), 0 24px 64px rgba(0,0,0,.22);
+  /* 深度栈（v1.1.4 扁平：单层小晕，楼层差靠 border + 微量阴影） */
+  --sh-1: 0 1px 1px rgba(0,0,0,.05);
+  --sh-2: 0 1px 2px rgba(0,0,0,.06), 0 6px 16px rgba(0,0,0,.07);
+  --sh-3: 0 2px 4px rgba(0,0,0,.10), 0 18px 48px rgba(0,0,0,.14);
   --bevel: inset 0 1px 0 #ffffff;
   --btn-ledge: 0 2px 0 #c8c8c8;
   --ledge-dark: 0 2px 0 rgba(0,0,0,.35);
@@ -140,9 +140,9 @@ BASE_CSS = """
   --line: #333333; --accent: #ececec; --accent-soft: #2a2a2a;
   --code: #242424; --fill: #1e1e1e; --field-line: #4a4a4a;
   --overlay: rgba(0,0,0,.60);
-  --sh-1: 0 1px 0 rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.4), 0 2px 6px rgba(0,0,0,.35);
-  --sh-2: 0 1px 0 rgba(0,0,0,.6), 0 2px 4px rgba(0,0,0,.45), 0 10px 28px rgba(0,0,0,.5);
-  --sh-3: 0 2px 0 rgba(0,0,0,.6), 0 4px 8px rgba(0,0,0,.5), 0 24px 72px rgba(0,0,0,.6);
+  --sh-1: 0 1px 2px rgba(0,0,0,.40);
+  --sh-2: 0 1px 2px rgba(0,0,0,.45), 0 6px 16px rgba(0,0,0,.40);
+  --sh-3: 0 2px 4px rgba(0,0,0,.50), 0 16px 44px rgba(0,0,0,.50);
   --bevel: inset 0 1px 0 rgba(255,255,255,.06);
   --btn-ledge: 0 2px 0 #000000;
   --ledge-dark: 0 2px 0 #000000;
@@ -339,8 +339,8 @@ html[data-holo="off"] .scorehead.holo-frame{background:none}
 
 
 /* HOLO pointer depth: one active surface, no layout movement or pointer interception. */
-:root{--holo-ink:17,17,17;--holo-shadow:.19;--holo-edge:rgba(255,255,255,.95)}
-:root[data-theme="dark"]{--holo-ink:236,236,236;--holo-shadow:.55;--holo-edge:rgba(255,255,255,.27)}
+:root{--holo-ink:17,17,17;--holo-shadow:.10;--holo-edge:rgba(255,255,255,.95)}
+:root[data-theme="dark"]{--holo-ink:236,236,236;--holo-shadow:.45;--holo-edge:rgba(255,255,255,.27)}
 .lane.black{--holo-ink:236,236,236;--holo-shadow:.55;--holo-edge:rgba(255,255,255,.27)}
 .holo-fx{position:fixed;inset:0;overflow:hidden;z-index:45;pointer-events:none;contain:strict}
 .holo-ripple{position:absolute;width:320px;height:320px;margin:-160px;border:1px solid rgba(var(--holo-ink),.32);border-radius:50%;
