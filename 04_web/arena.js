@@ -173,8 +173,9 @@ function selectScenario(key) {
   $('#controls').innerHTML=Object.entries(catalog.controls).map(([name,c])=>`<label><input type="checkbox" id="c-${escapeHTML(name)}"><span>${escapeHTML(c.name)}<small>${escapeHTML(c.description)}</small></span></label>`).join('');
   $('#assumptions').innerHTML=catalog.assumptions.map(x=>'<li>'+escapeHTML(x)+'</li>').join('');
   document.querySelector('[data-preset="hardened"]').textContent=catalog.hardened_label || '全面加固';
-  history.replaceState(null,'',location.pathname+'?scenario='+encodeURIComponent(key));
+  history.replaceState(history.state,'',location.pathname+'?scenario='+encodeURIComponent(key));
   preset('everyday'); setRunning(false);
+  document.dispatchEvent(new Event('agentshield:scenario-ready'));
 }
 $('#scenario').onchange=()=>selectScenario($('#scenario').value);
 $('#controls').addEventListener('change',invalidate);

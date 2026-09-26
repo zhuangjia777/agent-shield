@@ -16,7 +16,7 @@
   --obs-inset: inset 0 1px 3px rgba(0,0,0,.08);
   /* 全息设备层（纯灰阶） */
   --sweep: linear-gradient(115deg, transparent 30%, rgba(0,0,0,.05) 46%, rgba(0,0,0,.10) 50%, rgba(0,0,0,.05) 54%, transparent 70%);
-  --scanline: repeating-linear-gradient(0deg, rgba(0,0,0,.07) 0 1px, transparent 1px 3px);
+  --depth-columns: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22144%22%20height%3D%22160%22%20viewBox%3D%220%200%20144%20160%22%3E%3Cg%20stroke%3D%22%23d8d8d8%22%20stroke-width%3D%220.7%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M72%2028%20112%2048%2072%2068%2032%2048Z%22%20fill%3D%22%23fafafa%22%2F%3E%3Cpath%20d%3D%22M32%2048%2072%2068%2072%20126%2032%20106Z%22%20fill%3D%22%23e9e9e9%22%2F%3E%3Cpath%20d%3D%22M72%2068%20112%2048%20112%20106%2072%20126Z%22%20fill%3D%22%23dedede%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
   --echo: 3px 3px 0 rgba(17,17,17,.10);
   --glow: 0 0 22px rgba(17,17,17,.08);
   --slab: #ffe54c; --slab-ink: #141414;
@@ -37,7 +37,7 @@
   --ledge-dark: 0 2px 0 #000000;
   --obs-inset: inset 0 1px 4px rgba(0,0,0,.45);
   --sweep: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.10) 50%, rgba(255,255,255,.05) 54%, transparent 70%);
-  --scanline: repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px);
+  --depth-columns: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22144%22%20height%3D%22160%22%20viewBox%3D%220%200%20144%20160%22%3E%3Cg%20stroke%3D%22%23343434%22%20stroke-width%3D%220.7%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M72%2028%20112%2048%2072%2068%2032%2048Z%22%20fill%3D%22%232c2c2c%22%2F%3E%3Cpath%20d%3D%22M32%2048%2072%2068%2072%20126%2032%20106Z%22%20fill%3D%22%23202020%22%2F%3E%3Cpath%20d%3D%22M72%2068%20112%2048%20112%20106%2072%20126Z%22%20fill%3D%22%23191919%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
   --echo: 3px 3px 0 rgba(236,236,236,.14);
   --glow: 0 0 26px rgba(236,236,236,.22);
   --slab: #ffe54c; --slab-ink: #141414;
@@ -48,12 +48,12 @@
 * { box-sizing: border-box; }
 html { background: var(--bg); }
 
-/* ---- L0 全息幕布：全屏扫描线 + 呼吸 ---- */
+/* ---- L0 全息幕布：静态立体方柱背景 ---- */
 html::before {
   content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background: var(--scanline); animation: screenbreath 9s ease-in-out infinite;
+  background-image:var(--depth-columns);background-size:144px 160px;opacity:.65;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.3),#000 75%);
 }
-@keyframes screenbreath { 0%,100% { opacity: .45; } 50% { opacity: .9; } }
 
 body { font: 15px/1.65 -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
        background: transparent; color: var(--fg); max-width: 920px; margin: 0 auto; padding: 28px 20px 80px;
@@ -79,7 +79,7 @@ a:hover { border-bottom-color: var(--fg); }
    slab = ::after（100%×100%，z:-1），静止 top/left:6px → 左上错出：
    背景从顶/左 6px 条透出（受光 bevel），底/右 6px 露出垫板；
    hover → slab 滑归 top:0 left:0，与边框齐平（回归，.2s ease）；
-   slab = 原版 #52 的 @ffe54c 黄，文字恒黑；
+   slab = light / dark 均黄色配黑字；
    边框独立成顶层 ::before 画框（z:1）→ 黑框永远压在黄板之上（slab 会溢出底/右缘盖框）。 */
 button { font: inherit; cursor: pointer; }
 .btn { position: relative; z-index: 0; display: inline-flex; justify-content: center; align-items: center; text-align: center;
@@ -212,7 +212,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
 /* HOLO adds visible surface texture and registration marks without moving content. */
 html::after{content:"";position:fixed;inset:7px;z-index:45;pointer-events:none;background:linear-gradient(var(--muted),var(--muted)) left top/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) left top/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) right top/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) right top/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) left bottom/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) left bottom/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) right bottom/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) right bottom/1px 22px no-repeat}
 .holo-frame{position:relative}.holo-frame::after{content:"";position:absolute;inset:6px;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) left top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/2px 12px no-repeat}
-.scorehead.holo-frame{padding:22px 18px;margin:18px 0;border:1px solid var(--line);background:var(--scanline)}
+.scorehead.holo-frame{padding:22px 18px;margin:18px 0;border:1px solid var(--line);background:var(--card)}
 html[data-holo="off"]::after,html[data-holo="off"] .holo-frame::after{display:none}
 html[data-holo="off"] .scorehead.holo-frame{background:none}
 .display-controls .btn[aria-pressed="true"]{color:var(--fg);border-bottom:2px solid var(--fg)}
@@ -222,6 +222,60 @@ html[data-holo="off"] .scorehead.holo-frame{background:none}
 .checkup-status{padding:16px;border-left:3px solid var(--fg);background:var(--code);margin-top:22px}.checkup-status p{margin:6px 0}.checkup-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:22px}
 @media(max-width:640px){.btn.compact{min-height:44px}}
 @media print{html::after,.holo-frame::after{display:none!important}}
+
+
+/* HOLO pointer depth: one active surface, no layout movement or pointer interception. */
+:root{--holo-ink:17,17,17;--holo-shadow:.19;--holo-edge:rgba(255,255,255,.95)}
+:root[data-theme="dark"]{--holo-ink:236,236,236;--holo-shadow:.55;--holo-edge:rgba(255,255,255,.27)}
+.lane.black{--holo-ink:236,236,236;--holo-shadow:.55;--holo-edge:rgba(255,255,255,.27)}
+.holo-fx{position:fixed;inset:0;overflow:hidden;z-index:45;pointer-events:none;contain:strict}
+.holo-ripple{position:absolute;width:320px;height:320px;margin:-160px;border:1px solid rgba(var(--holo-ink),.32);border-radius:50%;
+ background:radial-gradient(circle,transparent 50%,rgba(var(--holo-ink),.09) 70%,transparent 72%);
+ animation:holo-ripple .65s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes holo-ripple{from{transform:scale(.08);opacity:.85}to{transform:scale(2.2);opacity:0}}
+html[data-holo="on"] :is(.card,.metric,.config,.details-card,.topology,.lane,.guide-main,.scorehead,.answer,.agentinput,.event){
+ box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1))}
+html[data-holo="on"] :is(.report-card,.lane){--holo-base-shadow:var(--sh-2)}
+html[data-holo="on"] .holo-surface{transition:transform .16s ease-out,box-shadow .16s ease-out,border-color .12s}
+html[data-holo="on"][data-holo-motion="on"] .holo-active:not(:disabled):not([aria-disabled="true"]){
+ border-color:var(--field-line);
+ transition:transform .10s ease-out,box-shadow .10s ease-out,border-color .10s}
+html[data-holo="on"][data-holo-motion="on"] .holo-active[data-holo-tilt="true"]{
+ transform:perspective(1000px) translateY(-1px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg))}
+html[data-holo="on"][data-holo-motion="on"] :is(.btn,.agent-launcher).holo-active:not(:disabled):not([aria-disabled="true"]){transform:translateY(-.5px)}
+html[data-holo="on"] :is(.btn,.agent-launcher):not(:disabled):not([aria-disabled="true"]):active{
+ transform:translateY(1px);box-shadow:var(--bevel),0 1px 2px rgba(0,0,0,.2);transition:transform .05s}
+html[data-holo="on"][data-holo-motion="on"] :is(.btn,.agent-launcher).holo-active:active{transform:translateY(1px)}
+html[data-holo="off"] .holo-surface{transition:none}
+html[data-holo="off"] .holo-fx{display:none}
+@media(prefers-reduced-motion:reduce){.holo-fx{display:none!important}html[data-holo] .holo-surface,html[data-holo] :is(.btn,.agent-launcher):active{transform:none!important}}
+@media print{.holo-fx{display:none!important}html[data-holo] .holo-surface{transform:none!important;background-image:none!important}}
+
+
+/* Shared navigation remains still, including in HOLO mode. */
+html{scroll-padding-top:calc(var(--nav-height,140px) + 16px)}
+.site-header{position:sticky;top:0;z-index:48;background:var(--bg);padding:12px 0 0;margin-bottom:18px;border-bottom:1px solid var(--fg);box-shadow:0 3px 0 var(--line)}
+.site-header .topbar{margin:0;padding:0 0 12px;gap:12px;box-shadow:none;border:0}
+.nav-history,.nav-utility{display:flex;gap:10px;align-items:center}
+.site-header .brand{font-size:17px;margin-right:auto;white-space:nowrap}
+.site-header .display-controls{margin-left:0;gap:10px}
+.site-navigation{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 8px}
+.nav-link{padding:8px 14px;border:0;border-bottom:2px solid transparent;font-size:13px;color:var(--muted)}
+.nav-link:hover{color:var(--fg);background:var(--accent-soft)}
+.nav-link[aria-current]{font-weight:700;color:var(--fg);border-bottom-color:var(--fg)}
+.nav-toggle{display:none}
+html[data-holo] :is(.nav-control,.site-header .btn),html[data-holo] :is(.nav-control,.site-header .btn):active{transform:none!important;animation:none!important;transition:color .08s,border-color .08s}
+html[data-holo] .btn.nav-control:active,html[data-holo] .site-header .btn:active{box-shadow:var(--bevel),var(--btn-ledge)}
+.report-actions{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}
+body.guide-page aside{top:calc(var(--nav-height,140px) + 16px)}
+@media(max-width:640px){
+ .site-header .topbar{gap:8px;justify-content:flex-start}.site-header .brand{font-size:15px;margin-right:0;flex:1;text-align:right}
+ .nav-history{gap:8px}.nav-utility{order:2;margin-right:auto;gap:8px}.site-header .display-controls{order:3;gap:8px}.site-header .nav-toggle{display:inline-flex;order:4;width:100%;margin-top:2px}
+ .site-header .btn{padding:6px 10px;min-height:44px;font-size:12px}.site-navigation{display:none}
+ .site-header[data-nav-open="true"] .site-navigation{display:grid;grid-template-columns:1fr 1fr;gap:4px}.nav-link{min-height:44px;padding:10px}
+ body.guide-page aside{position:static}
+}
+@media print{.site-header,.breadcrumbs,.report-actions{display:none!important}}
 
 [hidden]{display:none!important}
 h1{font-size:30px;line-height:1.3;letter-spacing:-1px}h2{font-size:18px}h3{font-size:15px}
@@ -264,7 +318,123 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 .table-wrap{overflow:auto;margin:22px 0}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:12px;border:1px solid var(--line);vertical-align:top;min-width:95px}th{background:var(--accent-soft);color:var(--fg)}tr:nth-child(even) td{background:var(--code)}
 @media(max-width:800px){.guide-layout{grid-template-columns:1fr}aside{position:static;display:grid;grid-template-columns:1fr 1fr}aside small{grid-column:1/-1}.guide-main{padding:18px}}
 @media print{.guide-layout{display:block}aside,.topbar{display:none}.guide-main{border:0;padding:0}h2{break-after:avoid}.table-wrap{overflow:visible}tr{break-inside:avoid}table,th,td,code{font-size:12pt}}
-</style><script>/* Shared display preferences; works both in the app and in the offline guide. */
+</style><script>/* Shared navigation. Only local view preferences are stored; never model settings. */
+(() => {
+  'use strict';
+  function mount() {
+    const old = document.querySelector('.topbar');
+    if (!old) return;
+    const offline = location.protocol === 'file:';
+    const base = offline ? 'http://127.0.0.1:8787' : location.origin;
+    const sections = [['/', '首页'], ['/checkup', '体检本机'], ['/arena', '攻防演练'], ['/nvidia', 'Skill 审查'], ['/help', '使用说明']];
+    const report = location.pathname.startsWith('/report/');
+    const section = offline ? '/help' : (document.body.dataset.navSection || location.pathname);
+    const label = document.body.dataset.navLabel || sections.find(([url]) => url === section)?.[1] || '页面';
+    const fallback = report ? section : '/';
+    const route = value => {
+      try {
+        const u = new URL(value, base);
+        if (u.origin !== base || !(sections.some(([p]) => p === u.pathname) || /^\/report\/[^/]+$/.test(u.pathname))) return null;
+        return u.pathname + u.search + u.hash;
+      } catch { return null; }
+    };
+    const get = key => { try { return JSON.parse(sessionStorage.getItem(key)); } catch { return null; } };
+    const put = (key, value) => { try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {} };
+    const current = () => location.pathname + location.search + location.hash;
+    const pageKey = value => value.split('#')[0];
+    const key = () => 'as-view:' + pageKey(current());
+    let trail = [], restore = false;
+    if (!offline) {
+      const state = history.state?.asNavigation;
+      const intent = get('as-navigation-next');
+      try { sessionStorage.removeItem('as-navigation-next'); } catch {}
+      if (state) { trail = state.trail || []; restore = true; }
+      else if (intent && Date.now() - intent.at < 15000 && pageKey(intent.to) === pageKey(current())) {
+        trail = intent.trail || []; restore = intent.back;
+      } else {
+        const previous = document.referrer ? route(document.referrer) : null;
+        if (previous && pageKey(previous) !== pageKey(current())) trail = [previous];
+      }
+      trail = Array.isArray(trail) ? trail.map(route).filter(Boolean).slice(-24) : [];
+      try { history.replaceState({...history.state, asNavigation:{trail}}, ''); } catch {}
+    }
+    const url = target => offline ? base + target : target;
+    const link = (text, target, cls='btn outline small nav-control') => {
+      const a = document.createElement('a'); a.textContent = text; a.href = url(target); a.className = cls; return a;
+    };
+    const header = document.createElement('header'); header.className = 'site-header';
+    const top = document.createElement('div'); top.className = 'topbar';
+    const actions = document.createElement('nav'); actions.className = 'nav-history'; actions.setAttribute('aria-label', '返回与首页');
+    const back = link('← 返回', trail.at(-1) || fallback); back.dataset.navBack = 'true';
+    back.title = trail.length ? '返回上一页面' : '返回' + (sections.find(([p]) => p === fallback)?.[1] || '首页');
+    back.hidden = !offline && location.pathname === '/' && !trail.length;
+    actions.append(back, link('首页', '/'));
+    const brand = link('AgentShield', '/', 'brand');
+    const utility = document.createElement('div'); utility.className = 'nav-utility';
+    utility.append(link('设置', '/?settings=1'), link('使用说明', '/help'));
+    top.append(actions, brand, utility);
+    const toggle = document.createElement('button'); toggle.type = 'button'; toggle.className = 'btn outline small nav-control nav-toggle';
+    toggle.textContent = '导航'; toggle.setAttribute('aria-expanded', 'false'); toggle.setAttribute('aria-controls', 'site-navigation');
+    const nav = document.createElement('nav'); nav.id = 'site-navigation'; nav.className = 'site-navigation'; nav.setAttribute('aria-label', '主导航');
+    for (const [target, text] of sections) {
+      const a = link(text, target, 'nav-link nav-control');
+      if (target === section) a.setAttribute('aria-current', report ? 'location' : 'page');
+      nav.appendChild(a);
+    }
+    const closeMenu = () => { header.dataset.navOpen = 'false'; toggle.setAttribute('aria-expanded', 'false'); };
+    toggle.onclick = () => { const open = header.dataset.navOpen !== 'true'; header.dataset.navOpen = String(open); toggle.setAttribute('aria-expanded', String(open)); };
+    header.addEventListener('keydown', e => { if (e.key === 'Escape' && header.dataset.navOpen === 'true') { closeMenu(); toggle.focus(); } });
+    document.addEventListener('click', e => { if (!header.contains(e.target)) closeMenu(); });
+    const mobile = matchMedia('(max-width:640px)'); mobile.addEventListener('change', closeMenu);
+    top.appendChild(toggle); header.append(top, nav); old.replaceWith(header);
+    document.querySelectorAll('body > .breadcrumbs').forEach(e => e.remove());
+    const crumbs = document.createElement('nav'); crumbs.className = 'breadcrumbs'; crumbs.setAttribute('aria-label', '当前位置');
+    const separator = () => { const span = document.createElement('span'); span.textContent = '/'; span.setAttribute('aria-hidden', 'true'); crumbs.appendChild(span); };
+    if (section !== '/' || report) { crumbs.appendChild(link('首页', '/', 'nav-control')); separator(); }
+    if (report && section !== '/') { crumbs.appendChild(link(sections.find(([p]) => p === section)?.[1] || '报告', section, 'nav-control')); separator(); }
+    const leaf = document.createElement('span'); leaf.textContent = label; leaf.setAttribute('aria-current', 'page'); crumbs.appendChild(leaf);
+    header.after(crumbs);
+    const measure = () => document.documentElement.style.setProperty('--nav-height', header.getBoundingClientRect().height + 'px');
+    new ResizeObserver(measure).observe(header); measure();
+    if (offline) return;
+
+    const allowed = '#scan-system,#scan-network,#autoscroll,#depth,#controls input[type="checkbox"],#sample,#use-model';
+    const remember = () => {
+      const fields = {};
+      for (const e of document.querySelectorAll(allowed)) if (e.id) fields[e.id] = e.type === 'checkbox' ? e.checked : e.value;
+      put(key(), {y:scrollY, fields, details:[...document.querySelectorAll('body > details')].map(e=>e.open)});
+    };
+    let scrollTimer;
+    window.addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(remember, 150); }, {passive:true});
+    window.addEventListener('pagehide', () => { clearTimeout(scrollTimer); remember(); });
+    document.addEventListener('click', e => {
+      const a = e.target.closest('a[href]');
+      if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.hasAttribute('download') || (a.target && a.target !== '_self')) return;
+      const to = route(a.href);
+      if (!to || pageKey(to) === pageKey(current())) return;
+      remember();
+      const isBack = a.dataset.navBack === 'true';
+      put('as-navigation-next', {to, trail:isBack ? trail.slice(0, -1) : [...trail, current()].slice(-24), back:isBack, at:Date.now()});
+    });
+    const saved = restore ? get(key()) : null;
+    const restoreView = () => {
+      if (!saved) return;
+      for (const e of document.querySelectorAll(allowed)) {
+        const value = saved.fields?.[e.id];
+        if (e.type === 'checkbox' && typeof value === 'boolean') e.checked = value;
+        else if (e.tagName === 'SELECT' && typeof value === 'string' && [...e.options].some(o => o.value === value)) { e.value = value; e.dispatchEvent(new Event('change', {bubbles:true})); }
+      }
+      document.querySelectorAll('body > details').forEach((e, i) => { if (typeof saved.details?.[i] === 'boolean') e.open = saved.details[i]; });
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollTo(0, Math.max(0, Number(saved.y) || 0))));
+    };
+    if (section === '/arena' && document.querySelector('#scenario')?.disabled) document.addEventListener('agentshield:scenario-ready', restoreView, {once:true});
+    else restoreView();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, {once:true});
+  else mount();
+})();
+
+/* Shared display preferences; works both in the app and in the offline guide. */
 (() => {
   'use strict';
   const root = document.documentElement;
@@ -276,14 +446,16 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
   root.dataset.theme = chosen || (system.matches ? 'dark' : 'light');
   root.dataset.holo = read('as-holo') === 'off' ? 'off' : 'on';
   let themeButton, holoButton;
+  let refreshMotion = () => {};
   function sync() {
+    refreshMotion();
     if (!themeButton) return;
     const dark = root.dataset.theme === 'dark', holo = root.dataset.holo !== 'off';
     themeButton.textContent = dark ? 'LIGHT' : 'DARK';
     themeButton.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
     holoButton.textContent = holo ? 'HOLO ON' : 'HOLO OFF';
     holoButton.setAttribute('aria-pressed', String(holo));
-    holoButton.title = holo ? '关闭扫描纹理、定位角标与标题残影' : '开启扫描纹理、定位角标与标题残影';
+    holoButton.title = holo ? '关闭立体悬浮、方柱背景与背景波纹' : '开启立体悬浮、方柱背景与背景波纹';
   }
   system.addEventListener('change', e => {
     if (!chosen) { root.dataset.theme = e.matches ? 'dark' : 'light'; sync(); }
@@ -310,13 +482,106 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
       save('as-holo', root.dataset.holo); sync();
     };
     host.appendChild(controls); sync();
+    mountMotion();
+  }
+  function mountMotion() {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const surfaces = '.card,.metric,.config,.details-card,.topology,.lane,.guide-main,.scorehead,.answer,.agentinput,.event';
+    const buttons = '.btn,.agent-launcher';
+    const layer = document.createElement('div');
+    layer.className = 'holo-fx';
+    layer.setAttribute('aria-hidden', 'true');
+    const ripples = document.createElement('div');
+    ripples.className = 'holo-ripples';
+    layer.appendChild(ripples);
+    document.body.appendChild(layer);
+    let enabled = false, frame = 0, pending = null, active = null, bounds = null;
+    const timers = new Map();
+    const variables = ['--holo-rx', '--holo-ry'];
+    function release() {
+      if (!active) return;
+      active.classList.remove('holo-active');
+      active.removeAttribute('data-holo-tilt');
+      variables.forEach(name => active.style.removeProperty(name));
+      active = bounds = null;
+    }
+    function clear() {
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = 0; pending = null;
+      release();
+      for (const timer of timers.values()) window.clearTimeout(timer);
+      timers.clear(); ripples.replaceChildren();
+    }
+    refreshMotion = () => {
+      enabled = root.dataset.holo !== 'off' && !reduce.matches && fine.matches;
+      root.dataset.holoMotion = enabled ? 'on' : 'off';
+      layer.hidden = !enabled;
+      if (!enabled) clear();
+    };
+    reduce.addEventListener('change', refreshMotion);
+    fine.addEventListener('change', refreshMotion);
+    refreshMotion();
+    function paint() {
+      frame = 0;
+      const point = pending; pending = null;
+      if (!enabled || !point || !point.target.isConnected) { release(); return; }
+      const {x, y, target} = point;
+      if (target.closest('.site-header,.breadcrumbs,.nav-control')) { release(); return; }
+      // Event delegation includes cards inserted by the live arena stream.
+      const button = target.closest(buttons);
+      const surface = button || target.closest(surfaces);
+      if (!surface || surface.matches(':disabled,[aria-disabled="true"]')) { release(); return; }
+      if (surface !== active) {
+        release();
+        bounds = surface.getBoundingClientRect();
+        active = surface;
+        active.classList.add('holo-surface', 'holo-active');
+        const stable = surface.matches('.lane,.guide-main,.config,.details-card,.event,.agentinput,.scorehead') ||
+          surface.closest('.modal') || surface.querySelector('input,textarea,select') || bounds.height > 460 || bounds.width > 1000;
+        active.dataset.holoTilt = !button && !stable ? 'true' : 'false';
+      }
+      const localX = Math.max(0, Math.min(bounds.width, x - bounds.left));
+      const localY = Math.max(0, Math.min(bounds.height, y - bounds.top));
+      const nx = localX / Math.max(bounds.width, 1) * 2 - 1;
+      const ny = localY / Math.max(bounds.height, 1) * 2 - 1;
+      active.style.setProperty('--holo-rx', `${(-ny * .25).toFixed(2)}deg`);
+      active.style.setProperty('--holo-ry', `${(nx * .25).toFixed(2)}deg`);
+    }
+    document.addEventListener('pointermove', e => {
+      if (!enabled || e.pointerType !== 'mouse') return;
+      if (e.buttons) { clear(); return; } // Keep text selection and dragging still.
+      pending = {x:e.clientX, y:e.clientY, target:e.target};
+      if (!frame) frame = window.requestAnimationFrame(paint);
+    }, {passive:true});
+    document.addEventListener('pointerdown', e => {
+      if (!enabled || e.pointerType !== 'mouse' || e.button !== 0) return;
+      // Only blank page areas react; links, form controls, logs and dialogs do not.
+      if (e.target.closest(`${surfaces},${buttons},a,button,input,textarea,select,label,summary,pre,code,.overlay`)) return;
+      const ripple = document.createElement('div');
+      ripple.className = 'holo-ripple';
+      ripple.style.left = `${e.clientX}px`; ripple.style.top = `${e.clientY}px`;
+      if (timers.size >= 3) {
+        const oldest = timers.keys().next().value;
+        window.clearTimeout(timers.get(oldest)); timers.delete(oldest); oldest.remove();
+      }
+      ripples.appendChild(ripple);
+      timers.set(ripple, window.setTimeout(() => { ripple.remove(); timers.delete(ripple); }, 700));
+    }, {passive:true});
+    document.addEventListener('pointerout', e => { if (!e.relatedTarget) clear(); }, {passive:true});
+    document.addEventListener('pointercancel', clear, {passive:true});
+    document.addEventListener('scroll', clear, {passive:true, capture:true});
+    document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
+    window.addEventListener('blur', clear);
+    window.addEventListener('resize', clear, {passive:true});
+    window.addEventListener('pagehide', clear);
   }
   window.addEventListener('storage', e => {
-    if (e.key === 'as-theme') {
+    if (e.key === 'as-theme' || e.key === null) {
       chosen = ['light', 'dark'].includes(e.newValue) ? e.newValue : null;
       root.dataset.theme = chosen || (system.matches ? 'dark' : 'light');
     }
-    if (e.key === 'as-holo') root.dataset.holo = e.newValue === 'off' ? 'off' : 'on';
+    if (e.key === 'as-holo' || e.key === null) root.dataset.holo = e.newValue === 'off' ? 'off' : 'on';
     sync();
   });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, {once:true});
@@ -392,7 +657,8 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <pre><code class="language-sh">.venv/bin/python 04_web/app.py --port 8788 --open
 </code></pre>
 <p>此时本文所有网页链接中的 <code>8787</code> 应改为 <code>8788</code>。服务默认仅监听本机 <code>127.0.0.1</code>；把链接发给别人不会让对方访问到你的页面。</p>
-<p>网页右上方可切换浅色／深色主题，以及使用 <strong>HOLO ON / OFF</strong> 开关控制全息装饰。选择会保存在当前浏览器，跨页面保持；关闭装饰不影响攻防结果与功能。系统启用「减少动态效果」时，页面会关闭动画。</p>
+<p>网页右上方可切换浅色／深色主题，以及使用 <strong>HOLO ON / OFF</strong> 开关控制全息装饰。LIGHT 和 DARK 模式的填色按钮均使用黄色配黑字。选择会保存在当前浏览器，跨页面保持；关闭装饰不影响攻防结果与功能。HOLO 开启时，背景显示静态、低对比度的立体方柱，不显示跟随鼠标的光斑或纹理。小卡片最多抬高 1px、倾斜 0.25°，按钮悬停只抬高 0.5px，按钮按下时下沉，点击页面空白处会出现扩散波纹。长报告和攻防日志保持静止，只增强边框和阴影；滚动、拖选文字时会收起跟随效果。触屏仅保留按钮按压反馈。系统启用「减少动态效果」时，关闭跟随、位移和波纹，保留静态边缘层次。</p>
+<p>所有页面顶部都有「返回」和「首页」，下方可前往体检、攻防演练、Skill 审查和使用说明。顶栏滚动时保持可见，手机端点击「导航」展开功能入口。返回会优先回到刚才的站内页面，并恢复滚动位置和检查范围、场景防护等选择；直接打开报告时，会返回对应的体检或 Skill 审查页面。返回不会重新执行检查，也不会恢复上一轮演练事件。面包屑显示当前位置，设置入口固定在顶部。导航按钮不再下沉或倾斜，开始检查等操作按钮保留按压反馈。</p>
 <h2 id="section-3">3. 配置私有模型</h2>
 <p>现有项目已经配置模型，正常使用时无需重新输入密钥。</p>
 <ol>

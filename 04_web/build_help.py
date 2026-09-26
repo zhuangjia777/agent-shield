@@ -23,7 +23,7 @@ nav = ''.join(f'<a href="#{anchor}">{escape(title)}</a>' for anchor, title in se
 module = ast.parse((ROOT / '04_web' / 'app.py').read_text())
 shared_css = next(ast.literal_eval(node.value) for node in module.body
                   if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'BASE_CSS' for t in node.targets))
-theme_js = (ROOT / '04_web' / 'theme.js').read_text()
+theme_js = (ROOT / '04_web' / 'navigation.js').read_text() + '\n' + (ROOT / '04_web' / 'theme.js').read_text()
 guide_css = """
 body.guide-page{max-width:1288px}.guide-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:22px;margin-top:22px}
 aside{align-self:start;position:sticky;top:22px}aside small{display:block;color:var(--muted);font:12px ui-monospace,monospace;letter-spacing:1px;margin-bottom:12px}

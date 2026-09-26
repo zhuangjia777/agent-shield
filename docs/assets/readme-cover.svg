@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="800" viewBox="0 0 1600 800" role="img" aria-labelledby="title desc">
+<title id="title">AgentShield — Inspect. Simulate. Understand.</title>
+<desc id="desc">A grayscale cover with a shield and two panels representing attack and defense. Skill review, system checks, and six simulated scenarios.</desc>
+<defs>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity=".045"/></pattern>
+  <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#24272c"/><stop offset="1" stop-color="#101114"/></linearGradient>
+  <linearGradient id="metal" x2="1" y2="1"><stop stop-color="#fff"/><stop offset=".5" stop-color="#bfc3ca"/><stop offset="1" stop-color="#717781"/></linearGradient>
+</defs>
+<rect width="1600" height="800" fill="url(#bg)"/>
+<rect width="1600" height="800" fill="url(#grid)"/>
+<path d="M48 88V48H88 M1512 48H1552V88 M48 712V752H88 M1512 752H1552V712" fill="none" stroke="#9fa5af" stroke-width="2"/>
+<g font-family="Arial, Helvetica, sans-serif">
+  <text x="92" y="111" fill="#b7bbc4" font-size="17" letter-spacing="4">SECURITY / AGENT TOOLS</text>
+  <rect x="92" y="152" width="42" height="3" fill="#e1e4e9"/>
+  <text x="85" y="290" fill="#f6f7f9" font-size="94" font-weight="700" letter-spacing="-4">AgentShield</text>
+  <text x="92" y="345" fill="#c3c7cf" font-size="26">Inspect. Simulate. Understand.</text>
+  <text x="92" y="423" fill="#9fa5b0" font-size="18">Skill review</text>
+  <text x="92" y="459" fill="#9fa5b0" font-size="18">System checks</text>
+  <text x="92" y="495" fill="#9fa5b0" font-size="18">Attack &amp; defense simulation</text>
+  <path d="M92 557H683" stroke="#444951"/>
+  <text x="92" y="594" fill="#d0d4dc" font-size="15" letter-spacing="2">LOCAL RULES</text>
+  <text x="310" y="594" fill="#d0d4dc" font-size="15" letter-spacing="2">MODEL INSIGHTS</text>
+  <text x="550" y="594" fill="#d0d4dc" font-size="15" letter-spacing="2">EVIDENCE</text>
+</g>
+<!-- Layered panels illustrate the split attack / defense view. -->
+<path d="M859 241H1488V644H859Z" fill="#08090b" opacity=".55"/>
+<path d="M834 213H1463V616H834Z" fill="#17191e" stroke="#454a54"/>
+<path d="M810 188H1440V590H810Z" fill="#111317" stroke="#8b919c"/>
+<path d="M1125 188H1440V590H1125Z" fill="#dfe2e7"/>
+<path d="M810 252H1440" stroke="#6c727b"/>
+<g font-family="Arial, Helvetica, sans-serif" font-size="16" letter-spacing="3">
+  <text x="844" y="229" fill="#cbd0d8">ATTACK</text><text x="1177" y="229" fill="#373c45">DEFENSE</text>
+</g>
+<g fill="none" stroke-width="2">
+  <path d="M847 297H985M847 316H937M847 481H991M847 500H953M847 529H1019" stroke="#4e5561"/>
+  <path d="M1217 297H1399M1273 316H1399M1213 481H1399M1285 500H1399M1235 529H1399" stroke="#a4aab4"/>
+  <path d="M875 390H998M1260 390H1383" stroke="#9299a4" stroke-dasharray="5 7"/>
+  <path d="M974 380L985 390L974 400M1340 380L1329 390L1340 400" stroke="#aeb4be"/>
+</g>
+<path d="M1125 288L1229 328V404C1229 473 1182 506 1125 531C1068 506 1021 473 1021 404V328Z" fill="#08090b" opacity=".3" transform="translate(8 12)"/>
+<path d="M1125 280L1229 320V396C1229 465 1182 498 1125 523C1068 498 1021 465 1021 396V320Z" fill="#252a32" stroke="url(#metal)" stroke-width="4"/>
+<path d="M1125 299L1211 332V396C1211 453 1175 479 1125 503C1075 479 1039 453 1039 396V332Z" fill="none" stroke="#6b737f"/>
+<path d="M1081 394L1111 424L1172 360" fill="none" stroke="url(#metal)" stroke-width="9" stroke-linecap="square"/>
+<g font-family="Arial, Helvetica, sans-serif" font-size="14" letter-spacing="2">
+  <text x="92" y="703" fill="#858d99">SKILLSPECTOR INTEGRATION</text>
+  <text x="1440" y="703" fill="#858d99" text-anchor="end">06 SCENARIOS / RULE-BASED SIMULATION</text>
+</g>
+</svg>

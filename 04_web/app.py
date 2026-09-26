@@ -49,7 +49,7 @@ NVIDIA_SCAN_LOCK = threading.Lock()
 
 def nvidia_html():
     return '''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NVIDIA Skill 审查 · AgentShield</title><link rel="stylesheet" href="/style.css"><script src="/theme.js"></script></head><body>
+<title>NVIDIA Skill 审查 · AgentShield</title><link rel="stylesheet" href="/style.css"><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
 <div class="topbar"><a class="brand" href="/">AgentShield</a><a class="btn outline" href="/arena?scenario=malicious_skill">Skill 攻防演练</a></div>
 <h1>NVIDIA Skill 安全审查</h1><p>使用 NVIDIA SkillSpector 的真实扫描结果，验证项目样本中的风险。保留原始报告、版本、输入内容哈希和覆盖边界。</p>
 <div class="card"><label for="sample">选择项目样本</label><select id="sample" style="font:inherit;padding:8px;width:100%">
@@ -121,7 +121,7 @@ BASE_CSS = """
   --obs-inset: inset 0 1px 3px rgba(0,0,0,.08);
   /* 全息设备层（纯灰阶） */
   --sweep: linear-gradient(115deg, transparent 30%, rgba(0,0,0,.05) 46%, rgba(0,0,0,.10) 50%, rgba(0,0,0,.05) 54%, transparent 70%);
-  --scanline: repeating-linear-gradient(0deg, rgba(0,0,0,.07) 0 1px, transparent 1px 3px);
+  --depth-columns: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22144%22%20height%3D%22160%22%20viewBox%3D%220%200%20144%20160%22%3E%3Cg%20stroke%3D%22%23d8d8d8%22%20stroke-width%3D%220.7%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M72%2028%20112%2048%2072%2068%2032%2048Z%22%20fill%3D%22%23fafafa%22%2F%3E%3Cpath%20d%3D%22M32%2048%2072%2068%2072%20126%2032%20106Z%22%20fill%3D%22%23e9e9e9%22%2F%3E%3Cpath%20d%3D%22M72%2068%20112%2048%20112%20106%2072%20126Z%22%20fill%3D%22%23dedede%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
   --echo: 3px 3px 0 rgba(17,17,17,.10);
   --glow: 0 0 22px rgba(17,17,17,.08);
   --slab: #ffe54c; --slab-ink: #141414;
@@ -142,7 +142,7 @@ BASE_CSS = """
   --ledge-dark: 0 2px 0 #000000;
   --obs-inset: inset 0 1px 4px rgba(0,0,0,.45);
   --sweep: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.10) 50%, rgba(255,255,255,.05) 54%, transparent 70%);
-  --scanline: repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 3px);
+  --depth-columns: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22144%22%20height%3D%22160%22%20viewBox%3D%220%200%20144%20160%22%3E%3Cg%20stroke%3D%22%23343434%22%20stroke-width%3D%220.7%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M72%2028%20112%2048%2072%2068%2032%2048Z%22%20fill%3D%22%232c2c2c%22%2F%3E%3Cpath%20d%3D%22M32%2048%2072%2068%2072%20126%2032%20106Z%22%20fill%3D%22%23202020%22%2F%3E%3Cpath%20d%3D%22M72%2068%20112%2048%20112%20106%2072%20126Z%22%20fill%3D%22%23191919%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
   --echo: 3px 3px 0 rgba(236,236,236,.14);
   --glow: 0 0 26px rgba(236,236,236,.22);
   --slab: #ffe54c; --slab-ink: #141414;
@@ -153,12 +153,12 @@ BASE_CSS = """
 * { box-sizing: border-box; }
 html { background: var(--bg); }
 
-/* ---- L0 全息幕布：全屏扫描线 + 呼吸 ---- */
+/* ---- L0 全息幕布：静态立体方柱背景 ---- */
 html::before {
   content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background: var(--scanline); animation: screenbreath 9s ease-in-out infinite;
+  background-image:var(--depth-columns);background-size:144px 160px;opacity:.65;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.3),#000 75%);
 }
-@keyframes screenbreath { 0%,100% { opacity: .45; } 50% { opacity: .9; } }
 
 body { font: 15px/1.65 -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
        background: transparent; color: var(--fg); max-width: 920px; margin: 0 auto; padding: 28px 20px 80px;
@@ -184,7 +184,7 @@ a:hover { border-bottom-color: var(--fg); }
    slab = ::after（100%×100%，z:-1），静止 top/left:6px → 左上错出：
    背景从顶/左 6px 条透出（受光 bevel），底/右 6px 露出垫板；
    hover → slab 滑归 top:0 left:0，与边框齐平（回归，.2s ease）；
-   slab = 原版 #52 的 @ffe54c 黄，文字恒黑；
+   slab = light / dark 均黄色配黑字；
    边框独立成顶层 ::before 画框（z:1）→ 黑框永远压在黄板之上（slab 会溢出底/右缘盖框）。 */
 button { font: inherit; cursor: pointer; }
 .btn { position: relative; z-index: 0; display: inline-flex; justify-content: center; align-items: center; text-align: center;
@@ -317,7 +317,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
 /* HOLO adds visible surface texture and registration marks without moving content. */
 html::after{content:"";position:fixed;inset:7px;z-index:45;pointer-events:none;background:linear-gradient(var(--muted),var(--muted)) left top/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) left top/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) right top/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) right top/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) left bottom/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) left bottom/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) right bottom/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) right bottom/1px 22px no-repeat}
 .holo-frame{position:relative}.holo-frame::after{content:"";position:absolute;inset:6px;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) left top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/2px 12px no-repeat}
-.scorehead.holo-frame{padding:22px 18px;margin:18px 0;border:1px solid var(--line);background:var(--scanline)}
+.scorehead.holo-frame{padding:22px 18px;margin:18px 0;border:1px solid var(--line);background:var(--card)}
 html[data-holo="off"]::after,html[data-holo="off"] .holo-frame::after{display:none}
 html[data-holo="off"] .scorehead.holo-frame{background:none}
 .display-controls .btn[aria-pressed="true"]{color:var(--fg);border-bottom:2px solid var(--fg)}
@@ -327,6 +327,60 @@ html[data-holo="off"] .scorehead.holo-frame{background:none}
 .checkup-status{padding:16px;border-left:3px solid var(--fg);background:var(--code);margin-top:22px}.checkup-status p{margin:6px 0}.checkup-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:22px}
 @media(max-width:640px){.btn.compact{min-height:44px}}
 @media print{html::after,.holo-frame::after{display:none!important}}
+
+
+/* HOLO pointer depth: one active surface, no layout movement or pointer interception. */
+:root{--holo-ink:17,17,17;--holo-shadow:.19;--holo-edge:rgba(255,255,255,.95)}
+:root[data-theme="dark"]{--holo-ink:236,236,236;--holo-shadow:.55;--holo-edge:rgba(255,255,255,.27)}
+.lane.black{--holo-ink:236,236,236;--holo-shadow:.55;--holo-edge:rgba(255,255,255,.27)}
+.holo-fx{position:fixed;inset:0;overflow:hidden;z-index:45;pointer-events:none;contain:strict}
+.holo-ripple{position:absolute;width:320px;height:320px;margin:-160px;border:1px solid rgba(var(--holo-ink),.32);border-radius:50%;
+ background:radial-gradient(circle,transparent 50%,rgba(var(--holo-ink),.09) 70%,transparent 72%);
+ animation:holo-ripple .65s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes holo-ripple{from{transform:scale(.08);opacity:.85}to{transform:scale(2.2);opacity:0}}
+html[data-holo="on"] :is(.card,.metric,.config,.details-card,.topology,.lane,.guide-main,.scorehead,.answer,.agentinput,.event){
+ box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1))}
+html[data-holo="on"] :is(.report-card,.lane){--holo-base-shadow:var(--sh-2)}
+html[data-holo="on"] .holo-surface{transition:transform .16s ease-out,box-shadow .16s ease-out,border-color .12s}
+html[data-holo="on"][data-holo-motion="on"] .holo-active:not(:disabled):not([aria-disabled="true"]){
+ border-color:var(--field-line);
+ transition:transform .10s ease-out,box-shadow .10s ease-out,border-color .10s}
+html[data-holo="on"][data-holo-motion="on"] .holo-active[data-holo-tilt="true"]{
+ transform:perspective(1000px) translateY(-1px) rotateX(var(--holo-rx,0deg)) rotateY(var(--holo-ry,0deg))}
+html[data-holo="on"][data-holo-motion="on"] :is(.btn,.agent-launcher).holo-active:not(:disabled):not([aria-disabled="true"]){transform:translateY(-.5px)}
+html[data-holo="on"] :is(.btn,.agent-launcher):not(:disabled):not([aria-disabled="true"]):active{
+ transform:translateY(1px);box-shadow:var(--bevel),0 1px 2px rgba(0,0,0,.2);transition:transform .05s}
+html[data-holo="on"][data-holo-motion="on"] :is(.btn,.agent-launcher).holo-active:active{transform:translateY(1px)}
+html[data-holo="off"] .holo-surface{transition:none}
+html[data-holo="off"] .holo-fx{display:none}
+@media(prefers-reduced-motion:reduce){.holo-fx{display:none!important}html[data-holo] .holo-surface,html[data-holo] :is(.btn,.agent-launcher):active{transform:none!important}}
+@media print{.holo-fx{display:none!important}html[data-holo] .holo-surface{transform:none!important;background-image:none!important}}
+
+
+/* Shared navigation remains still, including in HOLO mode. */
+html{scroll-padding-top:calc(var(--nav-height,140px) + 16px)}
+.site-header{position:sticky;top:0;z-index:48;background:var(--bg);padding:12px 0 0;margin-bottom:18px;border-bottom:1px solid var(--fg);box-shadow:0 3px 0 var(--line)}
+.site-header .topbar{margin:0;padding:0 0 12px;gap:12px;box-shadow:none;border:0}
+.nav-history,.nav-utility{display:flex;gap:10px;align-items:center}
+.site-header .brand{font-size:17px;margin-right:auto;white-space:nowrap}
+.site-header .display-controls{margin-left:0;gap:10px}
+.site-navigation{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 8px}
+.nav-link{padding:8px 14px;border:0;border-bottom:2px solid transparent;font-size:13px;color:var(--muted)}
+.nav-link:hover{color:var(--fg);background:var(--accent-soft)}
+.nav-link[aria-current]{font-weight:700;color:var(--fg);border-bottom-color:var(--fg)}
+.nav-toggle{display:none}
+html[data-holo] :is(.nav-control,.site-header .btn),html[data-holo] :is(.nav-control,.site-header .btn):active{transform:none!important;animation:none!important;transition:color .08s,border-color .08s}
+html[data-holo] .btn.nav-control:active,html[data-holo] .site-header .btn:active{box-shadow:var(--bevel),var(--btn-ledge)}
+.report-actions{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0}
+body.guide-page aside{top:calc(var(--nav-height,140px) + 16px)}
+@media(max-width:640px){
+ .site-header .topbar{gap:8px;justify-content:flex-start}.site-header .brand{font-size:15px;margin-right:0;flex:1;text-align:right}
+ .nav-history{gap:8px}.nav-utility{order:2;margin-right:auto;gap:8px}.site-header .display-controls{order:3;gap:8px}.site-header .nav-toggle{display:inline-flex;order:4;width:100%;margin-top:2px}
+ .site-header .btn{padding:6px 10px;min-height:44px;font-size:12px}.site-navigation{display:none}
+ .site-header[data-nav-open="true"] .site-navigation{display:grid;grid-template-columns:1fr 1fr;gap:4px}.nav-link{min-height:44px;padding:10px}
+ body.guide-page aside{position:static}
+}
+@media print{.site-header,.breadcrumbs,.report-actions{display:none!important}}
 
 [hidden]{display:none!important}
 h1{font-size:30px;line-height:1.3;letter-spacing:-1px}h2{font-size:18px}h3{font-size:15px}
@@ -395,7 +449,7 @@ def home_html():
 </a>""")
     return f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AgentShield</title><style>{BASE_CSS}</style><script src="/theme.js"></script></head><body>
+<title>AgentShield</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
 <div class="topbar">
   <div class="brand">AgentShield<small>规则评分 · LLM 解释 · 本地运行</small></div>
   <div class="hbtns">
@@ -407,7 +461,7 @@ def home_html():
   </div>
 </div>
 <p class="tip">双评估域：Skill 静态评估 + 本机网络/系统。风险分由公式规则推导，LLM 只解释、不改分。右下角 AGENT 或 <span class="mono">⌘⇧A</span> 呼出智能体。</p>
-<div class="grid">{''.join(cards) or '<p class="tip">还没有报告——先点右上「体检本机」。</p>'}</div>
+<div class="grid">{''.join(cards) or '<p class="tip">还没有报告，点击顶部导航中的「体检本机」开始检查。</p>'}</div>
 <div id="agent-host"></div>
 <div id="modal-host"></div>
 <footer>只监听 127.0.0.1（不出本机）。修复命令由你亲手确认执行。报告含密钥片段——分享前先看一眼。</footer>
@@ -418,7 +472,7 @@ def home_html():
 def checkup_html():
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>体检本机 · AgentShield</title>
-<style>{BASE_CSS}</style><script src="/theme.js"></script></head><body>
+<style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
 <div class="topbar"><a class="brand" href="/">AgentShield<small>本机安全体检</small></a><a class="btn outline" href="/">← 返回首页</a></div>
 <nav class="breadcrumbs" aria-label="当前位置"><a href="/">首页</a><span>/</span><span>体检本机</span></nav>
 <h1>体检本机</h1><p class="tip">选择检查范围，生成报告，再查看问题与修复建议。</p>
@@ -434,8 +488,20 @@ def checkup_html():
 <script src="/app.js"></script></body></html>"""
 
 
+def report_context(report):
+    """Choose navigation from report content, including legacy report names."""
+    sources = {f.get("source") for f in report.get("findings", [])}
+    if report.get("external_assessments") or "skill" in report or "skill" in sources:
+        return "/nvidia", "Skill 审查报告", "返回 Skill 审查"
+    if "system" in report or "network" in report or sources & {"system", "network"}:
+        return "/checkup", "检查报告", "重新体检"
+    return "/", "检查报告", "查看全部报告"
+
+
 def report_html(rid: str):
     d = json.loads((REPORTS / rid / "report.json").read_text())
+    section, page_label, next_label = report_context(d)
+    next_action = f'<a class="btn outline nav-control" href="{section}">{next_label}</a>' if section != "/" else ""
     order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
     cards = []
     for f in sorted(d.get("findings", []), key=lambda x: (order.get(x["risk"]["level"], 9), -x["risk"]["raw_score"])):
@@ -465,14 +531,13 @@ def report_html(rid: str):
     findings_json = json.dumps(d.get("findings", []), ensure_ascii=False).replace("</", "<\\/")
     return f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AgentShield · {esc(rid)}</title><style>{BASE_CSS}</style><script src="/theme.js"></script></head><body>
+<title>AgentShield · {esc(rid)}</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body data-nav-section="{section}" data-nav-label="{page_label}">
 <div class="topbar">
   <a class="brand" href="/">AgentShield</a>
   <div class="hbtns"><button class="btn outline" onclick="openSettings()">设置</button>
   <a class="btn primary compact" href="/checkup">体检本机</a></div>
 </div>
-<nav class="breadcrumbs" aria-label="当前位置"><a href="/">首页</a><span>/</span>{'<a href="/checkup">体检本机</a><span>/</span>' if rid.startswith("scan-") else ""}<span>查看报告</span></nav>
-<div class="report-navigation"><a class="btn outline" href="/">← 返回首页</a>{' <a class="btn outline" href="/checkup">← 返回体检</a>' if rid.startswith("scan-") else ""}</div>
+<div class="report-actions">{next_action}<a class="btn outline nav-control" href="/">查看全部报告</a><a class="btn outline nav-control" href="#report-export">导出报告</a></div>
 <div class="scorehead holo-frame">
   <div class="big">{sc}<span> /100 · 本地健康分</span></div>
   <div>
@@ -480,7 +545,7 @@ def report_html(rid: str):
     <div style="font-size:13.5px;margin-top:4px" class="tip">本地健康分越高越好 · 外部风险分单独展示 · 证据先于结论</div>
   </div>
 </div>
-<div class="exportbar tip">
+<div class="exportbar tip" id="report-export">
   <b style="color:var(--fg);margin-right:4px">导出</b>
   <a class="btn small" download href="/report/{rid}/files/report.html">HTML</a>
   <a class="btn small" download href="/report/{rid}/files/report.md">Markdown</a>
@@ -691,6 +756,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, nvidia_html())
             if path == "/arena.css":
                 return self._send(200, (ROOT / "04_web" / "arena.css").read_text(), "text/css; charset=utf-8")
+            if path == "/navigation.js":
+                return self._send(200, (ROOT / "04_web" / "navigation.js").read_text(), "text/javascript; charset=utf-8")
             if path == "/theme.js":
                 return self._send(200, (ROOT / "04_web" / "theme.js").read_text(), "text/javascript; charset=utf-8")
             if path == "/arena.js":
@@ -1124,6 +1191,7 @@ function closeAgent() {
   b.textContent = 'AGENT'; b.setAttribute('aria-label','打开智能体'); b.title = 'AgentShield 智能体 (⌘⇧A)';
   b.className = 'agent-launcher';
   b.onclick = () => { agentPrefill = null; openAgent(null); };
+  if (new URLSearchParams(location.search).get('settings') === '1') openSettings();
   document.body.appendChild(b);
   window.addEventListener('keydown', e => {
     if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key==='A') { e.preventDefault(); openAgent(null); }

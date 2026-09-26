@@ -1,63 +1,151 @@
-# AgentShield — AI 网络安全体检智能体
+# AgentShield
 
-> **使用指南：** [中文使用说明](使用说明.md) · [浏览器阅读版](使用说明.html) · [应用内帮助](http://127.0.0.1:8787/help)
+![AgentShield：Skill 安全审查、本机体检与攻防模拟](docs/assets/readme-cover.svg)
 
-> **六种攻防场景：** 公共 Wi-Fi、恶意 Skill、办公内网横向移动、钓鱼与会话盗用、Web/API 越权、依赖供应链投毒。支持左右分屏、攻击前置条件、虚拟加固和业务复测。[打开演练](http://127.0.0.1:8787/arena?scenario=office_lateral) · [新增场景说明](01_specs/extended-arena-2026-09-26.md)。全部为规则推演，不执行真实攻击。
+AgentShield 是一个在本机运行的安全检查工具，可以审查 Agent Skill、检查电脑的安全设置，也可以通过攻防模拟了解不同防护措施的效果。接入模型后，还能用通俗的语言解释发现的问题和修复建议。
 
-> **当前新增：** [公共 Wi-Fi 红黑演练](http://127.0.0.1:8787/arena) 采用左黑右红分屏，流式展示初始对攻、虚拟加固与同场景复测；支持停止、前后对照和专业证据。[实现与验证说明](01_specs/public-wifi-arena-2026-09-24.md)。私有 Qwen 已连通，DGX Spark 暂不可用。
+[使用说明](使用说明.md) · [HTML 版使用说明](使用说明.html) · [安装与启动](#安装与启动)
 
-> **NVIDIA 已接入：** [Skill 安全审查](http://127.0.0.1:8787/nvidia) 使用原版 SkillSpector 2.12.0，独立展示官方发现、覆盖范围与原始证据。[集成验收记录](01_specs/nvidia-integration-2026-09-24.md) · [安装与复现](09_integrations/nvidia/README.md)。
->
-> **后续集成计划：** DGX Spark 迁移、OpenShell、来源验签与 SkillEvaluator Tier 3 对照仍待实施。
+## 能做什么
 
-> 双评估域：**Skill 域**（评估第三方 Agent Skill）+ **环境域**（本机网络/系统体检）
-> 纪律：**本地健康分由确定性规则推导，LLM 不能改分**；NVIDIA 官方风险分独立展示，模型分析可以影响该官方结果，不与本地分相加。LLM 默认走 config.json 里的私有兼容 API（Qwen3.8-27B），本地报告解释在 API 不可用时尝试 Ollama→模板；演练规则无需模型。
+- **检查 Skill**：用本地规则查找风险，也可以安装 NVIDIA SkillSpector 进行补充审查。报告会列出发现的问题、对应证据和检查范围。
+- **体检本机**：检查系统安全设置，按需选择局域网探测。本机系统检查目前主要适配 macOS。
+- **模拟攻防**：左侧展示黑方的攻击过程，右侧展示红方的防护过程。调整防护策略后，可以比较攻击结果和正常业务是否受到影响。
+- **解释结果**：不熟悉安全术语时，可以查看模型生成的说明；需要深入检查时，可以查看规则、证据和原始报告。
+
+攻防演练目前有六个场景：公共 Wi-Fi、恶意 Skill、办公内网横向移动、钓鱼与会话盗用、Web/API 越权和依赖供应链投毒。黑方代表黑客，红方代表白帽。场景使用预设规则和模拟数据，不执行真实攻击。具体用法见 [攻防场景说明](01_specs/extended-arena-2026-09-26.md)。
+
+NVIDIA 审查使用原版 SkillSpector 2.12.0，结果与本地检查分开展示。安装方法见 [NVIDIA 集成说明](09_integrations/nvidia/README.md)，已完成的验证见 [集成验证记录](01_specs/nvidia-integration-2026-09-24.md)。
 
 ## 使用范围与限制
 
 - 检查结果取决于规则和测试用例的覆盖范围。没有发现问题，并不代表不存在风险。
-- 请使用测试样本，不要接入生产账号或真实密钥，也不要扫描未经授权的设备。
-- 攻防演练使用模拟场景，不执行真实攻击或破坏性命令。
+- 攻防演练请使用测试样本，不要接入生产账号或真实密钥；网络检查只用于你拥有或已获授权的设备。
 - Skill 静态检查和模板报告可以离线运行，分别使用 `--no-ai` 和 `--no-narrative`；模型分析需要连接相应服务。
 
-## 快速开始
+## 安装与启动
+
+以下步骤以 macOS 为例。本机系统体检目前主要适配 macOS。主程序使用 Python 标准库，网页、本地规则检查和攻防模拟无需额外安装 Python 依赖，也不需要 DGX Spark。
+
+### 1. 下载项目
+
+先准备 Git 和 Python 3.11，并确认 `python3 --version` 使用的是所需版本。在你希望存放项目的目录运行：
+
 ```bash
-cd ~/myProjects/agent-shield
-# 首次: 配置 LLM（config.json 含 key, 已 gitignore）
+git clone https://github.com/zhuangjia777/agent-shield.git
+cd agent-shield
+python3 -m venv .venv
+```
+
+已经下载过项目时，直接进入已有的 `agent-shield` 目录即可，无需再次克隆。
+
+### 2. 配置模型
+
+```bash
+# 首次: 配置 LLM（复制 config.json.example 改名成 config.json )
 test -f config.json || cp config.json.example config.json  # 已有配置不覆盖
-# 一条命令评估一个 Skill
+```
+
+编辑 `config.json` 中 `cloud` 下的三个字段：
+
+| 字段 | 填写内容 |
+| --- | --- |
+| `base_url` | 兼容 OpenAI API 的模型接口地址，一般以 `/v1` 结尾 |
+| `api_key` | 该接口的访问密钥 |
+| `model` | 服务提供的模型名称 |
+
+也可以启动后在网页的“设置”中填写。规则检查和攻防模拟不需要模型；AI 解释和演练文字复盘需要连接模型服务。`config.json` 已被 Git 忽略，不要将密钥写入示例配置。
+
+### 3. 启动网页
+
+在项目目录运行：
+
+```bash
+.venv/bin/python 04_web/app.py --open
+```
+
+浏览器会打开 [AgentShield](http://127.0.0.1:8787)。使用期间保持终端运行，按 `Ctrl+C` 停止服务。以后启动时，进入项目目录并执行同一条命令即可。
+
+如果 8787 端口已被占用，可以换一个端口：
+
+```bash
+.venv/bin/python 04_web/app.py --port 8788 --open
+```
+
+### 4. 可选：安装 NVIDIA SkillSpector
+
+需要使用 NVIDIA Skill 安全审查时，再安装这个组件。它使用独立的 Python 环境；以下命令需要先安装 `uv`，并在项目目录执行：
+
+```bash
+uv venv --python 3.14 .venv-skillspector
+uv pip install --python .venv-skillspector/bin/python \
+  -r 09_integrations/nvidia/requirements.lock
+.venv/bin/python 09_integrations/nvidia/record_install.py
+```
+
+安装过程需要联网下载依赖。最后一条命令会核验组件内容并记录安装路径。安装完成后，打开 [NVIDIA Skill 安全审查](http://127.0.0.1:8787/nvidia)。更多说明见 [集成安装与复现](09_integrations/nvidia/README.md)。
+
+## 命令行使用
+
+以下命令均在项目目录执行：
+
+```bash
+# 使用本地规则评估一个 Skill，无需模型
 .venv/bin/python 02_scan/cmd_scan.py --skill 06_samples/vulnerable-skill --no-ai
-# 生成报告（json/md/html，LLM 叙述：私有 Qwen3.8-27B 优先，Ollama→模板兜底）
+
+# 生成 JSON、Markdown 和 HTML 报告，使用已配置的模型生成文字说明
 .venv/bin/python 03_ai/report.py --input reports/eval_vulnerable-skill/results.json
-# 离线模式（不联网，纯规则 + 模板叙述）
-.venv/bin/python 03_ai/report.py --input ... --no-narrative
-# 打开仪表盘
-.venv/bin/python 04_web/app.py --open      # → http://127.0.0.1:8787
-# 跑基准
+
+# 离线生成报告，使用模板说明
+.venv/bin/python 03_ai/report.py --input reports/eval_vulnerable-skill/results.json --no-narrative
+
+# 运行基准评测
 .venv/bin/python tests/run_evals.py
 ```
 
-## 目录
-```
-01_specs/   架构设计、功能方案与验证记录
-02_scan/    统一入口 cmd_scan.py；findings.py 统一 schema + 公式评分；network/system 引擎
-03_ai/      报告层：规则评分 + LLM 叙述（兼容 API→Ollama→模板）
-04_web/     本机仪表盘 http://127.0.0.1:8787
-05_skill_eval/  Agent Skill 静态评估器（9 类规则）
-06_samples/ vulnerable / hardened / benign 三样本
-07_evals/   评测集 + 期望命中映射
-08_arena/   六种确定性攻防演练（合成证据，无真实工具执行）
-09_integrations/ NVIDIA 原版依赖锁定、子进程适配与来源记录
-10_skills/  AgentShield 审计 Skill 草稿（依赖本项目，尚未 Tier 3 验证）
-reports/    体检报告（每次一个子目录，results + report.*）
-tests/      run_evals.py 基准门禁
-config.json   运行时配置：私有/兼容 API 端点 + Ollama 兜底（改 key/模型在这）
-BENCHMARK.md 指标实测 vs 目标（不达标如实披露）
+## 如何看报告
+
+本地健康分从 100 分开始，发现问题后按严重程度扣分：严重问题每项扣 25 分，高危扣 12 分，中危扣 5 分，低危扣 2 分，最低为 0 分。分数由规则计算，模型负责解释，不修改这个分数。
+
+每项问题的风险值按以下公式计算，再按阈值划分严重程度：
+
+```text
+风险值 = 影响程度 × 可利用性 × 证据可信度 × 暴露程度
 ```
 
-## 评分公式（每条 finding）
-`Risk = Impact(1-5) × Exploitability(1-5) × EvidenceConfidence(0.5/0.75/1.0) × Exposure(0.5/1.0/1.5)`
-报告总分 = 100 − Σ(critical 25 / high 12 / medium 5 / low 2)，全部规则可复算。
+其中，影响程度和可利用性取值为 1–5，可利用性越高表示越容易被利用；证据可信度取值为 0.5、0.75 或 1.0，暴露程度取值为 0.5、1.0 或 1.5。具体计算见 [findings.py](02_scan/findings.py)。
 
-## 当前基准
-本地三样本门禁命中 5/5 映射规则，benign/hardened 高危误报为 0；这不是完整 30 条评测集的结果。NVIDIA 扫描耗时与覆盖范围见独立验收记录，不能沿用本地规则耗时。
+NVIDIA SkillSpector 的风险分越高，表示风险越大，与本地健康分的方向相反。启用模型分析时，它的结果可能影响 NVIDIA 风险分；两种分数不相加。
+
+## 测试情况
+
+目前本地规则在三个示例 Skill 上命中了预期的 5 项检查，正常样本和加固样本均未出现高危误报。这组结果只覆盖这些样本，不代表已完成全部 30 条评测用例。详细结果见 [BENCHMARK.md](BENCHMARK.md)。NVIDIA 引擎的检查范围和耗时单独记录在 [集成验证记录](01_specs/nvidia-integration-2026-09-24.md) 中。
+
+## 后续计划
+
+以下功能尚未完成：
+
+- **在 DGX Spark 上运行模型**：部署并测试本地模型，用于风险解释和攻防复盘。当前版本仍可使用已有的私有模型接口。
+- **接入 OpenShell**：让智能体在隔离环境中操作测试文件和服务，限制文件及网络访问，记录哪些操作被允许或阻止。
+- **验证 Skill 的发布者签名**：确认 Skill 的发布来源，并检查签名后的内容是否被修改。签名验证通过后，仍需做安全检查。
+- **测试 AgentShield Skill 的实际效果**：用同一个模型完成相同任务，比较加载和不加载该 Skill 时的结果，使用 NVIDIA SkillEvaluator Tier 3 记录效果差异。
+
+## 项目目录
+
+```text
+01_specs/        架构设计、功能方案和验证记录
+02_scan/         扫描入口、系统与网络检查、评分规则
+03_ai/           模型调用、结果解释和报告生成
+04_web/          本机网页界面
+05_skill_eval/   Skill 检查规则及 NVIDIA 扫描入口
+06_samples/      漏洞、加固和正常三个示例 Skill
+07_evals/        评测用例和预期结果
+08_arena/        六种攻防模拟场景
+09_integrations/ NVIDIA 组件版本、依赖和运行适配
+10_skills/       AgentShield 审计 Skill 草稿，尚未完成效果对照测试
+docs/assets/    README 封面等文档图片
+reports/        本地生成的报告，不上传到 Git
+tests/          自动化检查与评测脚本
+config.json     模型接口、密钥及 Ollama 配置，不上传到 Git
+BENCHMARK.md    测试结果和待完成的评测项
+```
