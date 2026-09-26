@@ -53,6 +53,7 @@
 | `--fg` | `#ececec` | accent 随之反转 |
 | `--muted` | `#8f8f8f` | 对比度下限 |
 | `--line` | `#333333` | |
+| `--card-edge` | `#5a5a5a` | 卡片 2px 外框（dark，比 --line 提一档保轮廓） |
 | `--accent` | `#ececec` | 近白 |
 | `--accent-soft` | `#2a2a2a` | 深填充 |
 | `--code` | `#242424` | |
@@ -112,7 +113,8 @@
 - 与板材厚度的分工：按钮 = **滑入填板**（自带 bevel 幻觉，绝不加投影/ledge）；卡片 = **bevel+投影板材**；两者别再叠加第二层错位。
 
 ### Card / 报告卡（板材）
-- **L2 板材**：`--card` 底 + `1px --line` 边框 + `box-shadow: var(--bevel), var(--sh-2)`。裸描边卡片禁止——板材必须带受光边和投影。
+- **板材边框**（v1.1.4）：L1/L2 卡片 + 分数字板 + agent 输入区 + 角色设置区 = `2px solid var(--card-edge)`（light `#8a8a8a` / dark `#5a5a5a`）——扁平化后阴影变浅，卡片轮廓靠这条更粗更深的边维持可读性。`--line`（1px 细线）继续只用于内部分割线。
+- **L2 板材**：`--card` 底 + `2px --card-edge` 边框 + `box-shadow: var(--bevel), var(--sh-2)`。裸描边卡片禁止——板材必须带受光边和投影。
 - 报告卡 hover：边框变 `--fg` + 掠光 `var(--sweep)` 以 `1.6s` 扫过（伪元素 translateX，hover-only，`prefers-reduced-motion` 下关闭）；仍不上浮。
 - 静态信息卡（原则卡、表单卡）用 **L1**（`--sh-1`），比可点击卡薄一档 = 层级差。
 - 大分数字 `58px / 800 / -2px`，`/100` 后缀降为 16px 灰色。

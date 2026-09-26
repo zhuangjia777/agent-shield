@@ -114,7 +114,7 @@ BASE_CSS = """
 /* ============ Tokens · v1.1.3（银灰板材；黄色仅用于按钮填板） ============ */
 :root {
   --bg: #f5f5f5; --card: #ffffff; --fg: #111111; --muted: #787878;
-  --line: #dcdcdc; --accent: #111111; --accent-soft: #ebebeb;
+  --line: #dcdcdc; --card-edge: #8a8a8a; --accent: #111111; --accent-soft: #ebebeb;
   --code: #f1f1f1; --fill: #ffffff; --field-line: #c8c8c8;
   --overlay: rgba(0,0,0,.45);
   /* 深度栈（v1.1.4 扁平：单层小晕，楼层差靠 border + 微量阴影） */
@@ -137,7 +137,7 @@ BASE_CSS = """
 }
 :root[data-theme="dark"] {
   --bg: #171717; --card: #1e1e1e; --fg: #ececec; --muted: #8f8f8f;
-  --line: #333333; --accent: #ececec; --accent-soft: #2a2a2a;
+  --line: #333333; --card-edge: #5a5a5a; --accent: #ececec; --accent-soft: #2a2a2a;
   --code: #242424; --fill: #1e1e1e; --field-line: #4a4a4a;
   --overlay: rgba(0,0,0,.60);
   --sh-1: 0 1px 2px rgba(0,0,0,.40);
@@ -233,9 +233,9 @@ button { font: inherit; cursor: pointer; }
 .btn:is(.outline,.ghost)[disabled] { color: var(--muted); border-color: var(--field-line); }
 
 /* ---- 板材（v1.1 核心：bevel + 阴影分级） ---- */
-.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
+.card { background: var(--card); border: 2px solid var(--card-edge); border-radius: var(--r);
         padding: 16px 18px; box-shadow: var(--bevel), var(--sh-1); }   /* L1 静态板 */
-.card.l2 { border: 1px solid var(--line); box-shadow: var(--bevel), var(--sh-2); position: relative; } /* L2 可交互板 */
+.card.l2 { border: 2px solid var(--card-edge); box-shadow: var(--bevel), var(--sh-2); position: relative; } /* L2 可交互板 */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin: 0; }
 .report-card { display: block; color: inherit; overflow: hidden; }
 .report-card:hover { border-color: var(--fg); text-decoration: none; }
@@ -317,7 +317,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
 
 /* ---- agent 输入区 · L2 板材 ---- */
 .agentinput { display: flex; gap: 8px; align-items: center; margin-top: 16px; padding: 12px 14px;
-              border: 1px solid var(--line); border-top: 2px solid var(--fg);
+              border: 2px solid var(--card-edge); border-top: 2px solid var(--fg);
               background: var(--card); box-shadow: var(--bevel), var(--sh-2); }
 .agentinput input { flex: 1; box-shadow: var(--obs-inset); }
 
@@ -326,7 +326,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
 /* HOLO adds visible surface texture and registration marks without moving content. */
 html::after{content:"";position:fixed;inset:7px;z-index:45;pointer-events:none;background:linear-gradient(var(--muted),var(--muted)) left top/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) left top/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) right top/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) right top/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) left bottom/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) left bottom/1px 22px no-repeat,linear-gradient(var(--muted),var(--muted)) right bottom/22px 1px no-repeat,linear-gradient(var(--muted),var(--muted)) right bottom/1px 22px no-repeat}
 .holo-frame{position:relative}.holo-frame::after{content:"";position:absolute;inset:6px;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) left top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/2px 12px no-repeat}
-.scorehead.holo-frame{padding:22px 18px;margin:18px 0;border:1px solid var(--line);background:var(--card)}
+.scorehead.holo-frame{padding:22px 18px;margin:18px 0;border:2px solid var(--card-edge);background:var(--card)}
 html[data-holo="off"]::after,html[data-holo="off"] .holo-frame::after{display:none}
 html[data-holo="off"] .scorehead.holo-frame{background:none}
 .display-controls .btn[aria-pressed="true"]{color:var(--fg);border-bottom:2px solid var(--fg)}
@@ -363,7 +363,7 @@ html[data-holo="off"] .holo-fx{display:none}
 @media print{.holo-fx{display:none!important}html[data-holo] .holo-surface{transform:none!important;background-image:none!important}}
 
 
-.role-settings{margin:16px 0;padding:14px;border:1px solid var(--line)}
+.role-settings{margin:16px 0;padding:14px;border:2px solid var(--card-edge)}
 .role-settings legend{font-weight:700}.modal .role-inherit{display:flex;gap:8px;align-items:center}.modal .role-inherit input{width:auto}.role-settings>.btn{margin-top:12px}
 /* Shared navigation remains still, including in HOLO mode. */
 html{scroll-padding-top:calc(var(--nav-height,140px) + 16px)}
@@ -1255,7 +1255,15 @@ function closeAgent() {
   b.textContent = 'AGENT'; b.setAttribute('aria-label','打开智能体'); b.title = 'AgentShield 智能体 (⌘⇧A)';
   b.className = 'agent-launcher';
   b.onclick = () => { agentPrefill = null; openAgent(null); };
-  if (new URLSearchParams(location.search).get('settings') === '1') openSettings();
+  // ?settings=1 深链：只自动打开一次，打开后立即从地址栏抹掉参数，
+  // 否则同一 URL 每次刷新都会再弹一次。
+  const _qs = new URLSearchParams(location.search);
+  if (_qs.get('settings') === '1') {
+    _qs.delete('settings');
+    const _s = _qs.toString();
+    history.replaceState(null, '', location.pathname + (_s ? '?'+_s : ''));
+    openSettings();
+  }
   document.body.appendChild(b);
   window.addEventListener('keydown', e => {
     if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key==='A') { e.preventDefault(); openAgent(null); }
