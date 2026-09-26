@@ -78,6 +78,24 @@ test -f config.json || cp config.json.example config.json  # 已有配置不覆�
 .venv/bin/python 04_web/app.py --port 8788 --open
 ```
 
+#### 关闭程序
+
+在启动程序的终端按 **Control + C（Ctrl+C）** 即可停止服务。只关闭浏览器页面不会退出程序。
+
+如果找不到启动时的终端，可先查看哪个进程在使用默认端口：
+
+```bash
+lsof -nP -iTCP:8787 -sTCP:LISTEN
+```
+
+确认是 AgentShield 服务后，执行：
+
+```bash
+lsof -tiTCP:8787 -sTCP:LISTEN | xargs kill
+```
+
+如果启动时指定了其他端口，将上面命令中的 `8787` 换成对应端口。下次使用时重新运行启动命令即可。
+
 ### 4. 可选：安装 NVIDIA SkillSpector
 
 需要使用 NVIDIA Skill 安全审查时，再安装这个组件。它使用独立的 Python 环境；以下命令需要先安装 `uv`，并在项目目录执行：
