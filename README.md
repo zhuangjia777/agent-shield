@@ -174,3 +174,7 @@ tests/          自动化检查与评测脚本
 config.json     模型接口、密钥及 Ollama 配置，不上传到 Git
 BENCHMARK.md    测试结果和待完成的评测项
 ```
+
+## License
+
+MIT，见 [LICENSE](LICENSE)。
