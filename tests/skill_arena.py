@@ -91,7 +91,8 @@ class SkillArenaTests(unittest.TestCase):
         handler=object.__new__(app.Handler);handler.path='/api/arena/scenarios'
         handler._json=lambda code,body:(code,body)
         code,data=handler.do_GET();self.assertEqual(code,200)
-        self.assertEqual(set(data['scenarios']),{'public_wifi','malicious_skill'})
+        self.assertEqual(set(data['scenarios']),{'public_wifi','malicious_skill','office_lateral',
+                                               'phishing_identity','api_authorization','dependency_supply_chain'})
         handler.path='/api/arena/run';handler.headers={'Content-Length':'30'}
         handler._body=lambda:{'scenario':'malicious_skill'}
         code,result=handler.do_POST();self.assertEqual(code,200)

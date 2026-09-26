@@ -25,7 +25,7 @@ def external_html(rep, raw_prefix=""):
                    "raw_sha256": p.get("raw_sha256"), "network_policy": p.get("network_policy"),
                    "io_events": p.get("io_events"), "signature_status": p.get("signature_status"),
                    "analysis_completeness": coverage}
-        blocks.append(f'''<section class="card" style="margin:18px 0;border-top:3px solid #76b900">
+        blocks.append(f'''<section class="card" style="margin:18px 0;border-top:3px solid var(--fg)">
 <h2 style="font-size:18px;margin-top:0">{esc(assessment.get('engine'))} <small>{esc(assessment.get('version'))}</small></h2>
 <p><b>官方引擎风险分 {esc(risk.get('score'))}/100</b>（越高风险越大） · {esc(risk.get('severity'))} · {esc(risk.get('recommendation'))}</p>
 <p>{esc(status)} · {mode} · {len(assessment.get('issues', []))} 项线索</p>

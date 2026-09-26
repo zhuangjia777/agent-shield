@@ -6,7 +6,7 @@ let controller = null, running = false, packets = [], shown = 0, total = 0;
 let counters, currentPhase = 'before';
 const names = {black:'黑方 · 黑客', red:'红方 · 白帽', judge:'规则裁判'};
 const stages = {before:'初始对攻', repair:'红方加固', after:'同场景复测', complete:'结果复盘'};
-const verdicts = {success:'目标达成', blocked:'已阻断', alert:'已检测', unobserved:'未监测', reachable:'可达', accepted:'生效', pass:'通过', regression:'业务受影响'};
+const verdicts = {success:'目标达成', blocked:'已阻断', skipped:'前置未满足', alert:'已检测', unobserved:'未监测', reachable:'可达', accepted:'生效', pass:'通过', regression:'业务受影响'};
 const status = text => { $('#status').textContent = text; };
 async function post(url, body) {
   const response = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
@@ -165,11 +165,14 @@ function selectScenario(key) {
   document.title=catalog.name+' · AgentShield';
   $('#scenario-eyebrow').textContent=catalog.eyebrow; $('#scenario-intro').textContent=catalog.description;
   $('#controls-note').textContent=catalog.controls_note;
+  $('#scenario-focus').textContent=catalog.focus || '先比较薄弱与日常配置，再查看哪些措施阻断攻击、是否影响正常业务。';
+  const goals=catalog.attack_goals || [], goalNames=Object.fromEntries(goals.map(g=>[g.id,g.name]));
+  $('#case-list').innerHTML=goals.map(g=>`<li>${escapeHTML(g.name)}${g.requires.length ? `<small>前置：${escapeHTML(g.requires.map(k=>goalNames[k] || k).join('、'))}</small>` : ''}</li>`).join('');
   $('#skill-workflow').classList.toggle('hidden',key !== 'malicious_skill');
   $('#topology').innerHTML=catalog.topology.map(n=>'<b>'+escapeHTML(n.name)+'</b>').join('<span class="line"></span>');
   $('#controls').innerHTML=Object.entries(catalog.controls).map(([name,c])=>`<label><input type="checkbox" id="c-${escapeHTML(name)}"><span>${escapeHTML(c.name)}<small>${escapeHTML(c.description)}</small></span></label>`).join('');
   $('#assumptions').innerHTML=catalog.assumptions.map(x=>'<li>'+escapeHTML(x)+'</li>').join('');
-  document.querySelector('[data-preset="hardened"]').textContent=key === 'malicious_skill' ? '全面封锁' : '全面加固';
+  document.querySelector('[data-preset="hardened"]').textContent=catalog.hardened_label || '全面加固';
   history.replaceState(null,'',location.pathname+'?scenario='+encodeURIComponent(key));
   preset('everyday'); setRunning(false);
 }

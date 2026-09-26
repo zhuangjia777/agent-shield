@@ -36,6 +36,9 @@ def catalog():
         "controls_note": "开关只影响虚拟工具策略。日常配置限定文件工作区并开启审计；全面加固还会停用所有工具。",
         "controls": CONTROLS, "presets": PRESETS,
         "attack_goals_total": 4, "business_total": 2,
+        "hardened_label": "全面封锁",
+        "attack_goals": [{"id": key, "name": name, "requires": ["secret_read"] if key == "secret_exfil" else []}
+                         for key, name, _, _ in ATTACKS],
         "topology": [{"name": "不可信 Skill 内容"}, {"name": "Agent 上下文"},
                      {"name": "工具授权边界"}, {"name": "演示文件 / 接收端"}],
         "assumptions": [

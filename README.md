@@ -2,7 +2,7 @@
 
 > **使用指南：** [中文使用说明](使用说明.md) · [浏览器阅读版](使用说明.html) · [应用内帮助](http://127.0.0.1:8787/help)
 
-> **新增第二场景：** [恶意 Skill / 提示注入](http://127.0.0.1:8787/arena?scenario=malicious_skill)，支持合成敏感工具请求、权限加固与业务复测。[实现与验收](01_specs/skill-arena-2026-09-24.md)。两个场景均为规则推演，不执行真实攻击。
+> **六种攻防场景：** 公共 Wi-Fi、恶意 Skill、办公内网横向移动、钓鱼与会话盗用、Web/API 越权、依赖供应链投毒。支持左右分屏、攻击前置条件、虚拟加固和业务复测。[打开演练](http://127.0.0.1:8787/arena?scenario=office_lateral) · [新增场景说明](01_specs/extended-arena-2026-09-26.md)。全部为规则推演，不执行真实攻击。
 
 > **当前新增：** [公共 Wi-Fi 红黑演练](http://127.0.0.1:8787/arena) 采用左黑右红分屏，流式展示初始对攻、虚拟加固与同场景复测；支持停止、前后对照和专业证据。[实现与验证说明](01_specs/public-wifi-arena-2026-09-24.md)。私有 Qwen 已连通，DGX Spark 暂不可用。
 
@@ -22,7 +22,7 @@
 
 ## 快速开始
 ```bash
-cd ~/myProjects/AgentShield
+cd ~/myProjects/agent-shield
 # 首次: 配置 LLM（config.json 含 key, 已 gitignore）
 test -f config.json || cp config.json.example config.json  # 已有配置不覆盖
 # 一条命令评估一个 Skill
@@ -46,7 +46,7 @@ test -f config.json || cp config.json.example config.json  # 已有配置不覆�
 05_skill_eval/  Agent Skill 静态评估器（9 类规则）
 06_samples/ vulnerable / hardened / benign 三样本
 07_evals/   评测集 + 期望命中映射
-08_arena/   公共 Wi-Fi / 恶意 Skill 确定性演练（合成证据，无真实工具执行）
+08_arena/   六种确定性攻防演练（合成证据，无真实工具执行）
 09_integrations/ NVIDIA 原版依赖锁定、子进程适配与来源记录
 10_skills/  AgentShield 审计 Skill 草稿（依赖本项目，尚未 Tier 3 验证）
 reports/    体检报告（每次一个子目录，results + report.*）

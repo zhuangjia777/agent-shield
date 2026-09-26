@@ -24,7 +24,7 @@
 
 ## 复现命令
 ```bash
-cd ~/myProjects/AgentShield
+cd ~/myProjects/agent-shield
 .venv/bin/python tests/run_evals.py
 .venv/bin/python 02_scan/cmd_scan.py --skill 06_samples/vulnerable-skill --no-ai
 .venv/bin/python 03_ai/report.py --input reports/<id>/results.json --no-narrative

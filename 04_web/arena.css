@@ -1,0 +1,43 @@
+/* Arena layout uses the shared design tokens; the two lanes stay side by side. */
+body.arena-page{max-width:1440px}
+.arena-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:22px}
+.arena-heading h1{margin:8px 0;font-size:30px}
+.eyebrow,.mono{font:12px ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:1px}.eyebrow{color:var(--muted)}
+.intro{color:var(--muted);max-width:920px;margin:12px 0 18px}
+.badge{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--field-line);color:var(--fg);background:var(--card);font-size:12px;box-shadow:var(--bevel),var(--sh-1);white-space:nowrap}
+.badge .dot{animation:none}.running .dot{animation:flicker 2.2s steps(2,jump-none) infinite}
+.scenario-picker{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:22px 0}.scenario-picker label{margin:0}.scenario-picker select{font-weight:600;padding:10px 14px}.scenario-picker .note{font-size:12px}
+.config,.details-card{border:1px solid var(--line);background:var(--card);border-radius:var(--r);padding:16px 18px;margin:18px 0;box-shadow:var(--bevel),var(--sh-1)}
+.config summary,.details-card summary{font-weight:600;font-size:13px}.config summary span{font-weight:400;color:var(--muted);margin-left:12px;font-size:12px}
+.config-body{padding-top:16px}.presets{display:flex;flex-wrap:wrap;gap:14px}.controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+.controls label{display:flex;align-items:flex-start;gap:10px;color:var(--fg);margin:0;font-size:13px;font-weight:500;text-transform:none;letter-spacing:0;padding:12px;background:var(--code);border:1px solid var(--line);box-shadow:var(--obs-inset)}
+.controls input{margin-top:4px}.controls small{display:block;font-size:12px;color:var(--muted);line-height:1.65;margin-top:6px}
+#case-list li{margin:12px 0;font-size:13px}#case-list small{display:block;color:var(--muted);margin-top:4px}
+.topology{display:flex;gap:12px;justify-content:center;align-items:center;padding:16px;border:1px solid var(--line);background:var(--card);box-shadow:var(--bevel),var(--sh-1);font-size:12px;color:var(--muted)}
+.topology b{color:var(--fg);font-weight:500}.topology .line{height:1px;flex:1;max-width:70px;background:var(--field-line)}
+.toolbar{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:22px 0 18px;scroll-margin-top:18px}
+.run-actions,.view-actions{display:flex;align-items:center;flex-wrap:wrap;gap:14px}.view-actions label{font-size:12px;margin:0;letter-spacing:0;text-transform:none;display:flex;gap:8px;align-items:center}.view-actions select{font-size:13px;padding:8px}
+.stagebar{display:flex;gap:2px;margin:0 0 18px;border:1px solid var(--line)}.stage{flex:1;padding:10px 14px;background:var(--code);color:var(--muted);font-size:12px;border-bottom:2px solid transparent}
+.stage.active{color:var(--bg);background:var(--fg);border-color:var(--fg);font-weight:700}.stage.done{color:var(--fg);border-color:var(--fg)}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px}.metric{background:var(--card);padding:16px 18px;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--bevel),var(--sh-1)}
+.metric strong{display:block;font:800 30px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--fg);letter-spacing:-1px}.metric span{font-size:12px;color:var(--muted)}.metric.success{border-top:3px solid var(--fg)}.metric.after{border-top:3px double var(--fg)}
+.livebar{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted)}.livebar #status{color:var(--fg)}
+.progress{height:3px;background:var(--line);margin-bottom:18px;overflow:hidden}.progress div{height:100%;width:0;background:var(--fg)}
+.arena{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}.lane{border:1px solid var(--field-line);border-radius:var(--r);overflow:hidden;background:var(--card);color:var(--fg);min-width:0;box-shadow:var(--bevel),var(--sh-2)}
+/* Fixed achromatic dark panel gives the black role a persistent visual identity. */
+.lane.black{--card:#171717;--fg:#ececec;--bg:#171717;--muted:#a8a8a8;--line:#393939;--field-line:#555555;--code:#222222;--accent-soft:#2a2a2a;--bevel:inset 0 1px 0 rgba(255,255,255,.06);--obs-inset:inset 0 1px 4px rgba(0,0,0,.45);--sh-1:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35)}
+.lane-head{padding:18px;display:flex;justify-content:space-between;gap:12px;align-items:center;border-bottom:1px solid var(--fg)}.role-title{display:flex;gap:12px;align-items:center}.role-icon{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--fg);font:700 13px ui-monospace,monospace;flex-shrink:0}.red .role-icon{border-style:double;border-width:3px}
+.role-title h2{font-size:18px;margin:0}.role-title p{font:11px/1.6 ui-monospace,monospace;color:var(--muted);margin:4px 0 0}.lane-status{font-size:12px;color:var(--muted)}
+.feed{height:480px;overflow:auto;padding:6px 18px 18px;scrollbar-width:thin;scrollbar-color:var(--field-line) transparent}
+.empty{display:grid;place-content:center;text-align:center;height:350px;color:var(--muted);line-height:1.8;font-size:13px}.empty b{font-weight:500;font-size:15px;color:var(--fg)}
+.event{border:1px solid var(--line);background:var(--card);border-radius:var(--r);margin:16px 0;padding:14px;box-shadow:var(--bevel),var(--sh-1)}.event.judge{border-left:3px double var(--fg)}
+.event .event-meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font:11px ui-monospace,monospace;color:var(--muted)}.event b{font-size:13px;display:block;margin:10px 0 6px}.event p{font-size:13px;line-height:1.7;margin:0;color:var(--fg)}
+.event .verdict{font-size:11px;border-radius:var(--r);padding:2px 6px;color:var(--fg);background:var(--card);border:1px solid var(--fg);font-weight:600;white-space:nowrap}
+.event .verdict.success,.event .verdict.regression{color:var(--bg);background:var(--fg)}.event .verdict.alert{border-style:dashed}.event .verdict.skipped,.event .verdict.unobserved{background:var(--code);color:var(--muted);border-color:var(--line);font-weight:400}
+.divider{display:flex;align-items:center;gap:10px;font:12px ui-monospace,monospace;color:var(--muted);margin:18px 0 8px}.divider::after{content:'';height:1px;background:var(--line);flex:1}.correlation{font:11px/1.6 ui-monospace,monospace;color:var(--muted);margin-top:10px}
+.expert-only{display:none}body.expert .expert-only{display:block}.arena pre{font-size:12px}
+.bottom{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;margin:22px 0}.tabs{display:flex;flex-wrap:wrap;gap:12px}.tabs button[aria-pressed=true]{border-bottom:3px solid var(--fg);font-weight:700;color:var(--fg)}
+.review{white-space:pre-wrap;font-size:13px}.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.hidden{display:none!important}
+@media(max-width:1000px){.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.lane-head{padding:14px}.lane-status{display:none}.feed{padding:6px 12px 16px}.metric{padding:12px}.metric strong{font-size:26px}}
+@media(max-width:640px){.arena-heading{align-items:flex-start;flex-wrap:wrap}.arena-heading h1{font-size:25px}.arena{grid-template-columns:1fr}.feed{height:360px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.stage{padding:10px 6px;font-size:11px;text-align:center}.topology{flex-wrap:wrap;justify-content:flex-start;gap:10px}.topology .line{flex:0 0 12px}.review-grid{grid-template-columns:1fr}.livebar{align-items:flex-start;flex-wrap:wrap}.config summary span{display:none}.controls{grid-template-columns:1fr}.scenario-picker select{width:100%}.run-actions{row-gap:16px}}
+@media print{.feed{height:auto;overflow:visible}.arena{display:block}.lane.black{--card:white;--fg:black;--bg:white;--muted:#555555;--code:#eeeeee}.toolbar,.config,.bottom{display:none}.event{break-inside:avoid}}

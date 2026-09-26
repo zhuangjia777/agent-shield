@@ -12,7 +12,7 @@
 
 1. **严格黑白灰。** 无彩色相（achromatic）、无彩色渐变；唯一"accent" 就是近黑（#111）／dark 下的近白（#ececec）。**灰阶功能性渐变（扫描线 / glow / reticle 弧）是 v1.1 允许的设备级例外**，常量表见 §6.6。语义等级用**墨色浓度 + 边框样式**表达，不用色相。
 2. **Radius = 0。** 集中在一个 token `--r: 0px`，所有圆角走它；仅小徽章允许 ≤2px 硬编码例外。
-3. **硬度 + 厚重。** 1px 边框；顶栏 / 弹窗头下方一条实心黑线；hover = 边框变黑（不上浮、不阴影渐隐）；**板材（plate）一律带分层阴影 + 硬肩（bevel），禁止裸描边卡片，分级见 §6.6；机械式按钮：底缘 2px 硬投影，按下 = `translateY(2px)` 吃掉 ledge**。无玻璃拟态；glow 只允许出现在 holo 设备位（§6.6）。
+3. **硬度 + 厚重。** 1px 边框；顶栏 / 弹窗头下方一条实心黑线；hover = 边框变黑（不上浮、不阴影渐隐）；**板材（plate）一律带分层阴影 + 硬肩（bevel），禁止裸描边卡片，分级见 §6.6；按钮 = #52 滑入填充板（静止 7px 错位，hover 滑归 + 文字反色，stable 主面不动）**。无玻璃拟态；glow 只允许出现在 holo 设备位（§6.6）。
 4. **报告感。** 页面读起来像技术报告：evidence 行、`score = a×b×c` 公式行、密集但对齐。不营销、不 hero、无装饰性图标（功能 emoji 之外的彩色 emoji 是颜色泄漏点，纯单色场景换文字/SVG）。
 5. **类型身份。** 系统无衬线正文；品牌名 / 表单 label / 状态 label 一律 **UPPERCASE + 字距**；ID、时间戳、公式、evidence 行用 **等宽**。
 
@@ -30,7 +30,7 @@
 | `--accent` | `#111111` | 语义 accent（= 近黑） |
 | `--accent-soft` | `#ebebeb` | 浅填充（low 徽章、hover 底） |
 | `--code` | `#f1f1f1` | 代码块 / evidence 观察区底 |
-| `--fill` | `#ffffff` | 按钮 / 输入框底色（代码里现写死 `#fff`，见 §7 迁移项） |
+| `--fill` | `#ffffff` | 按钮 / 输入框底色（已统一 token） |
 | `--overlay` | `rgba(0,0,0,.45)` | 弹窗遮罩 |
 | `--sh-1` | `0 1px 2px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.08)` | 板材 L1：卡片 / 输入框 / 徽章组（薄） |
 | `--sh-2` | `0 2px 4px rgba(0,0,0,.12), 0 10px 24px rgba(0,0,0,.14)` | 板材 L2：可点击卡 / 输入区 / toast（厚） |
@@ -38,10 +38,11 @@
 | `--bevel` | `inset 0 1px 0 #ffffff` | 板材硬肩（上缘受光边） |
 | `--btn-ledge` | `0 2px 0 #c8c8c8` | 按钮底缘硬投影（机关件） |
 | `--sweep` | `linear-gradient(115deg, transparent 30%, rgba(0,0,0,.05) 46%, rgba(0,0,0,.10) 50%, rgba(0,0,0,.05) 54%, transparent 70%)` | 卡片掠光（hover-only，light） |
+| `--slab` / `--slab-ink` | `#ffe54c` / `#141414` | 按钮滑入填板（原版黄，唯一彩色豁免）/ 文字恒黑 |
 | `--scanline` | `repeating-linear-gradient(0deg, rgba(0,0,0,.022) 0 1px, transparent 1px 3px)` | 全屏底纹扫描幕布 |
 | `--r` | `0px` | 全局圆角 |
 
-### 2.2 Dark（设计稿，待并入代码）
+### 2.2 Dark（已并入代码）
 
 推导规则：accent 反转（近白生效）；灰阶次序保持 bg < card < fill；文字次级不低于 `#8f8f8f`；遮罩更深。
 
@@ -62,6 +63,7 @@
 | `--sh-3` | `0 2px 0 rgba(0,0,0,.6), 0 4px 8px rgba(0,0,0,.5), 0 24px 72px rgba(0,0,0,.6)` | |
 | `--bevel` | `inset 0 1px 0 rgba(255,255,255,.06)` | 暗底下受光边只有 6% 白，几乎隐形 → 厚重感改靠阴影 |
 | `--btn-ledge` | `0 2px 0 #000000` | 暗底 ledge 用纯黑才看得见 |
+| `--slab` / `--slab-ink` | `#ffe54c` / `#141414` | 按钮滑入填板（dark 同黄，原版一致）/ 文字恒黑 |
 | `--sweep` | `linear-gradient(115deg, transparent 30%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.10) 50%, rgba(255,255,255,.05) 54%, transparent 70%)` | 暗底掠光反转成白光 |
 | `--scanline` | `repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px)` | 暗底幕布用白 |
 | `--r` | `0px` | 不变 |
@@ -101,11 +103,13 @@
 
 ## 5. 组件规则
 
-### Button（机械式，v1.1）
-- `.btn`：`--fill` 底 + `1px --field-line` 边框 + `box-shadow: var(--bevel), var(--btn-ledge)`（内受光边 + 2px 硬底缘 = "可按下"暗示）；hover 边框变 `--fg`；`active: translateY(2px)` 并去掉 ledge（`box-shadow: var(--bevel), 0 0 0`）——吃掉底缘就是"压下去"。
-- `.primary`：`--fg` 底反色字 + 黑 ledge（`0 2px 0 rgba(0,0,0,.35)`），重机关件视觉比默认钮厚一档。
-- `.ghost`：无边框无投影，与板材保持距离；hover 出 `--line` 边框。
-- `.small`：`4px 10px / 12px`，ledge 减为 `1px`。`:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }`。
+### Button（#52 滑入填充板，v1.1 定稿）
+- **机制**（getcssscan #52 原版：`::after` 100%×100% 填板，`z-index:-1`，静止 `top/left` 错位 → hover `top:0 left:0` 滑归 + `transition .2s`）：底色从顶/左 6px 条透出 = 受光 bevel；底/右 6px 露出垫板。位移 = 原版 7px × 0.86 ≈ 6px（small: 5px），用户要求"稍微加大"后由 4px 调回（2026-09-25 定稿）。
+- **灰阶映射**（v1.1.3 用户定稿）：**slab 用原版原色** `--slab: #ffe54c`（light/dark 均黄），文字恒黑 `--slab-ink #141414`。#52 的黄是本设计**唯一官方彩色豁免**（与"银灰全息"其余部分并存，字配色，色块只允许出现填板一处）；如需纯版，改回 `--slab: #dcdcdc`（其亮度等价灰）即整页回归 achromatic。
+- **变体**：`.solid` 主操作钮 = slab 常驻原位（`top/left:0, transition:none`）无滑入；`.outline` 工具栏薄钮 = 无 slab（`::after:none`）+ bevel+ledge，hover 仅边框变 `--fg`。`[disabled]`：45% opacity，slab 冻结。
+  - ⚠ **特异性坑**（v1.1.2 实测翻车）：变体规则 `.btn.small::after` 与hover规则 `.btn:hover::after` **特异性相同（0,1,2）但在源码中居后→覆盖 hover**，small 系按钮滑入全失效。凡"位移变体"+hover 滑归必须补 `.btn.small:hover::after, .btn.small.solid::after { top:0; left:0 }` 收尾，或把变体规则放到 hover 规则之前。
+- 字规格取 #52 原值：`16px / 200 / 1px 字距`（light 下 wordmark 级细体，跟反色 fill 对比成立）。
+- 与板材厚度的分工：按钮 = **滑入填板**（自带 bevel 幻觉，绝不加投影/ledge）；卡片 = **bevel+投影板材**；两者别再叠加第二层错位。
 
 ### Card / 报告卡（板材）
 - **L2 板材**：`--card` 底 + `1px --line` 边框 + `box-shadow: var(--bevel), var(--sh-2)`。裸描边卡片禁止——板材必须带受光边和投影。
@@ -170,11 +174,15 @@
 3. 暗底下投影加重、遮罩加深（光线模型反过来了）。
 4. 验证标准同 light：截图 + 目检，确认无彩色泄漏、无对比度掉到 `--muted` 之下。
 
-## 8. 已知技术债（并入 dark 时一并修）
+## 8. Web 落地记录（2026-09-26）
 
-- `app.py` 里硬编码：`.btn` 边框 `#c8c8c8`、`background: #fff`；`.obs` 文字 `#333`；`.agentinput` 底 `#fafafa`；`.sev.low` 的 `#444/#c9c9c9`；`.high` 的 `#3d3d3d`。→ 全部改指 token。
-- ⚠ 三处 JS `style.cssText`（悬浮 toast、悬浮按钮、评级 tip，约 L683/L842/L899）**不走 CSS 变量**，dark 下会漏旧皮肤；cssText 处需单独改或用属性选择器。
-- 验收 grep：`grep -n 'border-radius\|#[0-9a-fA-F]\{3,8\}'` 全源码过一遍（含 `build_help.py`、`cssText`）。
+- `app.py:BASE_CSS` 仍为全局样式单一来源，包含 light/dark、板材、黄色按钮填板、严重度、弹窗和设备层规则。
+- `theme.js` 为首页、报告、NVIDIA 审查、演练和使用说明提供统一显示设置；沿用 `as-theme` / `as-holo` 存储键，存储不可用时当前页面仍可切换。
+- `arena.css` 只负责演练布局与状态表现，引用共享 token。演练宽度上限 1440px，保持左右分屏；≤640px 改为上下分屏。黑方使用固定深灰面板，红方跟随主题，两者均保持无彩色相。
+- 业务告警、成功、阻断、前置失败通过文字、填充、实线／虚线区分；删除原红绿蓝状态色。NVIDIA 报告边框也使用中性色。
+- `build_help.py` 在生成时内嵌共享 CSS 与主题脚本，独立 HTML 不依赖网络资源。帮助页保留目录栏，宽度上限 1288px。
+- toast 和 AGENT 悬浮入口已改用 CSS 类；表单、代码槽、等级标签全部使用 token。旧报告归档文件未重写，网页报告采用当前样式。
+- HOLO OFF 关闭扫描线、掠光、角标、残影和入场效果；减少动态效果设置关闭动画及过渡。移动端按钮、选择器和折叠入口高度至少 44px。
 
 ## 9. Don't
 
@@ -186,3 +194,9 @@
 ## Preview
 
 `design_preview.html` — 顶栏可切 light/dark，含 token 色板、字阶、机械按钮、severity 五档、板材等级对照、报告卡、表单、trace、modal（reticle 角标）全组件样例 + 全息设备层实装（扫描幕布 / 掠光 / echo / flicker 点 / 入场 stagger）；顶栏 `HOLO OFF` 按钮一键关掉全部设备层做验收对照。
+
+### 2026-09-26 交互细化
+
+- HOLO ON：页面背景透出扫描纹理，视口有银灰定位角标，报告分数区／体检面板／攻防双栏有局部定位角标；OFF 关闭这些装饰。内容位置、板材阴影与正文不变。
+- 体检入口使用 `.btn.primary.compact`：保留黄色填板，字号 13px、字重 400、padding 7px 14px，与普通 outline 按钮相同；手机端仍保持 44px 点击高度。
+- `/checkup` 为独立体检入口，默认纯本机检查；运行中显示持续状态并防止当前页重复提交。体检报告增加首页／体检／报告面包屑和明确返回按钮。

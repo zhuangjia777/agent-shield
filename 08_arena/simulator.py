@@ -8,6 +8,9 @@ from __future__ import annotations
 import hashlib
 import json
 import skill_scenario
+import extended_scenarios
+
+SCENARIO_IDS = ("public_wifi", "malicious_skill", *extended_scenarios.SCENARIOS)
 
 VERSION = "wifi-tabletop-1.0"
 CONTROLS = {
@@ -33,6 +36,8 @@ ATTACKS = (
 
 
 def catalog(scenario="public_wifi"):
+    if scenario in extended_scenarios.SCENARIOS:
+        return extended_scenarios.catalog(scenario)
     if scenario == "malicious_skill":
         return skill_scenario.catalog()
     if scenario != "public_wifi":
@@ -43,6 +48,7 @@ def catalog(scenario="public_wifi"):
         "description": "同一个公共 Wi-Fi 下，黑方尝试四个预设攻击目标，红方监测并加固，再用相同场景复测。两侧随事件流同步更新。",
         "controls_note": "开关只修改虚拟场景。默认日常配置启用 HTTPS、共享认证与监测。",
         "attack_goals_total": 4, "business_total": 2,
+        "attack_goals": [{"id": key, "name": name, "requires": []} for key, name, _, _ in ATTACKS],
         "controls": CONTROLS, "presets": PRESETS,
         "topology": [
             {"id": "black", "name": "黑方 · 同网访客", "address": "192.0.2.66"},
@@ -65,7 +71,7 @@ def validate(body):
     if not isinstance(body, dict) or set(body) - {"scenario", "controls"}:
         raise ValueError("仅接受 scenario 和 controls；本演练不接受真实目标或命令。")
     scenario = body.get("scenario", "public_wifi")
-    if not isinstance(scenario, str) or scenario not in ("public_wifi", "malicious_skill"):
+    if not isinstance(scenario, str) or scenario not in SCENARIO_IDS:
         raise ValueError("未知场景。")
     selected = catalog(scenario)
     controls = body.get("controls", {})
@@ -141,7 +147,10 @@ def _run(controls):
 
 def simulate(body):
     controls = validate(body)
-    if body.get("scenario", "public_wifi") == "malicious_skill":
+    scenario = body.get("scenario", "public_wifi")
+    if scenario in extended_scenarios.SCENARIOS:
+        return extended_scenarios.simulate(scenario, controls)
+    if scenario == "malicious_skill":
         return skill_scenario.simulate(controls)
     # Preserve local collaboration: strengthen endpoints before blanket isolation.
     hardened = {**controls, "share_auth": True, "https_only": True,

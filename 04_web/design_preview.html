@@ -24,6 +24,7 @@
   --scanline: repeating-linear-gradient(0deg, rgba(0,0,0,.025) 0 1px, transparent 1px 3px);
   --echo: 3px 3px 0 rgba(17,17,17,.10);
   --glow: 0 0 22px rgba(17,17,17,.08);
+  --slab: #ffe54c; --slab-ink: #141414;
   --r: 0px;
   color-scheme: light;
 }
@@ -43,6 +44,7 @@
   --scanline: repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px);
   --echo: 3px 3px 0 rgba(236,236,236,.14);
   --glow: 0 0 26px rgba(236,236,236,.22);
+  --slab: #ffe54c; --slab-ink: #141414;
   color-scheme: dark;
 }
 
@@ -76,22 +78,48 @@ a:hover { border-bottom-color: var(--fg); }
        animation: flicker 2.2s steps(2, jump-none) infinite; }
 @keyframes flicker { 0%,100% { opacity: 1; } 41% { opacity: 1; } 42% { opacity: .3; } 43% { opacity: 1; } 78% { opacity: .45; } 79% { opacity: 1; } }
 
-/* ---- 机械按钮 ---- */
+/* ---- 按钮 = getcssscan #52 滑入填充板 ----
+   slab = ::after（100%×100%，z:-1），静止 top/left:6px → 左上错出：
+   背景从顶/左 6px 条透出（受光 bevel），底/右 6px 露出垫板；
+   hover → slab 滑归 top:0 left:0，与边框齐平（回归，.2s ease）；
+   slab = 原版 #52 的 @ffe54c 黄，文字恒黑；
+   边框独立成顶层 ::before 画框（z:1）→ 黑框永远压在黄板之上（slab 会溢出底/右缘盖框）。 */
 button { font: inherit; cursor: pointer; }
-.btn { border: 1px solid var(--field-line); background: var(--fill); color: var(--fg);
-       padding: 7px 14px; border-radius: var(--r); font-size: 13px;
-       box-shadow: var(--bevel), var(--btn-ledge);
-       transition: border-color .08s, background .08s; }
-.btn:hover { border-color: var(--fg); }
-.btn:active { transform: translateY(2px); box-shadow: var(--bevel), 0 0 0 transparent; }
-.btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
-.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg);
-               box-shadow: var(--bevel), var(--ledge-dark); }
-.btn.primary:hover { background: var(--accent); }
-.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); box-shadow: none; }
-.btn.ghost:hover { color: var(--fg); border-color: var(--line); box-shadow: none; transform: none; }
-.btn.small { padding: 4px 10px; font-size: 12px; box-shadow: var(--bevel), 0 1px 0 var(--field-line); }
+.btn { position: relative; z-index: 0;
+       font-size: 16px; font-weight: 200; letter-spacing: 1px;
+       padding: 13px 20px; border: 1px solid transparent;
+       border-radius: var(--r); background: transparent;
+       color: var(--slab-ink); outline: 0;
+       -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+.btn::before { content: ""; position: absolute; z-index: 1; inset: 0;
+               border: 1px solid var(--fg); pointer-events: none; }
+.btn::after { content: ""; position: absolute; z-index: -1;
+              width: 100%; height: 100%; top: 6px; left: 6px;
+              background: var(--slab);
+              transition: top .2s ease, left .2s ease; }
+.btn:hover::after { top: 0; left: 0; }
+.btn:active { transform: translateY(2px); }
+.btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+/* solid = 常显填充（主操作钮）：slab 常驻原位，无滑入 */
+.btn.solid { color: var(--slab-ink); }
+.btn.solid::after { top: 0; left: 0; transition: none; }
+.btn.solid:hover::after { top: 0; left: 0; }
+/* outline = 无 slab 变体：工具栏 / 密度区薄钮 */
+.btn.outline { color: var(--muted); border-color: var(--field-line);
+               font-weight: 400; font-size: 13px; padding: 7px 14px;
+               box-shadow: var(--bevel), var(--btn-ledge);
+               transition: color .08s, border-color .08s; }
+.btn.outline::after { content: none; }
+.btn.outline:hover { color: var(--fg); border-color: var(--fg); }
+.btn.outline:active { transform: translateY(2px); box-shadow: var(--bevel); }
+/* small：滑入位移 6→5px */
+.btn.small { font-size: 12px; font-weight: 400; letter-spacing: .5px; padding: 6px 12px; }
+.btn.small::after { top: 5px; left: 5px; }
+.btn.small:hover::after, .btn.small.solid::after { top: 0; left: 0; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn[disabled]::after { transition: none; top: 6px; left: 6px; }
+.btn.small[disabled]::after { top: 5px; left: 5px; }
+.btn.outline[disabled] { color: var(--muted); border-color: var(--field-line); }
 
 /* ---- 板材（v1.1 核心：bevel + 阴影分级） ---- */
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
@@ -233,16 +261,16 @@ h2 .idx { color: var(--fg); margin-right: 8px; font-family: ui-monospace, "SF Mo
   <div class="brand">AgentShield <small>DESIGN SPEC v1.1 · 厚重 × 全息</small></div>
   <div style="display:flex;gap:12px;align-items:center">
     <span class="status"><i class="dot"></i>SYSTEM ONLINE</span>
-    <button class="btn small" id="holoBtn" onclick="toggleHolo()">HOLO ON</button>
-    <button class="btn small" id="themeBtn" onclick="toggleTheme()">DARK</button>
-    <button class="btn primary small" onclick="openModal()">OPEN MODAL</button>
+    <button class="btn outline small" id="holoBtn" onclick="AS.toggleHolo()">HOLO ON</button>
+    <button class="btn outline small" id="themeBtn" onclick="AS.toggleTheme()">DARK</button>
+    <button class="btn small" onclick="openModal()">OPEN MODAL</button>
   </div>
 </div>
 
 <section>
   <h2><span class="idx">01</span>Principles · v1.1 增量</h2>
   <div class="card">
-    <p style="margin:0 0 8px"><b>厚重</b> = 阴影层级差被看见：L1 静态板 / L2 可交互板 / L3 浮窗三级板材，每块带 1px 上缘受光边（bevel），内凹槽只往里收；按钮改机械式，底缘 2px 硬投影，按下吃掉底缘。<br>
+    <p style="margin:0 0 8px"><b>厚重</b> = 阴影层级差被看见：L1 静态板 / L2 可交互板 / L3 浮窗三级板材，每块带 1px 上缘受光边（bevel），内凹槽只往里收；按钮 = #52 滑入填板（静止 4px 错位，hover 滑归，浅灰板 + 黑字）。<br>
     <b>全息</b> = 纯银灰设备层：扫描幕布呼吸、可点击体掠光、瞄准框 reticle、echo 双曝光字、CRT step 闪烁点。glow 全页只允许出现在大分数字一处。</p>
     <p class="tip" style="margin:0">验收：右上 <b>HOLO OFF</b> 一键全灭设备层后，页面信息结构必须仍然成立。</p>
   </div>
@@ -292,9 +320,15 @@ h2 .idx { color: var(--fg); margin-right: 8px; font-family: ui-monospace, "SF Mo
 <section>
   <h2><span class="idx">04</span>Type 字阶 + Echo</h2>
   <div class="card">
-    <div style="font-weight:800;font-size:18px;letter-spacing:.5px;text-transform:uppercase;text-shadow:var(--echo)">AgentShield <span style="font-weight:400;color:var(--muted);font-size:12px;text-transform:none;letter-spacing:0;text-shadow:none">wordmark · 800 · 18px（echo 位）</span></div>
-    <div style="font-size:58px;font-weight:800;letter-spacing:-2px;line-height:1;text-shadow:var(--echo),var(--glow)">72<span style="font-size:16px;font-weight:400;color:var(--muted);text-shadow:none"> /100 · 大分（glow 唯一允许位）</span></div>
-    <div style="font-size:30px;font-weight:800;letter-spacing:-1px">72<span style="font-size:13px;font-weight:400;color:var(--muted)"> /100 · 卡片分（无 echo）</span></div>
+    <div style="font-weight:800;font-size:18px;letter-spacing:.5px;text-transform:uppercase;text-shadow:var(--echo)">AgentShield <span class="tip" style="font-weight:400;color:var(--muted);font-size:12px;text-transform:none;letter-spacing:0;text-shadow:none">wordmark · 800 / 18px · echo 位</span></div>
+    <div style="display:flex;align-items:flex-end;gap:18px;margin-top:10px">
+      <div style="font-size:58px;font-weight:800;letter-spacing:-2px;line-height:1;white-space:nowrap;text-shadow:var(--echo),var(--glow)">72<span style="font-size:16px;font-weight:400;letter-spacing:0;color:var(--muted);text-shadow:none"> /100</span></div>
+      <div class="tip mono" style="font-size:12px;padding-bottom:8px">大分 58/800 · echo + glow（全页 glow 唯一允许位）</div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:18px;margin-top:10px">
+      <div style="font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1.2;white-space:nowrap">72<span style="font-size:13px;font-weight:400;letter-spacing:0;color:var(--muted)"> /100</span></div>
+      <div class="tip mono" style="font-size:12px;padding-bottom:5px">卡片分 30/800 · 无 echo 无 glow</div>
+    </div>
     <div style="font-size:15px">正文 body · 15px / 1.65 · 系统无衬线 PingFang SC</div>
     <div class="mono" style="color:var(--muted)">nvidia-20260924-155415-9bc694 · 2026-09-24 15:54:15 · score = 0.82×0.95×1.0 = 0.78</div>
     <p class="tip" style="margin:8px 0 0;font-size:12px">echo 只给 wordmark / 大分 / modal 标题三者；halo 在 light 下压到 0.08 几乎不见（白底上 glow 无意义），dark 下才显形。</p>
@@ -304,12 +338,12 @@ h2 .idx { color: var(--fg); margin-right: 8px; font-family: ui-monospace, "SF Mo
 <section>
   <h2><span class="idx">05</span>Buttons 机械式</h2>
   <div class="card" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
-    <button class="btn">DEFAULT</button>
-    <button class="btn primary">PRIMARY</button>
-    <button class="btn ghost">GHOST</button>
-    <button class="btn small">SMALL</button>
+    <button class="btn">SLIDE（#52 原版）</button>
+    <button class="btn solid">SOLID（主操作）</button>
+    <button class="btn outline">OUTLINE（薄钮）</button>
+    <button class="btn small">SMALL · SLIDE</button>
     <button class="btn" disabled>DISABLED</button>
-    <span class="tip">底缘 2px 硬投影 = "可按下"暗示；按下 translateY(2px) 吃掉底缘。stable hover 不动，ledge 在。</span>
+    <span class="tip">默认 = #52 滑入板：填板静止移出 4px（顶/左透出底色阶 bevel），hover 滑归 0,0；填板色 = 原版 @ffe54c 黄的灰阶等价，文字恒黑（原版逻辑）；solid 填板常驻原位；outline 无填板（工具栏）。按下 = translateY(2px)。</span>
   </div>
 </section>
 
@@ -379,7 +413,7 @@ Receiving objects: 100% (48211/48211), 38.21 MiB | 6.4 MiB/s, done.</div>
   </div>
   <div class="agentinput holo-sweep">
     <input type="text" placeholder="对报告提问，或下达新扫描指令…" spellcheck="false">
-    <button class="btn primary">SEND</button>
+    <button class="btn solid">SEND</button>
   </div>
   <p class="tip" style="margin-top:12px">OPEN MODAL（顶栏）打开 L3 板材：全页最厚投影 + 四角瞄准框 reticle + 标题 echo + "成像凝固"入场（scale .985→1）。动效预算 5 处封顶：幕布呼吸 / 掠光 / flicker 点 / 入场 stagger / modal 定形，一个不多。</p>
 </section>
@@ -389,7 +423,7 @@ Receiving objects: 100% (48211/48211), 38.21 MiB | 6.4 MiB/s, done.</div>
 <div class="overlay" id="ovl" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
     <span class="reticle tl"></span><span class="reticle tr"></span><span class="reticle bl"></span><span class="reticle br"></span>
-    <div class="mhead"><h3 id="mtitle">Modal · 新扫描</h3><button class="btn small ghost" onclick="closeModal()">✕</button></div>
+    <div class="mhead"><h3 id="mtitle">Modal · 新扫描</h3><button class="btn outline small" onclick="closeModal()">✕</button></div>
     <div class="mbody">
       <label>Target Repo</label>
       <input type="text" value="NousResearch/hermes-agent" spellcheck="false">
@@ -399,23 +433,39 @@ Receiving objects: 100% (48211/48211), 38.21 MiB | 6.4 MiB/s, done.</div>
       </div>
     </div>
     <div class="mfoot">
-      <button class="btn ghost" onclick="closeModal()">CANCEL</button>
-      <button class="btn primary" onclick="closeModal()">RUN SCAN</button>
+      <button class="btn outline" onclick="closeModal()">CANCEL</button>
+      <button class="btn solid" onclick="closeModal()">RUN SCAN</button>
     </div>
   </div>
 </div>
 
 <script>
-(function(){
-  var root = document.documentElement, tbtn = document.getElementById('themeBtn'), hbtn = document.getElementById('holoBtn');
-  function apply(t){ root.setAttribute('data-theme', t); tbtn.textContent = t === 'dark' ? 'LIGHT' : 'DARK'; localStorage.setItem('as-theme', t); }
-  function applyHolo(on){ root.setAttribute('data-holo', on ? 'on' : 'off'); hbtn.textContent = on ? 'HOLO ON' : 'HOLO OFF'; hbtn.classList.toggle('primary', on); localStorage.setItem('as-holo', on ? 'on' : 'off'); }
+var AS = (function(){
+  var root = document.documentElement,
+      tbtn = document.getElementById('themeBtn'),
+      hbtn = document.getElementById('holoBtn');
+  function apply(t){
+    root.setAttribute('data-theme', t);
+    tbtn.textContent = (t === 'dark' ? 'LIGHT' : 'DARK');
+    try { localStorage.setItem('as-theme', t); } catch(e){}
+  }
+  function applyHolo(on){
+    root.setAttribute('data-holo', on ? 'on' : 'off');
+    hbtn.textContent = on ? 'HOLO ON' : 'HOLO OFF';
+    hbtn.classList.toggle('primary', on);
+    try { localStorage.setItem('as-holo', on ? 'on' : 'off'); } catch(e){}
+  }
+  var savedT = null, savedH = null;
+  try { savedT = localStorage.getItem('as-theme'); savedH = localStorage.getItem('as-holo'); } catch(e){}
   var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  apply(localStorage.getItem('as-theme') || sys);
-  applyHolo(localStorage.getItem('as-holo') !== 'off');
+  apply(savedT || sys);
+  applyHolo(savedH !== 'off');
+  return {
+    toggleTheme: function(){ apply(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); },
+    toggleHolo: function(){ applyHolo(root.getAttribute('data-holo') !== 'off'); },
+    setTheme: apply, setHolo: applyHolo
+  };
 })();
-function toggleTheme(){ var r = document.documentElement; apply(r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
-function toggleHolo(){ var r = document.documentElement; applyHolo(r.getAttribute('data-holo') !== 'off'); }
 function openModal(){ document.getElementById('ovl').hidden = false; }
 function closeModal(){ document.getElementById('ovl').hidden = true; }
 document.getElementById('ovl').addEventListener('click', function(e){ if (e.target === this) closeModal(); });
