@@ -279,8 +279,8 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
   function sync() {
     if (!themeButton) return;
     const dark = root.dataset.theme === 'dark', holo = root.dataset.holo !== 'off';
-    themeButton.textContent = dark ? '浅色' : '深色';
-    themeButton.setAttribute('aria-label', dark ? '切换浅色主题' : '切换深色主题');
+    themeButton.textContent = dark ? 'LIGHT' : 'DARK';
+    themeButton.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
     holoButton.textContent = holo ? 'HOLO ON' : 'HOLO OFF';
     holoButton.setAttribute('aria-pressed', String(holo));
     holoButton.title = holo ? '关闭扫描纹理、定位角标与标题残影' : '开启扫描纹理、定位角标与标题残影';
