@@ -57,7 +57,7 @@ def nvidia_html():
 <option value="vulnerable-skill">植入漏洞样本</option><option value="hardened-skill">加固样本</option><option value="benign-skill">普通样本</option></select>
 <label><input type="checkbox" id="use-model"> 添加私有 Qwen 语义分析</label>
 <p class="tip">默认静态扫描不调用模型。启用语义分析会将所选合成样本交给配置的私有模型，约需数十秒至数分钟。扫描不执行样本脚本。</p>
-<button class="btn primary" id="scan">开始官方引擎审查</button><p id="status" role="status" aria-live="polite"></p><a id="result" class="btn" hidden>查看完整报告</a></div>
+<button class="btn primary compact" id="scan">开始官方引擎审查</button><p id="status" role="status" aria-live="polite"></p><a id="result" class="btn compact" hidden>查看完整报告</a></div>
 <p class="tip">SkillSpector 风险分越高风险越大；AgentShield 规则健康分越高越好，两者分开展示。来源 commit 与内容哈希已记录；OMS 发布者签名会随扫描单独验证，未签名不会显示为通过。OpenShell 隔离执行与 Tier 3 对照评测提供独立入口，配置方法见使用说明。</p>
 <script>
 const sampleHint=new URLSearchParams(location.search).get('sample');
@@ -1077,7 +1077,7 @@ function openSettings() {
           ${roleSettings('black','黑方 · 黑客',roles.black||{},c)}
           ${roleSettings('red','红方 · 白帽',roles.red||{},c)}
         </div>
-        <div class="mfoot"><button class="btn" id="btn-test" onclick="testLLM()">测试主模型已保存配置</button><button class="btn primary" onclick="saveSettings()">保存</button></div>
+        <div class="mfoot"><button class="btn compact" id="btn-test" onclick="testLLM()">测试主模型已保存配置</button><button class="btn primary compact" onclick="saveSettings()">保存</button></div>
         <div class="tip" id="test-out" role="status" style="padding:0 18px 14px;white-space:pre-wrap;max-height:140px;overflow:auto"></div>
       </div>
     </div>`;
@@ -1163,7 +1163,7 @@ function openAgent(prefill) {
       <div class="mbody" id="agent-log"></div>
       <div class="agentinput">
         <input id="agent-input" type="text" placeholder="说人话就行，比如：这个密钥问题到底怎么修？" ${prefill?'value="'+escAttr(prefill)+'"':''}>
-        <button class="btn primary" onclick="sendAgent()">发送</button>
+        <button class="btn primary compact" onclick="sendAgent()">发送</button>
       </div>
     </div>
   </div>`;

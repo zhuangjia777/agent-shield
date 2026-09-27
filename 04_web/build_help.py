@@ -28,7 +28,7 @@ guide_css = """
 body.guide-page{max-width:1288px}.guide-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:22px;margin-top:22px}
 aside{align-self:start;position:sticky;top:22px}aside small{display:block;color:var(--muted);font:12px ui-monospace,monospace;letter-spacing:1px;margin-bottom:12px}
 aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:0;border-left:2px solid var(--line)}aside a:hover,aside a:focus{color:var(--fg);border-left-color:var(--fg);background:var(--code)}
-.guide-main{background:var(--card);border:1px solid var(--line);box-shadow:var(--bevel),var(--sh-1);padding:28px;min-width:0}
+.guide-main{background:var(--card);border:2px solid var(--card-edge);box-shadow:var(--bevel),var(--sh-1);padding:28px;min-width:0}
 .guide-main h1{margin-top:0}.guide-main h2{font-size:22px;margin-top:40px;padding-top:22px;border-top:1px solid var(--fg)}.guide-main h3{font-size:16px;margin-top:22px}
 .guide-main p{margin:16px 0}.guide-main li{margin:8px 0}.guide-main code{background:var(--code);padding:2px 5px;overflow-wrap:anywhere}.guide-main pre code{padding:0}
 .table-wrap{overflow:auto;margin:22px 0}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:12px;border:1px solid var(--line);vertical-align:top;min-width:95px}th{background:var(--accent-soft);color:var(--fg)}tr:nth-child(even) td{background:var(--code)}
