@@ -39,7 +39,7 @@
 | `--btn-ledge` | `0 2px 0 #c8c8c8` | 按钮底缘硬投影（机关件） |
 | `--sweep` | `linear-gradient(115deg, transparent 30%, rgba(0,0,0,.05) 46%, rgba(0,0,0,.10) 50%, rgba(0,0,0,.05) 54%, transparent 70%)` | 卡片掠光（hover-only，light） |
 | `--slab` / `--slab-ink` | `#ffe54c` / `#141414` | LIGHT 黄色填板 / 黑字 |
-| `--depth-columns` | 内嵌 SVG 方柱，144×160px 平铺 | 静态灰阶背景，通过顶面和侧面明暗表现厚度 |
+| `--depth-columns` | 内嵌 SVG：单点透视立方柱隧道（`make_depth_background.py` 生成） | 面向用户、向消失点（页顶中央）无限延伸；line+fill 双档淡出，下方径向遮罩让内容区干净 |
 | `--r` | `0px` | 全局圆角 |
 
 ### 2.2 Dark（已并入代码）
@@ -66,7 +66,7 @@
 | `--btn-ledge` | `0 2px 0 #000000` | 暗底 ledge 用纯黑才看得见 |
 | `--slab` / `--slab-ink` | `#ffe54c` / `#141414` | 按钮滑入填板（DARK 黄色）/ 文字恒黑 |
 | `--sweep` | `linear-gradient(115deg, transparent 30%, rgba(255,255,255,.05) 46%, rgba(255,255,255,.10) 50%, rgba(255,255,255,.05) 54%, transparent 70%)` | 暗底掠光反转成白光 |
-| `--depth-columns` | 内嵌 SVG 方柱，144×160px 平铺 | 静态灰阶背景，通过顶面和侧面明暗表现厚度 |
+| `--depth-columns` | 内嵌 SVG：单点透视立方柱隧道（`make_depth_background.py` 生成） | 面向用户、向消失点（页顶中央）无限延伸；line+fill 双档淡出，下方径向遮罩让内容区干净 |
 | `--r` | `0px` | 不变 |
 
 ### 2.3 语义等级（severity）— 浓度分级，两主题共 5 档
@@ -158,7 +158,7 @@
 
 ### 6.3 全息设备层（holo eyewear，纯灰阶实现）
 允许在 L0/L2/L3 上叠加的装饰语言，**全部 achromatic**，常量全在 §2：
-1. **方柱背景**：`--depth-columns` 作为 `html::before` 的固定背景，144×160px 平铺。顶部较淡、下方略清晰；用三个面的灰阶表现纵深，不呼吸、不闪动、不跟随鼠标。
+1. **透视立方柱背景**（v1.1.5 重做）：`html::before` 固定铺满（`background-size:cover; background-position:center top`）。SVG = 6 列侧柱 + 1 列中央脊柱，每柱沿视线向深处堆叠（每步纵深 ×1.09 → 尺寸缩 8.5%）；正面平行屏幕，顶/底线延长线精确过消失点 (800,60)；只画 front/top/面向相机的单侧棱面；stroke 34 步内线性淡出、fill 10 步内淡出，再加底部径向遮罩压淡 = "无限延伸"。`aria-hidden`，print 下隐藏。调参后重跑 `04_web/make_depth_background.py` 重新生成本 token。不呼吸、不闪动、不跟随鼠标。
 2. **卡片掠光**：可点击卡 / L3 表面 hover 时 `--sweep` 斜掠一次（1.6s，translateX -60%→160%）。**只有"全息物体会响应"的东西才给掠光**（可点击卡、modal、输入区）。
 3. **reticle 角标**：L3（modal）四角 10×10 的 L 形直角括号（2px 画中画边框），与 modal 边缘关系 6px——瞄准框语汇，代替花哨装饰。
 4. **echo 双曝光标题**：仅三类位置——wordmark、报告大分、modal 标题：`text-shadow: 4px 0 0 var(--accent-soft)` 后立即反向 `text-shadow` 叠 `4px 0 0 var(--bg)` 制造双重残影；大分在 dark 下给 `0 0 18px rgba(236,236,236,.25)` 的窄光圈（**glow 全页只允许出现在这一处**）。halo 系数在 light 下压到几乎不见（0.08），因为 light 下白字在白底上、glow 无意义。
