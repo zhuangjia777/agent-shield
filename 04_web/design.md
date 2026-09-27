@@ -110,6 +110,7 @@
 - **变体**：`.solid` 主操作钮 = slab 常驻原位（`top/left:0, transition:none`）无滑入；`.outline` 工具栏薄钮 = 无 slab（`::after:none`）+ bevel+ledge，hover 仅边框变 `--fg`。`[disabled]`：45% opacity，slab 冻结。
   - ⚠ **特异性坑**（v1.1.2 实测翻车）：变体规则 `.btn.small::after` 与hover规则 `.btn:hover::after` **特异性相同（0,1,2）但在源码中居后→覆盖 hover**，small 系按钮滑入全失效。凡"位移变体"+hover 滑归必须补 `.btn.small:hover::after, .btn.small.solid::after { top:0; left:0 }` 收尾，或把变体规则放到 hover 规则之前。
 - 字规格取 #52 原值：`16px / 200 / 1px 字距`（light 下 wordmark 级细体，跟反色 fill 对比成立）。
+- **尺寸（v1.1.5 定稿）**：页面主行动按钮（开始官方引擎审查 / 开始体检 等）一律 **`compact`**（`13px/400/1px字距, 7px 14px`，高 37px），与开始体检按钮尺寸一致；禁止 16px 大号行动钮。`.small`（12px）只给顶栏工具钮用。
 - 与板材厚度的分工：按钮 = **滑入填板**（自带 bevel 幻觉，绝不加投影/ledge）；卡片 = **bevel+投影板材**；两者别再叠加第二层错位。
 
 ### Card / 报告卡（板材）
