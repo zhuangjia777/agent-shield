@@ -1283,6 +1283,21 @@ function handleAgentEvent(ev) {
   }
   if (ev.type === 'tool_call') push(`<div class="step"><span class="lbl tool">调 ${escHtml(ev.tool)}</span> <span class="mono tip">${escHtml(JSON.stringify(ev.input||{}))}</span><div class="obs" id="obs-${ev.step}">运行中…</div></div>`);
   if (ev.type === 'tool_result') { const o = document.getElementById('obs-'+ev.step); if (o) o.textContent = (ev.ok?'✓ ':'✗ ')+ (ev.obs||''); }
+  if (ev.type === 'tool_result' && ev.tool === 'delete_report' && ev.ok) {
+    // Agent 删了报告 → 同步页面，不用手动刷新
+    try {
+      const j = JSON.parse(ev.obs);
+      if (j.deleted) {
+        if (!document.querySelector('.report-card')) { location.href = '/'; return; } // 报告详情页
+        if (j.scope === 'all') { location.reload(); return; }
+        const card = document.querySelector(`.report-del[data-rid="${CSS.escape(j.report_id)}"]`)?.closest('.report-card')
+                  || document.querySelector(`a.report-card[href="/report/${CSS.escape(j.report_id)}"]`);
+        if (card) card.remove(); else location.reload();
+        flash(`已删除报告 ${j.report_id}`);
+        if (!document.querySelector('.report-card')) location.reload();
+      }
+    } catch (e) { /* obs 被截断或非 JSON：不动页面 */ }
+  }
   if (ev.type === 'ask') {
     const opts = (ev.choices||[]).map(c=>`<button class="btn small accent" style="margin:3px 3px 0 0" onclick="answerAgent(this.dataset.t)" data-t="${escAttr(c)}">${escHtml(c)}</button>`).join('');
     push(`<div class="step" style="border-left-color:var(--accent)"><span class="lbl tool">问你一下</span>
