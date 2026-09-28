@@ -106,7 +106,7 @@
 
 ### Button（#52 滑入填充板，v1.1 定稿）
 - **机制**（getcssscan #52 原版：`::after` 100%×100% 填板，`z-index:-1`，静止 `top/left` 错位 → hover `top:0 left:0` 滑归 + `transition .2s`）：底色从顶/左 6px 条透出 = 受光 bevel；底/右 6px 露出垫板。位移 = 原版 7px × 0.86 ≈ 6px（small: 5px），用户要求"稍微加大"后由 4px 调回（2026-09-25 定稿）。
-- **主题填色**（v1.4 用户定稿）：LIGHT 和 DARK 均使用黄色 `#ffe54c` 与黑字 `#141414`。取消鼠标聚光和卡片局部光斑，其余内容维持灰阶。
+- **彩色豁免（v1.2 起为两处）**：① 按钮 #52 黄板 `#ffe54c`（v1.4 定稿：light/dark 均黄板黑字 `#141414`，取消鼠标聚光和卡片局部光斑）；② 首页报告卡**分数信号灯**——彩色只出现在分数数字一处，只承载信息不做装饰：`≥90` 黄板 `sig-ok`（同按钮黄）、`70–89` 淡黄板 `sig-warn`（黄 30% `color-mix`）、`<70` 反色板 `sig-bad`（`--fg` 底 `--bg` 字，全场最强对比=最危险）。无分数（–）不上板。dark 同规则，反色板随 token 自动翻转。其余版面仍零彩色。
 - **变体**：`.solid`/`.primary` 主操作钮 = slab 常驻原位（`top/left:0`）无滑入，hover 反馈 = 填板加深一档 `--slab-hover`（`#f2ce16`，120ms background-color），active 下压 1px；`.outline` 工具栏薄钮 = 无 slab（`::after:none`）+ bevel+ledge，hover 仅边框变 `--fg`。`[disabled]`：45% opacity，slab 冻结。
   - ⚠ **特异性坑**（v1.1.2 实测翻车）：变体规则 `.btn.small::after` 与hover规则 `.btn:hover::after` **特异性相同（0,1,2）但在源码中居后→覆盖 hover**，small 系按钮滑入全失效。凡"位移变体"+hover 滑归必须补 `.btn.small:hover::after, .btn.small.solid::after { top:0; left:0 }` 收尾，或把变体规则放到 hover 规则之前。
 - 字规格取 #52 原值：`16px / 200 / 1px 字距`（light 下 wordmark 级细体，跟反色 fill 对比成立）。

@@ -240,8 +240,14 @@ button { font: inherit; cursor: pointer; }
 .report-card { display: block; color: inherit; overflow: hidden; }
 .report-card:hover { border-color: var(--fg); text-decoration: none; }
 .report-card .rid { font-size: 12px; color: var(--muted); }
-.report-card .sc { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+.report-card .sc { font-size: 30px; font-weight: 800; letter-spacing: -1px; display: inline-block; padding: 1px 8px 3px; margin-left: -8px; }
 .report-card .sc span { font-size: 13px; font-weight: 400; color: var(--muted); }
+/* 分数信号灯（v1.2）：彩色只出现在卡片分数一处 —— 黄=健康 / 淡黄=注意 / 反色=高危 */
+.report-card .sc.sig-ok   { background: var(--slab); color: var(--slab-ink); }
+.report-card .sc.sig-warn { background: color-mix(in srgb, var(--slab) 30%, transparent); color: var(--fg); }
+.report-card .sc.sig-bad  { background: var(--fg); color: var(--bg); }
+.report-card .sc.sig-ok span, .report-card .sc.sig-warn span { color: inherit; opacity: .6; }
+.report-card .sc.sig-bad span { color: inherit; opacity: .7; }
 
 /* ---- 掠光（仅 holo 响应体：可点卡 + modal + 输入区） ---- */
 .holo-sweep { position: relative; overflow: hidden; }
@@ -447,11 +453,13 @@ def _report_list():
 def home_html():
     cards = []
     for r in _report_list()[:24]:
-        sc = r["score"] if r["score"] is not None else "–"
+        sc = r["score"]
+        tier = "" if sc is None else (" sig-ok" if sc >= 90 else (" sig-warn" if sc >= 70 else " sig-bad"))
+        scdisp = sc if sc is not None else "–"
         cards.append(f"""
 <a class="card report-card" href="/report/{r['rid']}">
   <div class="rid mono">{esc(r['rid'])}</div>
-  <div class="sc">{sc}<span> /100</span></div>
+  <div class="sc{tier}">{scdisp}<span> /100</span></div>
   <div class="tip">{esc(r['at'])} · findings {r['n']} · {esc(r['engine'])}</div>
   <div class="tip">{esc(r.get('external'))}</div>
 </a>""")
