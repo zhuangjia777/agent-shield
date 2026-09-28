@@ -294,8 +294,11 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
        overflow: auto; white-space: pre-wrap; word-break: break-all; color: var(--fg); opacity: .88; }
 :root[data-theme="dark"] .obs { box-shadow: var(--obs-inset), inset 0 -1px 0 rgba(0,0,0,.5); }
 .answer { background: var(--card); border: 1px solid var(--fg); border-left: 3px solid var(--fg);
-          border-radius: var(--r); padding: 12px 16px; margin: 10px 0;
-          box-shadow: var(--bevel), var(--sh-2); }
+         border-radius: var(--r); padding: 12px 16px; margin: 10px 0;
+         box-shadow: var(--bevel), var(--sh-2); }
+/* 用户消息泡泡：黄框（豁免①黄板同色）+ 靠右；Agent 回答保持左对齐墨框 */
+.answer.you { border: 1px solid var(--slab); border-left: 3px solid var(--slab);
+              margin-left: auto; max-width: 85%; background: var(--bg); }
 
 /* ---- holo 大分（echo 双曝光 + 唯一 glow 位） ---- */
 .scorehead { display: flex; gap: 22px; align-items: center; padding: 6px 4px 14px; }
@@ -1258,7 +1261,7 @@ function sendAgent() {
   const inp = $('#agent-input'); if (!inp || !agentId) return;
   const t = inp.value.trim(); if (!t) return;
   inp.value = '';
-  $('#agent-log').insertAdjacentHTML('beforeend', `<div class="answer"><b>你：</b>${escHtml(t)}</div>`);
+  $('#agent-log').insertAdjacentHTML('beforeend', `<div class="answer you"><b>你：</b>${escHtml(t)}</div>`);
   resumeStream();  // 上一轮 done 会关掉 EventSource——发消息前必须重挂事件流，否则回答生成也看不见
   api(`/api/agent/${agentId}/message`, { message: t });
 }
