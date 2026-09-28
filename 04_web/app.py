@@ -215,10 +215,9 @@ button { font: inherit; cursor: pointer; }
 .btn:hover::after { top: 0; left: 0; }
 .btn:active { transform: none; }
 .btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
-/* solid = 常显填充（主操作钮）：slab 常驻原位，无滑入；hover = 填板加深一档 */
+/* solid/primary（v1.7 统一）：不再常驻填充——与 plain .btn 同用 #52 滑入机制（解释大白话钮同款），
+   仅保留语义 class；hover 滑归 + holo OFF 时由全局规则统一回落 primary 坐姿。 */
 .btn:is(.solid,.primary) { color: var(--slab-ink); }
-.btn:is(.solid,.primary)::after { top: 0; left: 0; transition: background-color .12s ease; }
-.btn:is(.solid,.primary):hover::after { top: 0; left: 0; background: var(--slab-hover); }
 .btn:is(.solid,.primary):active { transform: translateY(1px); }
 /* outline = 无 slab 变体：工具栏 / 密度区薄钮 */
 .btn:is(.outline,.ghost) { color: var(--muted); border-color: var(--field-line);
@@ -231,7 +230,7 @@ button { font: inherit; cursor: pointer; }
 /* small：滑入位移 6→5px */
 .btn.small { font-size: 12px; font-weight: 400; letter-spacing: .5px; padding: 6px 12px; }
 .btn.small::after { top: 5px; left: 5px; }
-.btn.small:hover::after, .btn.small:is(.solid,.primary)::after { top: 0; left: 0; }
+.btn.small:hover::after { top: 0; left: 0; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .btn[disabled]::after { transition: none; top: 6px; left: 6px; }
 .btn.small[disabled]::after { top: 5px; left: 5px; }
@@ -429,7 +428,7 @@ input,textarea,select{color:var(--fg);accent-color:var(--fg)}select{width:auto;m
 summary{cursor:pointer}a,button,input,textarea,select,summary{-webkit-tap-highlight-color:transparent}
 :where(a,button,input,textarea,select,summary):focus-visible{outline:2px solid var(--fg);outline-offset:4px}
 button:disabled{opacity:.45;cursor:not-allowed}.btn[disabled]:hover::after{top:6px;left:6px}.btn.small[disabled]:hover::after{top:5px;left:5px}
-.btn:is(.solid,.primary)[disabled]::after{top:0;left:0}.btn:is(.outline,.ghost)::before{border-color:var(--field-line)}.btn:is(.outline,.ghost):hover::before{border-color:var(--fg)}
+.btn:is(.outline,.ghost)::before{border-color:var(--field-line)}.btn:is(.outline,.ghost):hover::before{border-color:var(--fg)}
 .modal .card,.modal .answer,.modal .agentinput{box-shadow:var(--bevel),var(--sh-1)}.modal .agentinput{border-top:2px solid var(--fg);margin-top:0;gap:14px;flex-shrink:0}.agentinput input{min-width:0}
 .modal::before{content:"";position:absolute;inset:-7px;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) left top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) left bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left bottom/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/2px 12px no-repeat}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99;padding:10px 18px;font-size:13px;max-width:90vw;box-shadow:var(--bevel),var(--sh-2)}
