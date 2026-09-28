@@ -239,6 +239,16 @@ def red_exec(cmd: str) -> dict:
         return {"ok": False, "msg": f"容器内没有 localhost 服务。攻击入口一律用 {RED_ENTRY}（WAF），不要写 127.0.0.1 或宿主端口 3998/3999"}
     if re.search(r"\bsudo\b", cmd):
         return {"ok": False, "msg": "容器内也不允许 sudo"}
+    # 模型高频翻车：把 SQLi payload 写到引号外（...1' OR '1'='1'）——shell 会把 OR 拆成
+    # 独立参数，curl 实际只发了引号内的普通 URL（exit 3），WAF/靶机根本没见到 payload。
+    # 剥离引号内容后，若还残留裸的大写 OR/AND/UNION/SELECT（合法 SQL 都在引号内），
+    # 即为出引号的 payload：拒绝并给出正确写法，防止模型对坏命令反复重试烧步骤。
+    stripped = re.sub(r"'[^']*'|\"[^\"]*\"", " ", cmd)
+    if re.search(r"\b(OR|AND|UNION|SELECT)\b", stripped):
+        return {"ok": False, "msg": "疑似 SQLi payload 写在了引号外（shell 会把 OR/AND 拆散，目标只会收到普通 URL，白测）。"
+                "payload 必须在 URL 引号内并做 URL 编码（' → %27），或放 POST JSON body。"
+                "已验证可用示例：printf '{\"email\":\"admin@juice-sh.op\\047 OR 1=1 --\",\"password\":\"x\"}' > /tmp/p.json && "
+                "curl -s -X POST http://aslab-blue:8080/rest/user/login -H \"Content-Type: application/json\" -d @/tmp/p.json"}
     st = status()
     if not st["running"]:
         return {"ok": False, "msg": "演练场未启动，先 start"}
