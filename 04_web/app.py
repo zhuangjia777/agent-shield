@@ -1201,6 +1201,7 @@ function openAgent(prefill) {
 let agentPrefill = null;
 function newAgent() {
   if (agentId) api('/api/agent/close', { agent_id: agentId });
+  if (agentEs) { try { agentEs.close(); } catch {} agentEs = null; }
   agentId = null;
   const log = $('#agent-log');
   if (log) log.innerHTML = '<div class="step"><span class="lbl">就绪</span><div class="tip">我能：看最近报告 · 评估任意 Skill · 本机系统体检 · 大白话解释 · 一步步带你修复。不确定时我会先问你。</div></div>';
@@ -1208,9 +1209,11 @@ function newAgent() {
     if (j.agent_id) { agentId = j.agent_id; resumeStream(); }
   });
 }
+let agentEs = null;
 function resumeStream() {
   if (!agentId) return;
-  sse(`/api/agent/${agentId}/event`, handleAgentEvent, d => {});
+  if (agentEs) { try { agentEs.close(); } catch {} }
+  agentEs = sse(`/api/agent/${agentId}/event`, handleAgentEvent, d => {});
 }
 function handleAgentEvent(ev) {
   const log = $('#agent-log'); if (!log) return;
@@ -1256,12 +1259,14 @@ function sendAgent() {
   const t = inp.value.trim(); if (!t) return;
   inp.value = '';
   $('#agent-log').insertAdjacentHTML('beforeend', `<div class="answer"><b>你：</b>${escHtml(t)}</div>`);
+  resumeStream();  // 上一轮 done 会关掉 EventSource——发消息前必须重挂事件流，否则回答生成也看不见
   api(`/api/agent/${agentId}/message`, { message: t });
 }
 function answerAgent(text) {
   if (!agentId || !text) return;
   const o = $('#ask-other'); if (o) o.remove();
   document.querySelectorAll('[data-t]').forEach(b=>{ b.classList.add('btn'); b.style.opacity=.35; b.disabled=true; });
+  resumeStream();
   api(`/api/agent/${agentId}/answer`, { text: text });
 }
 function agentAsk(t, auto) {
@@ -1271,6 +1276,7 @@ function agentAsk(t, auto) {
 function closeAgent() {
   $('#agent-host').innerHTML = '';
   agentOpenFlag = false;
+  if (agentEs) { try { agentEs.close(); } catch {} agentEs = null; }
   if (agentId) { api('/api/agent/close', { agent_id: agentId }); agentId = null; }
 }
 // 悬浮入口 + 快捷键
