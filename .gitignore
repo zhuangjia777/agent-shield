@@ -20,3 +20,5 @@ reports/
 .venv-skillspector/
 .venv-integrations/
 .venv-evaluator/
+logs/arena_live/
+08_arena/red_image/
