@@ -136,7 +136,7 @@ Observation 会由系统给你。
 Ask: <给用户的简短问题>
 Choices: <选项1> | <选项2> | <选项3>
 实战演练(lab_*)流程: lab_start 起场 → lab_attack 前先 Ask 展示完整攻击命令 → 确认后执行 → 用 lab_judge 读靶机真实记录当战果（不要凭攻击命令的输出来猜）→ 演示完 lab_stop 拆场。
-实战省步纪律: 拓扑固定为 aslab-blue:8080 → Juice Shop，起场后不需要 nmap 反复侦察。Juice Shop 已验证 SQLi: POST /rest/user/login，body {"email":"admin@juice-sh.op\\047 OR 1=1 --","password":"***"}（printf 写 /tmp/p.json 再 curl -d @/tmp/p.json）。拿到战果后尽快 lab_judge → lab_stop → Final Answer，不要加戏。
+实战省步纪律: 拓扑固定为 aslab-blue:8080 → Juice Shop，起场后不需要 nmap 反复侦察。Juice Shop 已验证 SQLi: POST /rest/user/login，JSON body 里 email 字段填 admin@juice-sh.op' OR 1=1 --（printf 写 /tmp/p.json 再 curl -d @/tmp/p.json；printf 里单引号写 \\047）。拿到战果后尽快 lab_judge → lab_stop → Final Answer，不要加戏。
 限制: {max_steps} 步内必须 Final。跑过的工具不需要重复跑。
 """
 
@@ -250,7 +250,22 @@ class ReActAgent:
                 messages.append({"role": "user", "content": f"用户选择了: {answer}"})
                 continue
         else:
-            final_text = "到步数上限了，我把目前掌握的情况给你：可以换一种问法再试。"
+            # 步数耗尽：不能把已拿到的信息扔掉甩锅"换一种问法"。
+            # 用一次不占步数的强制收尾调用，逼模型基于 transcript 给真实总结。
+            messages.append({"role": "user", "content":
+                "步数已用尽。不要再调用任何工具。根据以上对话中已获得的信息，"
+                "直接以 Final Answer: 开头，用 3-5 句话向用户总结：已完成什么、关键结果数据、还差什么。"})
+            buffer = ""
+            try:
+                for kind, piece in chat_stream(messages, temperature=0.1):
+                    if kind != "reasoning":
+                        buffer += piece
+            except Exception:
+                pass
+            d = _parse(buffer, messages) if buffer.strip() else None
+            summary = (d or {}).get("text", "").strip() if d and d.get("kind") == "final" else buffer.strip()
+            final_text = (summary + "\n\n（⚠️ 步数上限，未走完完整流程）") if summary else \
+                "步数上限且总结失败：请查看上方步骤日志，或换一种问法重新开始。"
             on_event("final", {"text": final_text, "step": MAX_STEPS})
         # 记忆：把本轮真实问答写回 history（此前只存 "(done, transcript=N steps)"，
         # 下一轮模型看不到自己上轮答过什么，等于每轮失忆）
