@@ -71,6 +71,7 @@ a:hover { border-bottom-color: var(--fg); }
          text-shadow: var(--echo); }
 .brand small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 8px;
                text-transform: none; letter-spacing: 0; text-shadow: none; }
+.brand .brand-agent { color: var(--slab); }
 .status { display: inline-flex; align-items: center; gap: 7px; font-family: ui-monospace, "SF Mono", monospace;
           font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .dot { width: 7px; height: 7px; background: var(--fg); display: inline-block;
@@ -306,7 +307,8 @@ button:disabled{opacity:.45;cursor:not-allowed}.btn[disabled]:hover::after{top:6
 .modal .card,.modal .answer,.modal .agentinput{box-shadow:var(--bevel),var(--sh-1)}.modal .agentinput{border-top:2px solid var(--fg);margin-top:0;gap:14px;flex-shrink:0}.agentinput input{min-width:0}
 .modal::before{content:"";position:absolute;inset:-7px;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) left top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) left bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left bottom/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/2px 12px no-repeat}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99;padding:10px 18px;font-size:13px;max-width:90vw;box-shadow:var(--bevel),var(--sh-2)}
-.agent-launcher{position:fixed;right:22px;bottom:22px;z-index:40;width:58px;height:54px;font:700 13px ui-monospace,monospace;border:1px solid var(--fg);border-radius:var(--r);background:var(--card);color:var(--fg);box-shadow:var(--bevel),var(--sh-3)}
+/* 悬浮入口 = 与 .btn solid 同一套 #52 样式（黄板黑字/hover 加深/黑框前置），这里只定位置 */
+.agent-launcher{position:fixed;right:22px;bottom:22px;z-index:40;width:58px;height:54px}
 footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid var(--fg);padding-top:16px}
 body>.grid,body>.scorehead,body>.arena{animation:rise .4s ease-out backwards}body>.arena{animation-delay:80ms}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -377,7 +379,8 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
     back.title = trail.length ? '返回上一页面' : '返回' + (sections.find(([p]) => p === fallback)?.[1] || '首页');
     back.hidden = !offline && location.pathname === '/' && !trail.length;
     actions.append(back, link('首页', '/'));
-    const brand = link('AgentShield', '/', 'brand');
+    const brand = document.createElement('a'); brand.href = url('/'); brand.className = 'brand';
+    brand.innerHTML = '<span class="brand-agent">Agent</span>Shield';
     const utility = document.createElement('div'); utility.className = 'nav-utility';
     utility.append(link('设置', '/?settings=1'), link('使用说明', '/help'));
     top.append(brand, actions, utility);
@@ -582,7 +585,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, {once:true});
   else mount();
 })();
-</script></head><body class="guide-page"><header class="topbar"><div class="brand">AgentShield<small>使用说明 · 2026-09-26</small></div><a class="btn outline small" href="http://127.0.0.1:8787/">打开应用 ↗</a></header><div class="guide-layout"><aside><small>CONTENTS / 目录</small><a href="#section-1">1. 先选择你要做的事</a><a href="#section-2">2. 启动与关闭</a><a href="#section-3">3. 配置私有模型</a><a href="#section-4">4. 使用左右分屏攻防演练</a><a href="#section-5">5. 使用 NVIDIA Skill 安全审查</a><a href="#section-6">6. 读取、导出与分享报告</a><a href="#section-7">7. 专业用户：审查自己的 Skill</a><a href="#section-8">8. 本机体检与智能体助手</a><a href="#section-9">9. 常见问题</a><a href="#section-10">10. 演示顺序与当前能力范围</a></aside><main class="guide-main"><h1>AgentShield 使用说明</h1>
+</script></head><body class="guide-page"><header class="topbar"><div class="brand"><span class="brand-agent">Agent</span>Shield<small>使用说明 · 2026-09-26</small></div><a class="btn outline small" href="http://127.0.0.1:8787/">打开应用 ↗</a></header><div class="guide-layout"><aside><small>CONTENTS / 目录</small><a href="#section-1">1. 先选择你要做的事</a><a href="#section-2">2. 启动与关闭</a><a href="#section-3">3. 配置私有模型</a><a href="#section-4">4. 使用左右分屏攻防演练</a><a href="#section-5">5. 使用 NVIDIA Skill 安全审查</a><a href="#section-6">6. 读取、导出与分享报告</a><a href="#section-7">7. 专业用户：审查自己的 Skill</a><a href="#section-8">8. 本机体检与智能体助手</a><a href="#section-9">9. 常见问题</a><a href="#section-10">10. 演示顺序与当前能力范围</a></aside><main class="guide-main"><h1>AgentShield 使用说明</h1>
 <p>适用版本：2026-09-26 当前本地实现。建议普通用户先阅读第 1–5 节，开发者与安全人员继续阅读第 6–10 节。</p>
 <p>AgentShield 提供 Agent Skill 安全审查、六种红黑攻防仿真，以及本机系统与网络体检。场景涵盖公共 Wi-Fi、恶意 Skill、办公内网、身份会话、Web/API 和依赖供应链。黑方代表黑客，红方代表白帽。当前可使用已配置的私有 Qwen 模型；使用这些功能不需要先准备 DGX Spark。</p>
 <h2 id="section-1">1. 先选择你要做的事</h2>

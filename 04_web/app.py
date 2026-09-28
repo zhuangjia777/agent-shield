@@ -51,7 +51,7 @@ NVIDIA_SCAN_LOCK = threading.Lock()
 def nvidia_html():
     return '''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NVIDIA Skill 审查 · AgentShield</title><link rel="stylesheet" href="/style.css"><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
-<div class="topbar"><a class="brand" href="/">AgentShield</a><a class="btn outline" href="/arena?scenario=malicious_skill">Skill 攻防演练</a></div>
+<div class="topbar"><a class="brand" href="/"><span class="brand-agent">Agent</span>Shield</a><a class="btn outline" href="/arena?scenario=malicious_skill">Skill 攻防演练</a></div>
 <h1>NVIDIA Skill 安全审查</h1><p>使用 NVIDIA SkillSpector 的真实扫描结果，验证项目样本中的风险。保留原始报告、版本、输入内容哈希和覆盖边界。</p>
 <div class="card"><label for="sample">选择项目样本</label><select id="sample" style="font:inherit;padding:8px;width:100%">
 <option value="vulnerable-skill">植入漏洞样本</option><option value="hardened-skill">加固样本</option><option value="benign-skill">普通样本</option></select>
@@ -182,6 +182,7 @@ a:hover { border-bottom-color: var(--fg); }
          text-shadow: var(--echo); }
 .brand small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 8px;
                text-transform: none; letter-spacing: 0; text-shadow: none; }
+.brand .brand-agent { color: var(--slab); }
 .status { display: inline-flex; align-items: center; gap: 7px; font-family: ui-monospace, "SF Mono", monospace;
           font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .dot { width: 7px; height: 7px; background: var(--fg); display: inline-block;
@@ -417,7 +418,8 @@ button:disabled{opacity:.45;cursor:not-allowed}.btn[disabled]:hover::after{top:6
 .modal .card,.modal .answer,.modal .agentinput{box-shadow:var(--bevel),var(--sh-1)}.modal .agentinput{border-top:2px solid var(--fg);margin-top:0;gap:14px;flex-shrink:0}.agentinput input{min-width:0}
 .modal::before{content:"";position:absolute;inset:-7px;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) left top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right top/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right top/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) left bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) left bottom/2px 12px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/12px 2px no-repeat,linear-gradient(var(--fg),var(--fg)) right bottom/2px 12px no-repeat}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:99;padding:10px 18px;font-size:13px;max-width:90vw;box-shadow:var(--bevel),var(--sh-2)}
-.agent-launcher{position:fixed;right:22px;bottom:22px;z-index:40;width:58px;height:54px;font:700 13px ui-monospace,monospace;border:1px solid var(--fg);border-radius:var(--r);background:var(--card);color:var(--fg);box-shadow:var(--bevel),var(--sh-3)}
+/* 悬浮入口 = 与 .btn solid 同一套 #52 样式（黄板黑字/hover 加深/黑框前置），这里只定位置 */
+.agent-launcher{position:fixed;right:22px;bottom:22px;z-index:40;width:58px;height:54px}
 footer{margin-top:44px;font-size:12px;color:var(--muted);border-top:1px solid var(--fg);padding-top:16px}
 body>.grid,body>.scorehead,body>.arena{animation:rise .4s ease-out backwards}body>.arena{animation-delay:80ms}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -467,7 +469,7 @@ def home_html():
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AgentShield</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
 <div class="topbar">
-  <div class="brand">AgentShield<small>规则评分 · LLM 解释 · 本地运行</small></div>
+  <div class="brand"><span class="brand-agent">Agent</span>Shield<small>规则评分 · LLM 解释 · 本地运行</small></div>
   <div class="hbtns">
     <a class="btn outline" href="/help">使用说明</a>
     <a class="btn outline" href="/nvidia">NVIDIA Skill 审查</a>
@@ -489,7 +491,7 @@ def checkup_html():
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>体检本机 · AgentShield</title>
 <style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
-<div class="topbar"><a class="brand" href="/">AgentShield<small>本机安全体检</small></a><a class="btn outline" href="/">← 返回首页</a></div>
+<div class="topbar"><a class="brand" href="/"><span class="brand-agent">Agent</span>Shield<small>本机安全体检</small></a><a class="btn outline" href="/">← 返回首页</a></div>
 <nav class="breadcrumbs" aria-label="当前位置"><a href="/">首页</a><span>/</span><span>体检本机</span></nav>
 <h1>体检本机</h1><p class="tip">选择检查范围，生成报告，再查看问题与修复建议。</p>
 <section class="card holo-frame"><h2>检查范围</h2>
@@ -549,7 +551,7 @@ def report_html(rid: str):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AgentShield · {esc(rid)}</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body data-nav-section="{section}" data-nav-label="{page_label}">
 <div class="topbar">
-  <a class="brand" href="/">AgentShield</a>
+  <a class="brand" href="/"><span class="brand-agent">Agent</span>Shield</a>
   <div class="hbtns"><button class="btn outline" onclick="openSettings()">设置</button>
   <a class="btn primary compact" href="/checkup">体检本机</a></div>
 </div>
@@ -1261,7 +1263,7 @@ function closeAgent() {
 (function(){
   const b = document.createElement('button');
   b.textContent = 'AGENT'; b.setAttribute('aria-label','打开智能体'); b.title = 'AgentShield 智能体 (⌘⇧A)';
-  b.className = 'agent-launcher';
+  b.className = 'agent-launcher btn solid compact';
   b.onclick = () => { agentPrefill = null; openAgent(null); };
   // ?settings=1 深链：只自动打开一次，打开后立即从地址栏抹掉参数，
   // 否则同一 URL 每次刷新都会再弹一次。

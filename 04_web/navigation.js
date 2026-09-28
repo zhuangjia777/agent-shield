@@ -49,7 +49,8 @@
     back.title = trail.length ? '返回上一页面' : '返回' + (sections.find(([p]) => p === fallback)?.[1] || '首页');
     back.hidden = !offline && location.pathname === '/' && !trail.length;
     actions.append(back, link('首页', '/'));
-    const brand = link('AgentShield', '/', 'brand');
+    const brand = document.createElement('a'); brand.href = url('/'); brand.className = 'brand';
+    brand.innerHTML = '<span class="brand-agent">Agent</span>Shield';
     const utility = document.createElement('div'); utility.className = 'nav-utility';
     utility.append(link('设置', '/?settings=1'), link('使用说明', '/help'));
     top.append(brand, actions, utility);
