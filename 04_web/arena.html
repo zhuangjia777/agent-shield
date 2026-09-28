@@ -6,6 +6,14 @@
 <div class="arena-heading"><div><div class="eyebrow" id="scenario-eyebrow">SECURITY ARENA</div><h1>红黑<span class="nav-hl">攻防演练</span></h1></div><span class="badge"><span class="dot"></span> 模型智能体 / 虚拟环境</span></div>
 <p class="intro" id="scenario-intro">选择演练场景，观察同一用例在不同防护下的结果。</p>
 <div class="scenario-picker"><label for="scenario">演练场景</label><select id="scenario" disabled><option>正在加载…</option></select><span class="note">切换场景会清除本页上一轮记录；需要留档请先导出。</span></div>
+<section class="card" id="live-lab-card" style="margin:14px 0">
+  <h2 style="margin-top:0">🔴 Docker 实战演练 <span class="badge" id="lab-state"><span class="dot"></span> 状态未知</span></h2>
+  <p class="intro" style="margin:6px 0">真实报文、真实防护开关：隔离网内 Kali 攻击机 → WAF（可开关）→ Juice Shop 靶机；红队物理上无法绕过 WAF，战果由靶机真实记录判定。需要本机 Docker。所有攻击动作先展示命令、经你确认。</p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+    <button class="btn primary compact" onclick="agentAsk('起一个 Docker 实战演练场，演示 SQL 注入被 WAF 拦截，然后关掉 WAF 再打一次，最后用裁判探针对比战果并拆场', true)">交给 Agent 一步步带我</button>
+    <button class="btn outline compact" id="lab-check" onclick="labStatus()">刷新演练场状态</button>
+  </div>
+</section>
 <details class="details-card"><summary>本轮攻击目标与前置条件</summary><p class="note" id="scenario-focus"></p><ol id="case-list"></ol></details>
 <div id="skill-workflow" class="details-card hidden"><b>从 Skill 审查到攻防推演</b><p class="note">先用 NVIDIA 引擎审查内置样本，再观察下方四个合成请求的权限边界，最后对照修复和正常业务。审查报告与演练证据分别保留，扫描线索不会自动判定攻击成功。</p><a class="btn outline small" href="/nvidia?sample=vulnerable-skill">打开 NVIDIA 样本审查 ↗</a></div>
 <details class="config"><summary>场景防护设置 <span>调整虚拟策略，比较修复前后差异</span></summary><div class="config-body">
@@ -23,5 +31,7 @@
 <p class="note">智能体模式实时显示模型选择的工具及返回结果；规则演示按固定顺序播放。两种模式都只操作合成环境。上方前后计数由规则裁判检查全部预设目标，不是实际网络攻击成功率。</p>
 <details id="expert-toggle" class="details-card"><summary>专业视图 · 判定规则与证据 JSON</summary><pre id="evidence">开始演练后显示已收到的事件；完成后提供完整证据。</pre></details>
 <div class="bottom"><div class="run-actions"><button id="review" class="btn compact" disabled>私有模型 · 红黑复盘</button><button id="export" class="btn compact" disabled>导出完整证据 JSON</button></div><span class="note">模型解读不改写规则判定</span></div><div id="reviews" class="details-card hidden" aria-live="polite"></div>
-<footer>AgentShield / 红黑智能体与规则演练 · 工具只操作虚拟环境，不发送攻击报文。OpenShell 文件与服务执行需另行配置隔离网关。</footer>
+<footer>AgentShield / 红黑智能体与规则演练 · 上方推演场景只操作虚拟环境；Docker 实战演练发送真实报文，但被隔离网限制在本机容器内。OpenShell 文件与服务执行需另行配置隔离网关。</footer>
+<div id="agent-host"></div><div id="modal-host"></div>
+<script src="/app.js"></script>
 <script src="/arena.js"></script></body></html>

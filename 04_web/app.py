@@ -41,6 +41,7 @@ import llm as llm_mod   # noqa: E402
 import agent as agent_mod  # noqa: E402
 import agents as arena_agents
 import simulator as arena_mod  # noqa: E402
+import livelab as lab_mod  # noqa: E402
 from external_reports import external_html  # noqa: E402
 import nvidia_scan  # noqa: E402
 
@@ -817,6 +818,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, (ROOT / "04_web" / "arena.js").read_text(), "text/javascript; charset=utf-8")
             if path == "/api/arena/catalog":
                 return self._json(200, arena_mod.catalog())
+            if path == "/api/lab/status":
+                return self._json(200, lab_mod.status())
             if path == "/api/reports":
                 return self._json(200, {"rids": [r["rid"] for r in _report_list()]})
             if path == "/api/arena/scenarios":

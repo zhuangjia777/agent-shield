@@ -19,8 +19,10 @@ from llm import chat_stream, load_config  # noqa: E402
 from skillcheck import check_skill, SkillBundle  # noqa: E402
 from findings import aggregate_score  # noqa: E402
 import cmd_scan  # noqa: E402
+sys.path.insert(0, str(ROOT / "08_arena"))
+import livelab  # noqa: E402
 
-MAX_STEPS = 6
+MAX_STEPS = 10  # 实战演练流程步骤多（起场→确认→攻击→WAF→裁判→复测），6 步不够用
 REPORTS = ROOT / "reports"
 SAMPLES = ROOT / "06_samples"
 
@@ -36,6 +38,12 @@ TOOLS = [
     ("run_command", "执行一条本机命令（当前用户权限，无 sudo）。参数: cmd。"
                     "白名单内只读诊断命令直接执行；白名单外必须先 Ask 用户展示完整命令并获同意，"
                     "再带 confirmed=true 重新调用。sudo/管道给 shell/重定向写系统路径一律拒绝"),
+    ("lab_start", "启动 Docker 实战演练场（隔离网内：Kali 攻击机 + WAF + Juice Shop 靶机，已实测无外网）。无参数。需要 Docker"),
+    ("lab_attack", "在演练场内以红队身份执行一条攻击命令（只能打隔离网内靶机）。参数: cmd。"
+                   "真实报文。第一次调用不带 confirmed 只会收到确认提示；必须先 Ask 用户确认命令后再带 confirmed=true 调用"),
+    ("lab_waf", "蓝队开关：开启或关闭靶机前的 WAF。参数: mode（block=开防护 / bypass=关防护）"),
+    ("lab_judge", "读取裁判探针：靶机真实记录的被攻克挑战列表 + WAF 状态。无参数"),
+    ("lab_stop", "销毁演练场全部容器与网络，一键清理。无参数"),
 ]
 
 # run_command 白名单：argv 前缀命中 = 只读诊断，直接执行。新增条目务必确认该前缀下无破坏性子命令。
@@ -126,6 +134,7 @@ Observation 会由系统给你。
 不确定用户指的是哪份报告/哪个对象时，不要猜，输出（选项用竖线分隔，一行内）:
 Ask: <给用户的简短问题>
 Choices: <选项1> | <选项2> | <选项3>
+实战演练(lab_*)流程: lab_start 起场 → lab_attack 前先 Ask 展示完整攻击命令 → 确认后执行 → 用 lab_judge 读靶机真实记录当战果（不要凭攻击命令的输出来猜）→ 演示完 lab_stop 拆场。
 限制: {max_steps} 步内必须 Final。跑过的工具不需要重复跑。
 """
 
@@ -276,6 +285,11 @@ def _normalize_tool(name: str) -> str:
         "ask": "ask", "ask_user": "ask", "question": "ask",
         "run_command": "run_command", "bash": "run_command", "exec": "run_command",
         "run": "run_command", "shell": "run_command", "命令": "run_command", "执行": "run_command",
+        "lab_start": "lab_start", "start_lab": "lab_start", "起场": "lab_start",
+        "lab_attack": "lab_attack", "attack": "lab_attack", "red_exec": "lab_attack", "红队攻击": "lab_attack",
+        "lab_waf": "lab_waf", "waf": "lab_waf", "blue_team": "lab_waf", "蓝队": "lab_waf",
+        "lab_judge": "lab_judge", "judge": "lab_judge", "裁判": "lab_judge",
+        "lab_stop": "lab_stop", "stop_lab": "lab_stop", "拆场": "lab_stop",
         "final": "final_answer", "final answer": "final_answer", "final_answer": "final_answer",
         "answer": "final_answer", "回答": "final_answer",
     }
@@ -383,6 +397,37 @@ def _execute(tool: str, tin: dict):
         if tool == "run_command":
             return _run_command(str(tin.get("cmd") or tin.get("command") or ""),
                                 tin.get("confirmed") in (True, "true", "True", "yes", "是"))
+        if tool in ("lab_start", "lab_attack", "lab_waf", "lab_judge", "lab_stop"):
+            try:
+                if tool == "lab_start":
+                    r = livelab.start()
+                    return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
+                if tool == "lab_attack":
+                    cmd = str(tin.get("cmd") or tin.get("command") or "").strip()
+                    if tin.get("confirmed") not in (True, "true", "True", "yes", "是"):
+                        return json.dumps({"need_confirm": True, "cmd": cmd,
+                                           "note": "这是真实攻击报文（只打隔离网内靶机）。"
+                                                   "请先用 Ask 向用户展示完整命令并说明意图，用户同意后再带 confirmed=true 调用。"},
+                                          ensure_ascii=False), True
+                    r = livelab.red_exec(cmd)
+                    return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
+                if tool == "lab_waf":
+                    mode = str(tin.get("mode") or "").strip()
+                    if not mode:
+                        st = livelab.waf_get()
+                        return json.dumps(st, ensure_ascii=False), bool(st.get("ok"))
+                    r = livelab.waf_set(mode)
+                    return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
+                if tool == "lab_judge":
+                    r = livelab.judge_http()
+                    w = livelab.waf_get()
+                    r["waf"] = w.get("waf")
+                    return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
+                if tool == "lab_stop":
+                    r = livelab.stop()
+                    return json.dumps(r, ensure_ascii=False), True
+            except Exception as e:
+                return json.dumps({"error": f"演练场操作失败: {str(e)[:200]}"}, ensure_ascii=False), False
         if tool == "delete_report":
             import shutil
             rid = str(tin.get("report_id") or tin.get("id") or "").strip()

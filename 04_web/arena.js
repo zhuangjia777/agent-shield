@@ -1,3 +1,4 @@
+/* aslab-wrap */ (function(){
 'use strict';
 const $ = s => document.querySelector(s);
 const escapeHTML = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -216,3 +217,18 @@ fetch('/api/arena/scenarios').then(r=>{if(!r.ok)throw new Error('场景不可用
   const requested=new URLSearchParams(location.search).get('scenario');
   selectScenario(Object.hasOwn(catalogs,requested) ? requested : data.default);
 }).catch(e=>status('加载失败：'+e.message));
+
+// ── Docker 实战演练状态卡 ──────────────────────────────
+async function labStatus(){
+  const el=$('#lab-state'); if(!el) return;
+  try{
+    const r=await fetch('/api/lab/status'); const j=await r.json();
+    el.innerHTML = j.running
+      ? `<span class="dot"></span> 运行中 · WAF ${j.waf==='block'?'已开启':'已关闭'} · 人视角 <a href="${j.waf_url}" target="_blank" rel="noopener">${j.waf_url}</a>`
+      : j.docker_ok ? '<span class="dot"></span> 就绪（未起场）' : '<span class="dot"></span> Docker 不可用';
+  }catch(e){ el.innerHTML='<span class="dot"></span> 状态查询失败'; }
+}
+if($('#lab-check')){ labStatus(); }
+
+window.labStatus = labStatus;
+})();
