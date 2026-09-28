@@ -30,14 +30,21 @@ SUBNET_ISOLATED = "172.28.99.0/24"
 SUBNET_LAN = "172.28.98.0/24"
 TARGET_NAME = "aslab-target"
 RED_NAME = "aslab-red"
+BLUE_NAME = "aslab-blue"
 TARGET_IMG = "bkimminich/juice-shop:latest"
 RED_IMG = "aslab-red-tools:1"
+BLUE_IMG = "python:3.12-alpine"
 RED_DOCKERFILE_DIR = Path(__file__).resolve().parent / "red_image"
-HOST_PORT = 3999          # 127.0.0.1:3999 → 靶机:3000，只绑回环
+WAF_SCRIPT = Path(__file__).resolve().parent / "waf.py"
+WAF_MODE_FILE = LOGDIR / "waf_mode.json"
+HOST_PORT = 3999          # 127.0.0.1:3999 → 靶机:3000（裁判探针），只绑回环
+WAF_HOST_PORT = 3998      # 127.0.0.1:3998 → WAF:8080（人浏览器体验攻防）
 TARGET_HTTP = "http://127.0.0.1:3999"
+WAF_HTTP = "http://127.0.0.1:3998"
+RED_ENTRY = "http://aslab-blue:8080"   # 红队唯一的合法入口（WAF 后面才是靶机）
 
-# 红队 exec 只允许打这些靶机主机名（aslab-net 内），任何其他目标一律拒绝
-ALLOWED_TARGETS = (TARGET_NAME,)
+# 红队 exec 只允许打 WAF 主机名——绕过 WAF 直打靶机一律拒绝，蓝队开关才有意义
+ALLOWED_TARGETS = (BLUE_NAME,)
 
 
 def _sh(args: list[str], timeout: int = 60) -> tuple[int, str]:
@@ -58,16 +65,19 @@ def _log(entry: dict):
 
 def status() -> dict:
     code, out = _sh(["docker", "ps", "-a", "--format", "{{.Names}}\t{{.Status}}",
-                     "--filter", f"name={TARGET_NAME}", "--filter", f"name={RED_NAME}"])
+                     "--filter", f"name={TARGET_NAME}", "--filter", f"name={RED_NAME}",
+                     "--filter", f"name={BLUE_NAME}"])
     containers = {}
     for line in out.splitlines():
         if "\t" in line:
             n, s = line.split("\t", 1)
             containers[n] = s
-    return {"docker_ok": code == 0, "containers": containers,
-            "running": containers.get(TARGET_NAME, "").startswith("Up") and
-                       containers.get(RED_NAME, "").startswith("Up"),
-            "target_url": TARGET_HTTP}
+    running = (containers.get(TARGET_NAME, "").startswith("Up") and
+               containers.get(RED_NAME, "").startswith("Up") and
+               containers.get(BLUE_NAME, "").startswith("Up"))
+    return {"docker_ok": code == 0, "containers": containers, "running": running,
+            "waf": waf_get().get("waf") if running else None,
+            "target_url": TARGET_HTTP, "waf_url": WAF_HTTP}
 
 
 def _isolation_check() -> tuple[bool, str]:
@@ -108,18 +118,33 @@ def start() -> dict:
         if code != 0:
             return {"ok": False, "msg": f"攻击机镜像构建失败: {out[-200:]}"}
 
-    # 靶机：双网卡。aslab-lan(bridge) 供 publish 给宿裁判探针；aslab-net(internal) 供红队。
-    # 注意：--internal 网络 run 时 publish 不会真正转发端口（Docker 29 实测），故必须走这条路。
+    # 靶机只在 aslab-lan（不接隔离网）：红队在物理上只能打到 WAF(aslab-blue)，
+    # WAF 从 lan 转发给靶机。网络层强制攻防路径，exec 白名单只是第二道防线。
     _sh(["docker", "rm", "-f", TARGET_NAME])
     code, out = _sh(["docker", "run", "-d", "--name", TARGET_NAME,
                      "--network", NET_LAN, "-p", f"127.0.0.1:{HOST_PORT}:3000",
                      "--memory", "1g", "--cpus", "2", TARGET_IMG])
     if code != 0:
         return {"ok": False, "msg": f"靶机启动失败: {out[-200:]}"}
-    code, out = _sh(["docker", "network", "connect", NET_ISOLATED, TARGET_NAME])
+
+    # 蓝队 WAF：同样双网卡（lan 供人浏览器 3998，internal 供红队打）。默认 block 档。
+    WAF_MODE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    WAF_MODE_FILE.write_text('{"mode": "block"}')
+    _sh(["docker", "rm", "-f", BLUE_NAME])
+    code, out = _sh(["docker", "run", "-d", "--name", BLUE_NAME,
+                     "--network", NET_LAN, "-p", f"127.0.0.1:{WAF_HOST_PORT}:8080",
+                     "-v", f"{WAF_SCRIPT}:/waf/waf.py:ro",
+                     "-v", f"{WAF_MODE_FILE}:/waf/mode.json:ro",
+                     "--memory", "256m", "--cpus", "1", "--read-only",
+                     "--tmpfs", "/tmp:rw,size=64m",
+                     BLUE_IMG, "python", "/waf/waf.py"])
     if code != 0:
         stop()
-        return {"ok": False, "msg": f"靶机接入隔离网失败: {out[-200:]}"}
+        return {"ok": False, "msg": f"蓝队 WAF 启动失败: {out[-200:]}"}
+    code, out = _sh(["docker", "network", "connect", NET_ISOLATED, BLUE_NAME])
+    if code != 0:
+        stop()
+        return {"ok": False, "msg": f"WAF 接入隔离网失败: {out[-200:]}"}
 
     _sh(["docker", "rm", "-f", RED_NAME])
     code, out = _sh(["docker", "run", "-d", "--name", RED_NAME,
@@ -145,12 +170,17 @@ def start() -> dict:
         stop()
         return {"ok": False, "msg": f"靶机在 {TARGET_HTTP} 60s 内未就绪"}
 
-    # 红队可达靶机
-    code, out = _sh(["docker", "exec", RED_NAME, "bash", "-c",
-                     f"exec 3<>/dev/tcp/{TARGET_NAME}/3000 && echo ok"], timeout=15)
+    # 拓扑校验：红队必须能打通 WAF；必须打不通靶机 3000（只能经 WAF）
+    code, _ = _sh(["docker", "exec", RED_NAME, "bash", "-c",
+                   f"exec 3<>/dev/tcp/{BLUE_NAME}/8080 && echo ok"], timeout=15)
     if code != 0:
         stop()
-        return {"ok": False, "msg": "红队容器无法连通靶机，网络配置异常"}
+        return {"ok": False, "msg": "红队容器无法连通 WAF，网络配置异常"}
+    code, out = _sh(["docker", "exec", RED_NAME, "bash", "-c",
+                     f"exec 3<>/dev/tcp/{TARGET_NAME}/3000 2>/dev/null && echo LEAK || echo blocked"], timeout=15)
+    if "LEAK" in out:
+        stop()
+        return {"ok": False, "msg": "红队可直连靶机（绕过 WAF），拓扑异常，已回滚"}
 
     # 隔离实测（不过就拆）
     iso_ok, iso_msg = _isolation_check()
@@ -159,12 +189,31 @@ def start() -> dict:
         return {"ok": False, "msg": f"外网隔离校验失败，已回滚。{iso_msg}"}
 
     _log({"at": time.strftime("%F %T"), "evt": "lab_start", "iso": iso_msg})
-    return {"ok": True, "msg": f"演练场就绪：靶机 {TARGET_HTTP}，攻击机 {RED_NAME}（{iso_msg}）",
-            "target_url": TARGET_HTTP, "red": RED_NAME, "target": TARGET_NAME}
+    return {"ok": True, "msg": f"演练场就绪：攻击入口 {RED_ENTRY}（经 WAF），人视角 http://127.0.0.1:{WAF_HOST_PORT}，{iso_msg}，WAF=block",
+            "target_url": TARGET_HTTP, "waf_url": WAF_HTTP, "red": RED_NAME, "blue": BLUE_NAME,
+            "target": TARGET_NAME, "waf": "block"}
+
+
+def waf_set(mode: str) -> dict:
+    """蓝队开关：block=启用防护，bypass=关掉防护（红队直通靶机）。"""
+    if mode not in ("block", "bypass"):
+        return {"ok": False, "msg": "mode 只能是 block 或 bypass"}
+    if not WAF_MODE_FILE.parent.exists():
+        return {"ok": False, "msg": "演练场未启动"}
+    WAF_MODE_FILE.write_text(json.dumps({"mode": mode}))
+    _log({"at": time.strftime("%F %T"), "evt": "waf", "mode": mode})
+    return {"ok": True, "msg": f"WAF 已切换为 {mode}（下一发请求即生效）", "waf": mode}
+
+
+def waf_get() -> dict:
+    try:
+        return {"ok": True, "waf": json.loads(WAF_MODE_FILE.read_text()).get("mode", "block")}
+    except Exception:
+        return {"ok": False, "waf": None}
 
 
 def stop() -> dict:
-    _sh(["docker", "rm", "-f", RED_NAME, TARGET_NAME], timeout=30)
+    _sh(["docker", "rm", "-f", RED_NAME, BLUE_NAME, TARGET_NAME], timeout=30)
     _sh(["docker", "network", "rm", NET_ISOLATED, NET_LAN], timeout=15)
     _log({"at": time.strftime("%F %T"), "evt": "lab_stop"})
     return {"ok": True, "msg": "演练场已销毁"}
@@ -180,7 +229,7 @@ def red_exec(cmd: str) -> dict:
     hosts |= set(re.findall(r"\b(?:nmap|curl|wget|sqlmap|hydra|nc|ncat)\b[^|;&]*?\s+([a-zA-Z0-9][\w.\-]*\.[a-z]{2,}|\d{1,3}(?:\.\d{1,3}){3})", cmd))
     external = [h for h in hosts if h not in ALLOWED_TARGETS and not h.startswith(("localhost", "127.", "::1"))]
     if external:
-        return {"ok": False, "msg": f"目标白名单外，拒绝执行: {external}（只允许打隔离网内靶机）"}
+        return {"ok": False, "msg": f"目标白名单外，拒绝执行: {external}（红队只允许打 {BLUE_NAME}:8080，攻防必须过 WAF）"}
     if re.search(r"\bsudo\b", cmd):
         return {"ok": False, "msg": "容器内也不允许 sudo"}
     st = status()
@@ -211,5 +260,8 @@ def judge_http(path: str = "/api/Challenges") -> dict:
 if __name__ == "__main__":
     import sys
     fn = sys.argv[1] if len(sys.argv) > 1 else "status"
-    print(json.dumps({"start": start, "stop": stop, "status": status,
-                      "judge": judge_http}.get(fn, status)(), ensure_ascii=False, indent=1))
+    if fn == "waf":
+        print(json.dumps(waf_set(sys.argv[2]), ensure_ascii=False, indent=1))
+    else:
+        print(json.dumps({"start": start, "stop": stop, "status": status,
+                          "judge": judge_http}.get(fn, status)(), ensure_ascii=False, indent=1))
