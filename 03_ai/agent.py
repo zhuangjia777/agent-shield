@@ -31,6 +31,8 @@ TOOLS = [
     ("check_system", "快速本机系统体检（防火墙/加密/自动更新/端口）"),
     ("learn", "用大白话解释某个安全问题。参数: topic"),
     ("run_fix", "执行/给出修复。参数: action + detail（返回建议命令；破坏性命令只给不执行）"),
+    ("delete_report", "删除某份体检报告（report_id 传 all 表示全部）。破坏性操作：第一次调用不带 confirmed 只会收到确认提示；"
+                      "必须先 Ask 用户确认，用户同意后再带 confirmed=true 重新调用"),
 ]
 
 
@@ -180,6 +182,8 @@ def _normalize_tool(name: str) -> str:
         "check_system": "check_system", "system": "check_system", "sys": "check_system",
         "learn": "learn", "explain": "learn", "解释": "learn",
         "run_fix": "run_fix", "fix": "run_fix", "repair": "run_fix", "修复": "run_fix",
+        "delete_report": "delete_report", "delete_reports": "delete_report",
+        "delete": "delete_report", "clear_reports": "delete_report", "删除": "delete_report",
     }
     return table.get(n, table.get(name, name))
 
@@ -282,6 +286,31 @@ def _execute(tool: str, tin: dict):
             action = tin.get("action", "")
             detail = tin.get("detail", "")
             return _fixer(action, detail), True
+        if tool == "delete_report":
+            import shutil
+            rid = str(tin.get("report_id") or tin.get("id") or "").strip()
+            confirmed = tin.get("confirmed") in (True, "true", "True", "yes", "是")
+            if not rid:
+                return "delete_report 需要 report_id（具体 id 或 all）", False
+            if not confirmed:
+                # 确认闸：不给 confirmed=true 就永远删不掉，逼模型先走 Ask 流程
+                scope = "全部体检报告" if rid.lower() == "all" else f"报告 {rid}"
+                return json.dumps({"deleted": 0, "need_confirm": True,
+                                   "note": f"即将永久删除{scope}，不可恢复。请先用 Ask 向用户确认；"
+                                           f"用户同意后，再以 confirmed=true 重新调用本工具。"}, ensure_ascii=False), True
+            if rid.lower() in ("all", "全部", "所有"):
+                victims = [p for p in REPORTS.iterdir() if p.is_dir()]
+                for p in victims:
+                    shutil.rmtree(p, ignore_errors=True)
+                return json.dumps({"deleted": len(victims), "scope": "all"}, ensure_ascii=False), True
+            # 单个删除：id 必须是 reports/ 下真实存在的一级目录名，杜绝 ../ 路径穿越
+            if "/" in rid or "\\" in rid or ".." in rid:
+                return f"非法 report_id: {rid}", False
+            target = (REPORTS / rid).resolve()
+            if target.parent != REPORTS.resolve() or not target.is_dir():
+                return f"找不到报告 {rid}", False
+            shutil.rmtree(target)
+            return json.dumps({"deleted": 1, "report_id": rid}, ensure_ascii=False), True
         return f"未知工具 {tool}，可用: {[t[0] for t in TOOLS]}", False
     except Exception as e:
         return f"工具执行失败: {e}", False
