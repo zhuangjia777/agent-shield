@@ -51,7 +51,7 @@ NVIDIA_SCAN_LOCK = threading.Lock()
 def nvidia_html():
     return '''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NVIDIA Skill 审查 · AgentShield</title><link rel="stylesheet" href="/style.css"><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
-<div class="topbar"><a class="brand" href="/"><span class="brand-agent">Agent</span>Shield</a><a class="btn outline" href="/arena?scenario=malicious_skill">Skill 攻防演练</a></div>
+<div class="topbar"><a class="brand" href="/"><span class="brand-agent">Agent</span>Shield</a><a class="btn outline" href="/arena?scenario=malicious_skill"><span class="nav-hl">Skill 攻防演练</span></a></div>
 <h1>NVIDIA Skill 安全审查</h1><p>使用 NVIDIA SkillSpector 的真实扫描结果，验证项目样本中的风险。保留原始报告、版本、输入内容哈希和覆盖边界。</p>
 <div class="card"><label for="sample">选择项目样本</label><select id="sample" style="font:inherit;padding:8px;width:100%">
 <option value="vulnerable-skill">植入漏洞样本</option><option value="hardened-skill">加固样本</option><option value="benign-skill">普通样本</option></select>
@@ -183,6 +183,8 @@ a:hover { border-bottom-color: var(--fg); }
 .brand small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 8px;
                text-transform: none; letter-spacing: 0; text-shadow: none; }
 .brand .brand-agent { color: var(--slab); }
+/* 攻防演练入口高亮（豁免之一）：文字直接取主题黄 */
+.nav-hl { color: var(--slab); }
 .status { display: inline-flex; align-items: center; gap: 7px; font-family: ui-monospace, "SF Mono", monospace;
           font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .dot { width: 7px; height: 7px; background: var(--fg); display: inline-block;
@@ -473,7 +475,7 @@ def home_html():
   <div class="hbtns">
     <a class="btn outline" href="/help">使用说明</a>
     <a class="btn outline" href="/nvidia">NVIDIA Skill 审查</a>
-    <a class="btn outline" href="/arena">红黑攻防演练</a>
+    <a class="btn outline" href="/arena"><span class="nav-hl">红黑攻防演练</span></a>
     <button class="btn outline" onclick="openSettings()">设置</button>
     <a class="btn primary compact" href="/checkup">体检本机</a>
   </div>

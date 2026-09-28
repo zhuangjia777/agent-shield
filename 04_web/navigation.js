@@ -59,6 +59,7 @@
     const nav = document.createElement('nav'); nav.id = 'site-navigation'; nav.className = 'site-navigation'; nav.setAttribute('aria-label', '主导航');
     for (const [target, text] of sections) {
       const a = link(text, target, 'nav-link nav-control');
+      if (text.includes('攻防演练')) a.innerHTML = '<span class="nav-hl">' + text + '</span>';
       if (target === section) a.setAttribute('aria-current', report ? 'location' : 'page');
       nav.appendChild(a);
     }

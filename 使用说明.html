@@ -72,6 +72,8 @@ a:hover { border-bottom-color: var(--fg); }
 .brand small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 8px;
                text-transform: none; letter-spacing: 0; text-shadow: none; }
 .brand .brand-agent { color: var(--slab); }
+/* 攻防演练入口高亮（豁免之一）：文字直接取主题黄 */
+.nav-hl { color: var(--slab); }
 .status { display: inline-flex; align-items: center; gap: 7px; font-family: ui-monospace, "SF Mono", monospace;
           font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .dot { width: 7px; height: 7px; background: var(--fg); display: inline-block;
@@ -389,6 +391,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
     const nav = document.createElement('nav'); nav.id = 'site-navigation'; nav.className = 'site-navigation'; nav.setAttribute('aria-label', '主导航');
     for (const [target, text] of sections) {
       const a = link(text, target, 'nav-link nav-control');
+      if (text.includes('攻防演练')) a.innerHTML = '<span class="nav-hl">' + text + '</span>';
       if (target === section) a.setAttribute('aria-current', report ? 'location' : 'page');
       nav.appendChild(a);
     }
