@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -90,18 +91,32 @@ class ReActAgent:
 
         buffer = ""
         pending_user = user_msg
+        final_text = ""
         for step in range(1, MAX_STEPS + 1):
             buffer = ""
-            # 读完一整步的所有 content（便于流式 UX 尽早把中间态推进去，但不影响最终解析）
+            # v1.9 流式：检测到 "Final Answer:" 标记后，把标记之后的增量作为 final_delta
+            # 实时转发前端（打字机效果）；标记未出现说明这步可能是 Action，不流，避免闪错内容。
+            stream_from = None  # buffer 中最终答案正文的起始下标
             for kind, piece in chat_stream(messages, temperature=0.2):
                 if kind == "reasoning":
                     on_event("thinking", {"step": step, "text": piece})
                     continue  # ReAct 协议只吃正文；推理过程仅作展示
+                prev_len = len(buffer)
                 buffer += piece
+                if stream_from is None and "Final Answer:" in buffer:
+                    stream_from = buffer.index("Final Answer:") + len("Final Answer:")
+                if stream_from is not None:
+                    new = buffer[max(prev_len, stream_from):]
+                    if new:
+                        if stream_from == max(prev_len, stream_from):
+                            new = new.lstrip()
+                        if new:
+                            on_event("final_delta", {"step": step, "text": new})
             decision = _parse(decision := buffer, messages)
             if decision is None:
                 # 流中断且解析不出 -> 把整个 buffer 当 final
-                on_event("final", {"text": buffer.strip(), "step": step})
+                final_text = buffer.strip()
+                on_event("final", {"text": final_text, "step": step})
                 messages.append({"role": "user", "content": f"Observation: (llm 流提前结束)\n{buffer}"})
                 break
             kind = decision["kind"]  # think_action | final | ask
@@ -118,7 +133,8 @@ class ReActAgent:
                 messages.append({"role": "user", "content": f"Observation: {obs_str}"})
                 continue
             if kind == "final":
-                on_event("final", {"text": decision.get("text", "").strip(), "step": step})
+                final_text = decision.get("text", "").strip()
+                on_event("final", {"text": final_text, "step": step})
                 break
             if kind == "ask":
                 question = decision.get("text", "").strip()
@@ -132,10 +148,15 @@ class ReActAgent:
                 messages.append({"role": "user", "content": f"用户选择了: {answer}"})
                 continue
         else:
-            on_event("final", {"text": "到步数上限了，我把目前掌握的情况给你：可以换一种问法再试。", "step": MAX_STEPS})
-        # 记忆
+            final_text = "到步数上限了，我把目前掌握的情况给你：可以换一种问法再试。"
+            on_event("final", {"text": final_text, "step": MAX_STEPS})
+        # 记忆：把本轮真实问答写回 history（此前只存 "(done, transcript=N steps)"，
+        # 下一轮模型看不到自己上轮答过什么，等于每轮失忆）
+        if not final_text:
+            final_text = next((e["content"] for e in reversed(messages)
+                               if e["role"] == "assistant"), "") or f"(完成 {len(self.transcript)} 步)"
         self.history.append({"role": "user", "content": pending_user})
-        self.history.append({"role": "assistant", "content": "(done, transcript=" + str(len(self.transcript)) + " steps)"})
+        self.history.append({"role": "assistant", "content": final_text[:2000]})
         return self.transcript
 
 

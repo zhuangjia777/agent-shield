@@ -962,8 +962,10 @@ class Handler(BaseHTTPRequestHandler):
                 with SES_LOCK:
                     sess = AgentSession()
                     AGENT_SESSIONS[sess.id] = sess
-                msg = (body.get("message") or "").strip() or "帮我看看最近一份报告，说说最该先做什么。"
-                _run_agent_turn(sess, msg)
+                # v1.8：打开窗口不再自动跑默认问题——有消息才执行一轮，没消息就等着用户输入
+                msg = (body.get("message") or "").strip()
+                if msg:
+                    _run_agent_turn(sess, msg)
                 return self._json(200, {"ok": True, "agent_id": sess.id})
             m = re.fullmatch(r"/api/agent/([^/]+)/(answer|message)", path)
             if m:
@@ -1250,7 +1252,20 @@ function handleAgentEvent(ev) {
         <input id="ask-other" type="text" placeholder="或者自己打（回车发送）" onkeydown="if(event.key==='Enter'&&this.value.trim())answerAgent(this.value.trim())"></div></div>`);
   }
   if (ev.type === 'ask_answered') push(`<div class="step tip">你的回答：<b>${escHtml(ev.answer)}</b></div>`);
-  if (ev.type === 'final') push(`<div class="answer">${renderMd(ev.text)}</div>`);
+  if (ev.type === 'final_delta') {
+    // 打字机：答案边生成边上屏，final 事件到达后整体换成 renderMd 完整版
+    let el = document.getElementById('final-live');
+    if (!el) { el = document.createElement('div'); el.className = 'answer'; el.id = 'final-live'; log.appendChild(el); }
+    el.textContent += ev.text;
+    log.scrollTop = log.scrollHeight;
+    return;
+  }
+  if (ev.type === 'final') {
+    const live = document.getElementById('final-live');
+    if (live) { live.removeAttribute('id'); live.innerHTML = renderMd(ev.text); }
+    else push(`<div class="answer">${renderMd(ev.text)}</div>`);
+    log.scrollTop = log.scrollHeight;
+  }
   if (ev.type === 'error') push(`<div class="step"><span class="lbl" style="color:var(--bad)">出错</span> ${escHtml(ev.text)}</div>`);
 }
 function renderMd(t) {
