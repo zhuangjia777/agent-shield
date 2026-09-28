@@ -222,8 +222,9 @@ def stop() -> dict:
 def red_exec(cmd: str) -> dict:
     """在红队容器内执行一条命令。只允许打白名单靶机；全量落盘。"""
     cmd = cmd.strip()
-    # 防御：聊天客户端会把粘贴的 URL 包成 `@url:`http://...`` 检索语法，模型有时原样抄进命令
-    cmd = re.sub(r"@url:`?([^`'\"]+)`?", r"\1", cmd)
+    # 防御：聊天客户端会把粘贴的 URL/路径包成 `@url:`http://...`` / `@file:`path`` 检索语法，模型有时原样抄进命令。
+    # 只吃"带反引号壳"的形式，且必须带协议或斜杠开头；绝不碰 curl 的 @file 语义（如 -d @/tmp/p.json）。
+    cmd = re.sub(r"@(?:url|file|img|image|attachment):`(https?://[^`]+|/[^`]+)`", r"\1", cmd)
     cmd = cmd.replace("`", "")
     if not cmd:
         return {"ok": False, "msg": "空命令"}

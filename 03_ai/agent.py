@@ -22,7 +22,7 @@ import cmd_scan  # noqa: E402
 sys.path.insert(0, str(ROOT / "08_arena"))
 import livelab  # noqa: E402
 
-MAX_STEPS = 10  # 实战演练流程步骤多（起场→确认→攻击→WAF→裁判→复测），6 步不够用
+MAX_STEPS = 14  # 实战演练流程步骤多（起场→确认→攻击→切WAF→复测→裁判→拆场→总结），10 步会卡在战果之后
 REPORTS = ROOT / "reports"
 SAMPLES = ROOT / "06_samples"
 
@@ -136,6 +136,7 @@ Observation 会由系统给你。
 Ask: <给用户的简短问题>
 Choices: <选项1> | <选项2> | <选项3>
 实战演练(lab_*)流程: lab_start 起场 → lab_attack 前先 Ask 展示完整攻击命令 → 确认后执行 → 用 lab_judge 读靶机真实记录当战果（不要凭攻击命令的输出来猜）→ 演示完 lab_stop 拆场。
+实战省步纪律: 拓扑固定为 aslab-blue:8080 → Juice Shop，起场后不需要 nmap 反复侦察。Juice Shop 已验证 SQLi: POST /rest/user/login，body {"email":"admin@juice-sh.op\\047 OR 1=1 --","password":"***"}（printf 写 /tmp/p.json 再 curl -d @/tmp/p.json）。拿到战果后尽快 lab_judge → lab_stop → Final Answer，不要加戏。
 限制: {max_steps} 步内必须 Final。跑过的工具不需要重复跑。
 """
 
