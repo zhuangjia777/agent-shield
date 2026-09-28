@@ -222,6 +222,9 @@ def stop() -> dict:
 def red_exec(cmd: str) -> dict:
     """在红队容器内执行一条命令。只允许打白名单靶机；全量落盘。"""
     cmd = cmd.strip()
+    # 防御：聊天客户端会把粘贴的 URL 包成 `@url:`http://...`` 检索语法，模型有时原样抄进命令
+    cmd = re.sub(r"@url:`?([^`'\"]+)`?", r"\1", cmd)
+    cmd = cmd.replace("`", "")
     if not cmd:
         return {"ok": False, "msg": "空命令"}
     # 目标白名单：出现的 URL/主机必须是靶机或本机回环（容器内），禁止任意外部主机
@@ -230,6 +233,10 @@ def red_exec(cmd: str) -> dict:
     external = [h for h in hosts if h not in ALLOWED_TARGETS and not h.startswith(("localhost", "127.", "::1"))]
     if external:
         return {"ok": False, "msg": f"目标白名单外，拒绝执行: {external}（红队只允许打 {BLUE_NAME}:8080，攻防必须过 WAF）"}
+    # 容器内 localhost 没有服务；127.0.0.1:3998/3999 是宿主视角，容器里不可达。
+    # 模型常把宿主地址抄进命令——直接拒绝并给出正确入口，省得烧步骤。
+    if any(h.startswith(("localhost", "127.", "::1")) for h in hosts):
+        return {"ok": False, "msg": f"容器内没有 localhost 服务。攻击入口一律用 {RED_ENTRY}（WAF），不要写 127.0.0.1 或宿主端口 3998/3999"}
     if re.search(r"\bsudo\b", cmd):
         return {"ok": False, "msg": "容器内也不允许 sudo"}
     st = status()

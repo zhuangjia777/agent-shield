@@ -39,8 +39,9 @@ TOOLS = [
                     "白名单内只读诊断命令直接执行；白名单外必须先 Ask 用户展示完整命令并获同意，"
                     "再带 confirmed=true 重新调用。sudo/管道给 shell/重定向写系统路径一律拒绝"),
     ("lab_start", "启动 Docker 实战演练场（隔离网内：Kali 攻击机 + WAF + Juice Shop 靶机，已实测无外网）。无参数。需要 Docker"),
-    ("lab_attack", "在演练场内以红队身份执行一条攻击命令（只能打隔离网内靶机）。参数: cmd。"
-                   "真实报文。第一次调用不带 confirmed 只会收到确认提示；必须先 Ask 用户确认命令后再带 confirmed=true 调用"),
+    ("lab_attack", "在演练场内以红队身份执行一条攻击命令。参数: cmd。真实报文。"
+                   "命令里的目标主机必须写 aslab-blue:8080（唯一攻击入口，容器内不存在 localhost/127.0.0.1 服务）。"
+                   "真实攻击：第一次调用不带 confirmed 只会收到确认提示；必须先 Ask 用户确认命令后再带 confirmed=true 调用"),
     ("lab_waf", "蓝队开关：开启或关闭靶机前的 WAF。参数: mode（block=开防护 / bypass=关防护）"),
     ("lab_judge", "读取裁判探针：靶机真实记录的被攻克挑战列表 + WAF 状态。无参数"),
     ("lab_stop", "销毁演练场全部容器与网络，一键清理。无参数"),
