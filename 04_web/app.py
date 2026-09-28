@@ -51,7 +51,7 @@ NVIDIA_SCAN_LOCK = threading.Lock()
 def nvidia_html():
     return '''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>NVIDIA Skill 审查 · AgentShield</title><link rel="stylesheet" href="/style.css"><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
-<div class="topbar"><a class="brand" href="/"><span class="brand-agent">Agent</span>Shield</a><a class="btn outline" href="/arena?scenario=malicious_skill"><span class="nav-hl">Skill 攻防演练</span></a></div>
+<div class="topbar"><a class="brand" href="/">Agent<span class="brand-shield">Shield</span></a><a class="btn outline" href="/arena?scenario=malicious_skill"><span class="nav-hl">Skill 攻防演练</span></a></div>
 <h1>NVIDIA Skill 安全审查</h1><p>使用 NVIDIA SkillSpector 的真实扫描结果，验证项目样本中的风险。保留原始报告、版本、输入内容哈希和覆盖边界。</p>
 <div class="card"><label for="sample">选择项目样本</label><select id="sample" style="font:inherit;padding:8px;width:100%">
 <option value="vulnerable-skill">植入漏洞样本</option><option value="hardened-skill">加固样本</option><option value="benign-skill">普通样本</option></select>
@@ -131,6 +131,7 @@ BASE_CSS = """
   --echo: 3px 3px 0 rgba(17,17,17,.10);
   --glow: 0 0 22px rgba(17,17,17,.08);
   --slab: #ffe54c; --slab-hover: #f2ce16; --slab-ink: #141414;
+  --brand-ink: #857000;  /* 黄系文字专用：light 深金（对 #f5f5f5 对比 4.46:1） */
   --high: #3d3d3d; --high-ink: #ffffff; --low-ink: #444444; --ok: var(--fg); --warn: var(--fg); --bad: var(--fg);
   --r: 0px;
   color-scheme: light;
@@ -152,6 +153,7 @@ BASE_CSS = """
   --echo: 3px 3px 0 rgba(236,236,236,.14);
   --glow: 0 0 26px rgba(236,236,236,.22);
   --slab: #ffe54c; --slab-hover: #f2ce16; --slab-ink: #141414;
+  --brand-ink: #ffe54c;  /* dark 下原黄直接可读（14.1:1） */
   --high: #6f6f6f; --high-ink: #ffffff; --low-ink: #a8a8a8;
   color-scheme: dark;
 }
@@ -182,9 +184,9 @@ a:hover { border-bottom-color: var(--fg); }
          text-shadow: var(--echo); }
 .brand small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 8px;
                text-transform: none; letter-spacing: 0; text-shadow: none; }
-.brand .brand-agent { color: var(--slab); }
-/* 攻防演练入口高亮（豁免之一）：文字直接取主题黄 */
-.nav-hl { color: var(--slab); }
+.brand .brand-shield { color: var(--brand-ink); }
+/* 攻防演练入口高亮（豁免之一）：主题黄；light 下自动换深金保证可读 */
+.nav-hl { color: var(--brand-ink); }
 .status { display: inline-flex; align-items: center; gap: 7px; font-family: ui-monospace, "SF Mono", monospace;
           font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .dot { width: 7px; height: 7px; background: var(--fg); display: inline-block;
@@ -364,7 +366,7 @@ html[data-holo="on"] .holo-surface{transition:box-shadow .16s ease-out}
    所以 inset bevel 画在 ::before 框层（z:1）上；hover 抬升的外层投影走 .holo-active（元素外侧，不被黄板遮）。
    holo OFF：本组规则整体失效，按钮回落纯 primary/#52 原样（本来就无附加阴影）。 */
 html[data-holo="on"] .btn:not(.outline,.ghost):not(:disabled):not([aria-disabled="true"])::before{
- box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10)}
+ box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1))}
 html[data-holo="on"][data-holo-motion="on"] .holo-active:not(:disabled):not([aria-disabled="true"]){
  box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1)),0 4px 12px rgba(0,0,0,var(--holo-shadow));
  transition:box-shadow .10s ease-out}
@@ -482,7 +484,7 @@ def home_html():
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AgentShield</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
 <div class="topbar">
-  <div class="brand"><span class="brand-agent">Agent</span>Shield<small>规则评分 · LLM 解释 · 本地运行</small></div>
+  <div class="brand">Agent<span class="brand-shield">Shield</span><small>规则评分 · LLM 解释 · 本地运行</small></div>
   <div class="hbtns">
     <a class="btn outline" href="/help">使用说明</a>
     <a class="btn outline" href="/nvidia">NVIDIA Skill 审查</a>
@@ -504,7 +506,7 @@ def checkup_html():
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>体检本机 · AgentShield</title>
 <style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
-<div class="topbar"><a class="brand" href="/"><span class="brand-agent">Agent</span>Shield<small>本机安全体检</small></a><a class="btn outline" href="/">← 返回首页</a></div>
+<div class="topbar"><a class="brand" href="/">Agent<span class="brand-shield">Shield</span><small>本机安全体检</small></a><a class="btn outline" href="/">← 返回首页</a></div>
 <nav class="breadcrumbs" aria-label="当前位置"><a href="/">首页</a><span>/</span><span>体检本机</span></nav>
 <h1>体检本机</h1><p class="tip">选择检查范围，生成报告，再查看问题与修复建议。</p>
 <section class="card holo-frame"><h2>检查范围</h2>
@@ -564,7 +566,7 @@ def report_html(rid: str):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AgentShield · {esc(rid)}</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body data-nav-section="{section}" data-nav-label="{page_label}">
 <div class="topbar">
-  <a class="brand" href="/"><span class="brand-agent">Agent</span>Shield</a>
+  <a class="brand" href="/">Agent<span class="brand-shield">Shield</span></a>
   <div class="hbtns"><button class="btn outline" onclick="openSettings()">设置</button>
   <a class="btn primary compact" href="/checkup">体检本机</a></div>
 </div>

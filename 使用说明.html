@@ -20,6 +20,7 @@
   --echo: 3px 3px 0 rgba(17,17,17,.10);
   --glow: 0 0 22px rgba(17,17,17,.08);
   --slab: #ffe54c; --slab-hover: #f2ce16; --slab-ink: #141414;
+  --brand-ink: #857000;  /* 黄系文字专用：light 深金（对 #f5f5f5 对比 4.46:1） */
   --high: #3d3d3d; --high-ink: #ffffff; --low-ink: #444444; --ok: var(--fg); --warn: var(--fg); --bad: var(--fg);
   --r: 0px;
   color-scheme: light;
@@ -41,6 +42,7 @@
   --echo: 3px 3px 0 rgba(236,236,236,.14);
   --glow: 0 0 26px rgba(236,236,236,.22);
   --slab: #ffe54c; --slab-hover: #f2ce16; --slab-ink: #141414;
+  --brand-ink: #ffe54c;  /* dark 下原黄直接可读（14.1:1） */
   --high: #6f6f6f; --high-ink: #ffffff; --low-ink: #a8a8a8;
   color-scheme: dark;
 }
@@ -71,9 +73,9 @@ a:hover { border-bottom-color: var(--fg); }
          text-shadow: var(--echo); }
 .brand small { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: 8px;
                text-transform: none; letter-spacing: 0; text-shadow: none; }
-.brand .brand-agent { color: var(--slab); }
-/* 攻防演练入口高亮（豁免之一）：文字直接取主题黄 */
-.nav-hl { color: var(--slab); }
+.brand .brand-shield { color: var(--brand-ink); }
+/* 攻防演练入口高亮（豁免之一）：主题黄；light 下自动换深金保证可读 */
+.nav-hl { color: var(--brand-ink); }
 .status { display: inline-flex; align-items: center; gap: 7px; font-family: ui-monospace, "SF Mono", monospace;
           font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .dot { width: 7px; height: 7px; background: var(--fg); display: inline-block;
@@ -253,7 +255,7 @@ html[data-holo="on"] .holo-surface{transition:box-shadow .16s ease-out}
    所以 inset bevel 画在 ::before 框层（z:1）上；hover 抬升的外层投影走 .holo-active（元素外侧，不被黄板遮）。
    holo OFF：本组规则整体失效，按钮回落纯 primary/#52 原样（本来就无附加阴影）。 */
 html[data-holo="on"] .btn:not(.outline,.ghost):not(:disabled):not([aria-disabled="true"])::before{
- box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10)}
+ box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1))}
 html[data-holo="on"][data-holo-motion="on"] .holo-active:not(:disabled):not([aria-disabled="true"]){
  box-shadow:inset 0 1px 0 var(--holo-edge),inset 0 -2px 0 rgba(0,0,0,.10),var(--holo-base-shadow,var(--sh-1)),0 4px 12px rgba(0,0,0,var(--holo-shadow));
  transition:box-shadow .10s ease-out}
@@ -393,7 +395,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
     back.hidden = !offline && location.pathname === '/' && !trail.length;
     actions.append(back, link('首页', '/'));
     const brand = document.createElement('a'); brand.href = url('/'); brand.className = 'brand';
-    brand.innerHTML = '<span class="brand-agent">Agent</span>Shield';
+    brand.innerHTML = 'Agent<span class="brand-shield">Shield</span>';
     const utility = document.createElement('div'); utility.className = 'nav-utility';
     utility.append(link('设置', '/?settings=1'), link('使用说明', '/help'));
     top.append(brand, actions, utility);
@@ -599,7 +601,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, {once:true});
   else mount();
 })();
-</script></head><body class="guide-page"><header class="topbar"><div class="brand"><span class="brand-agent">Agent</span>Shield<small>使用说明 · 2026-09-26</small></div><a class="btn outline small" href="http://127.0.0.1:8787/">打开应用 ↗</a></header><div class="guide-layout"><aside><small>CONTENTS / 目录</small><a href="#section-1">1. 先选择你要做的事</a><a href="#section-2">2. 启动与关闭</a><a href="#section-3">3. 配置私有模型</a><a href="#section-4">4. 使用左右分屏攻防演练</a><a href="#section-5">5. 使用 NVIDIA Skill 安全审查</a><a href="#section-6">6. 读取、导出与分享报告</a><a href="#section-7">7. 专业用户：审查自己的 Skill</a><a href="#section-8">8. 本机体检与智能体助手</a><a href="#section-9">9. 常见问题</a><a href="#section-10">10. 演示顺序与当前能力范围</a></aside><main class="guide-main"><h1>AgentShield 使用说明</h1>
+</script></head><body class="guide-page"><header class="topbar"><div class="brand">Agent<span class="brand-shield">Shield</span><small>使用说明 · 2026-09-26</small></div><a class="btn outline small" href="http://127.0.0.1:8787/">打开应用 ↗</a></header><div class="guide-layout"><aside><small>CONTENTS / 目录</small><a href="#section-1">1. 先选择你要做的事</a><a href="#section-2">2. 启动与关闭</a><a href="#section-3">3. 配置私有模型</a><a href="#section-4">4. 使用左右分屏攻防演练</a><a href="#section-5">5. 使用 NVIDIA Skill 安全审查</a><a href="#section-6">6. 读取、导出与分享报告</a><a href="#section-7">7. 专业用户：审查自己的 Skill</a><a href="#section-8">8. 本机体检与智能体助手</a><a href="#section-9">9. 常见问题</a><a href="#section-10">10. 演示顺序与当前能力范围</a></aside><main class="guide-main"><h1>AgentShield 使用说明</h1>
 <p>适用版本：2026-09-26 当前本地实现。建议普通用户先阅读第 1–5 节，开发者与安全人员继续阅读第 6–10 节。</p>
 <p>AgentShield 提供 Agent Skill 安全审查、六种红黑攻防仿真，以及本机系统与网络体检。场景涵盖公共 Wi-Fi、恶意 Skill、办公内网、身份会话、Web/API 和依赖供应链。黑方代表黑客，红方代表白帽。当前可使用已配置的私有 Qwen 模型；使用这些功能不需要先准备 DGX Spark。</p>
 <h2 id="section-1">1. 先选择你要做的事</h2>
