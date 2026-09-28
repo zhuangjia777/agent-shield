@@ -33,7 +33,71 @@ TOOLS = [
     ("run_fix", "执行/给出修复。参数: action + detail（返回建议命令；破坏性命令只给不执行）"),
     ("delete_report", "删除某份体检报告（report_id 传 all 表示全部）。破坏性操作：第一次调用不带 confirmed 只会收到确认提示；"
                       "必须先 Ask 用户确认，用户同意后再带 confirmed=true 重新调用"),
+    ("run_command", "执行一条本机命令（当前用户权限，无 sudo）。参数: cmd。"
+                    "白名单内只读诊断命令直接执行；白名单外必须先 Ask 用户展示完整命令并获同意，"
+                    "再带 confirmed=true 重新调用。sudo/管道给 shell/重定向写系统路径一律拒绝"),
 ]
+
+# run_command 白名单：argv 前缀命中 = 只读诊断，直接执行。新增条目务必确认该前缀下无破坏性子命令。
+CMD_WHITELIST = [
+    ("sw_vers",), ("uname",), ("uptime",), ("whoami",), ("id",), ("who",),
+    ("ps",), ("lsof",), ("netstat",), ("vm_stat",), ("sysctl",), ("df",), ("mount",),
+    ("pmset", "-g"), ("fdesetup", "status"), ("csrutil", "status"),
+    ("socketfilterfw", "--getglobalstate"),
+    ("/usr/libexec/ApplicationFirewall/socketfilterfw", "--getglobalstate"),
+    ("softwareupdate", "--history"), ("softwareupdate", "--schedule"),
+    ("tmutil", "destinationinfo"), ("system_profiler",),
+    ("defaults", "read"), ("defaults", "domains"),
+    ("networksetup", "-get"), ("networksetup", "-list"),
+    ("scutil", "--get"), ("scutil", "--dns"), ("scutil", "--proxy"),
+    ("launchctl", "list"), ("launchctl", "print"), ("launchctl", "print-disabled"),
+    ("dig",), ("nslookup",), ("host",), ("traceroute",), ("ping", "-c"),
+]
+
+
+def _run_command(cmd: str, confirmed: bool):
+    """三层闸：硬禁（sudo/管道给 shell/写系统路径）→ 白名单直跑 → 其余确认闸。
+    一律 shlex.split + shell=False 执行：管道/重定向本就不会被 shell 解释，
+    但为防止"看起来跑的是完整命令实际只跑半截"的误导，含这些形状的直接拒。"""
+    import shlex
+    import subprocess
+    cmd = cmd.strip()
+    if not cmd:
+        return json.dumps({"error": "cmd 为空"}, ensure_ascii=False), False
+    if re.search(r"\bsudo\b", cmd):
+        return json.dumps({"error": "拒绝执行：含 sudo。含提权命令请用户亲手在终端执行。"}, ensure_ascii=False), False
+    if re.search(r"\|\s*(ba|z|k|c)?sh\b", cmd) or "| python" in cmd or "| python3" in cmd:
+        return json.dumps({"error": "拒绝执行：管道给 shell/解释器（curl|sh 类模式）永不放行。"}, ensure_ascii=False), False
+    if re.search(r">{1,2}\s*/(etc|usr|bin|sbin|var|private|System|Library|Applications|root)\b", cmd):
+        return json.dumps({"error": "拒绝执行：重定向写系统路径。"}, ensure_ascii=False), False
+    try:
+        argv = shlex.split(cmd)
+    except ValueError as e:
+        return json.dumps({"error": f"命令解析失败: {e}"}, ensure_ascii=False), False
+    if not argv:
+        return json.dumps({"error": "cmd 为空"}, ensure_ascii=False), False
+    allowed = any(argv[:len(p)] == list(p) for p in CMD_WHITELIST)
+    # 前缀白名单不够：个别白名单命令带写旗标就有破坏性（如 sysctl -w）→ 命中则降级为需确认
+    for bad_cmd, bad_flag in [("sysctl", "-w"), ("launchctl", "load"), ("launchctl", "unload"),
+                              ("launchctl", "remove"), ("defaults", "write"), ("defaults", "delete")]:
+        if argv[0] == bad_cmd and any(a == bad_flag or a.startswith(bad_flag) for a in argv[1:]):
+            allowed = False
+    if not allowed and not confirmed:
+        return json.dumps({"cmd": cmd, "need_confirm": True,
+                           "note": f"命令不在只读白名单: {cmd}\n"
+                                   "请先用 Ask 向用户展示这条完整命令并说明用途，用户同意后再以 confirmed=true 重新调用。"},
+                          ensure_ascii=False), True
+    try:
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=30)
+        return json.dumps({"cmd": cmd, "exit": p.returncode,
+                           "stdout": (p.stdout or "")[:1200], "stderr": (p.stderr or "")[:400],
+                           "whitelisted": allowed}, ensure_ascii=False), True
+    except subprocess.TimeoutExpired:
+        return json.dumps({"cmd": cmd, "error": "超时（30s），已终止"}, ensure_ascii=False), False
+    except FileNotFoundError:
+        return json.dumps({"cmd": cmd, "error": f"命令不存在: {argv[0]}"}, ensure_ascii=False), False
+    except Exception as e:
+        return json.dumps({"cmd": cmd, "error": str(e)[:200]}, ensure_ascii=False), False
 
 
 def _observations():
@@ -143,6 +207,14 @@ class ReActAgent:
                                             "tool": "ask", "input": tin, "obs": answer[:300]})
                     messages.append({"role": "user", "content": f"用户选择了: {answer}"})
                     continue
+                if tool == "final_answer":
+                    # 模型用 Action: Final Answer 给答案（工具协议格式）→ 当作 final 收尾
+                    final_text = str(tin.get("answer") or tin.get("text") or tin.get("content") or "").strip()
+                    if final_text:
+                        on_event("final", {"text": final_text, "step": step})
+                        break
+                    messages.append({"role": "user", "content": "Observation: Final Answer 缺少 answer 参数"})
+                    continue
                 on_event("tool_call", {"step": step, "tool": tool, "input": tin})
                 obs, ok = _execute(tool, tin)
                 obs_str = obs if len(obs) <= 1500 else obs[:1500] + "…(截断)"
@@ -202,6 +274,10 @@ def _normalize_tool(name: str) -> str:
         "delete_report": "delete_report", "delete_reports": "delete_report",
         "delete": "delete_report", "clear_reports": "delete_report", "删除": "delete_report",
         "ask": "ask", "ask_user": "ask", "question": "ask",
+        "run_command": "run_command", "bash": "run_command", "exec": "run_command",
+        "run": "run_command", "shell": "run_command", "命令": "run_command", "执行": "run_command",
+        "final": "final_answer", "final answer": "final_answer", "final_answer": "final_answer",
+        "answer": "final_answer", "回答": "final_answer",
     }
     return table.get(n, table.get(name, name))
 
@@ -304,6 +380,9 @@ def _execute(tool: str, tin: dict):
             action = tin.get("action", "")
             detail = tin.get("detail", "")
             return _fixer(action, detail), True
+        if tool == "run_command":
+            return _run_command(str(tin.get("cmd") or tin.get("command") or ""),
+                                tin.get("confirmed") in (True, "true", "True", "yes", "是"))
         if tool == "delete_report":
             import shutil
             rid = str(tin.get("report_id") or tin.get("id") or "").strip()

@@ -510,7 +510,7 @@ def home_html():
 <div class="grid">{''.join(cards) or '<p class="tip">还没有报告，点击顶部导航中的「体检本机」开始检查。</p>'}</div>
 <div id="agent-host"></div>
 <div id="modal-host"></div>
-<footer>只监听 127.0.0.1（不出本机）。修复命令由你亲手确认执行。报告含密钥片段——分享前先看一眼。</footer>
+<footer>只监听 127.0.0.1（不出本机）。修复命令由你亲手确认执行；Agent 执行命令仅限只读白名单，其余须你逐条确认。报告含密钥片段——分享前先看一眼。</footer>
 <script src="/app.js"></script>
 </body></html>"""
 
