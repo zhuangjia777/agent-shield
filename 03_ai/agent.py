@@ -126,6 +126,23 @@ class ReActAgent:
                 if decision["thought"]:
                     on_event("think", {"step": step, "thought": decision["thought"]})
                 tool, tin = _normalize_tool(decision["tool"]), decision["input"]
+                if tool == "ask":
+                    # 模型用 Action: Ask 发问（工具协议格式）→ 转成真正的询问流程。
+                    # 此前被 _execute 当"未知工具"，模型反复 Ask 反复失败直到步数耗尽，用户端表现为"没反应"。
+                    question = str(tin.get("question") or tin.get("text") or "").strip()
+                    choices = tin.get("choices") or []
+                    if isinstance(choices, str):
+                        choices = [c.strip() for c in re.split(r"[|,，、]", choices) if c.strip()]
+                    if not question:
+                        messages.append({"role": "user", "content": "Observation: Ask 缺少 question 参数"})
+                        continue
+                    on_event("ask", {"step": step, "question": question, "choices": choices[:4]})
+                    answer = answer_callback(question, choices[:4])
+                    on_event("ask_answered", {"answer": answer})
+                    self.transcript.append({"step": step, "thought": decision["thought"],
+                                            "tool": "ask", "input": tin, "obs": answer[:300]})
+                    messages.append({"role": "user", "content": f"用户选择了: {answer}"})
+                    continue
                 on_event("tool_call", {"step": step, "tool": tool, "input": tin})
                 obs, ok = _execute(tool, tin)
                 obs_str = obs if len(obs) <= 1500 else obs[:1500] + "…(截断)"
@@ -184,6 +201,7 @@ def _normalize_tool(name: str) -> str:
         "run_fix": "run_fix", "fix": "run_fix", "repair": "run_fix", "修复": "run_fix",
         "delete_report": "delete_report", "delete_reports": "delete_report",
         "delete": "delete_report", "clear_reports": "delete_report", "删除": "delete_report",
+        "ask": "ask", "ask_user": "ask", "question": "ask",
     }
     return table.get(n, table.get(name, name))
 

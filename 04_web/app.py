@@ -1360,12 +1360,17 @@ function sendAgent() {
   resumeStream();  // 上一轮 done 会关掉 EventSource——发消息前必须重挂事件流，否则回答生成也看不见
   api(`/api/agent/${agentId}/message`, { message: t });
 }
-function answerAgent(text) {
+async function answerAgent(text) {
   if (!agentId || !text) return;
   const o = $('#ask-other'); if (o) o.remove();
   document.querySelectorAll('[data-t]').forEach(b=>{ b.classList.add('btn'); b.style.opacity=.35; b.disabled=true; });
   resumeStream();
-  api(`/api/agent/${agentId}/answer`, { text: text });
+  const j = await api(`/api/agent/${agentId}/answer`, { text: text });
+  if (j && j.ok === false) {
+    // 会话过期（服务重启等）：给出可见反馈，而不是点完按钮死寂
+    const log = $('#agent-log');
+    if (log) { log.insertAdjacentHTML('beforeend', `<div class="step"><span class="lbl" style="color:var(--bad)">会话失效</span> 智能体会话已过期，请点「新对话」重新开始。</div>`); log.scrollTop = log.scrollHeight; }
+  }
 }
 function agentAsk(t, auto) {
   openAgent(null);
