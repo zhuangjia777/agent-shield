@@ -32,7 +32,7 @@ TARGET_NAME = "aslab-target"
 RED_NAME = "aslab-red"
 BLUE_NAME = "aslab-blue"
 TARGET_IMG = "bkimminich/juice-shop:latest"
-RED_IMG = "aslab-red-tools:1"
+RED_IMG = "aslab-red-tools:2"
 BLUE_IMG = "python:3.12-alpine"
 RED_DOCKERFILE_DIR = Path(__file__).resolve().parent / "red_image"
 WAF_SCRIPT = Path(__file__).resolve().parent / "waf.py"
@@ -113,7 +113,7 @@ def start() -> dict:
         (RED_DOCKERFILE_DIR / "Dockerfile").write_text(
             "FROM kalilinux/kali-rolling:latest\n"
             "RUN apt-get update && apt-get install -y --no-install-recommends "
-            "nmap curl sqlite3 whois && rm -rf /var/lib/apt/lists/*\n")
+            "nmap curl sqlite3 whois sqlmap && rm -rf /var/lib/apt/lists/*\n")
         code, out = _sh(["docker", "build", "-q", "-t", RED_IMG, str(RED_DOCKERFILE_DIR)], timeout=900)
         if code != 0:
             return {"ok": False, "msg": f"攻击机镜像构建失败: {out[-200:]}"}
