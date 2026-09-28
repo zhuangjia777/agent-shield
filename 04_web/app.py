@@ -817,6 +817,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, (ROOT / "04_web" / "arena.js").read_text(), "text/javascript; charset=utf-8")
             if path == "/api/arena/catalog":
                 return self._json(200, arena_mod.catalog())
+            if path == "/api/reports":
+                return self._json(200, {"rids": [r["rid"] for r in _report_list()]})
             if path == "/api/arena/scenarios":
                 return self._json(200, {"default": "public_wifi", "scenarios": {
                     key: arena_mod.catalog(key) for key in arena_mod.SCENARIO_IDS}})
@@ -1066,6 +1068,26 @@ async function delReport(rid, btn) {
     flash(j.msg || '删除失败');
   }
 }
+// 对账兜底：页面加载后核对卡片与服务器实际存在的报告（agent/别的标签页删过的，这里自动清理）
+async function reconcileReportCards() {
+  const cards = [...document.querySelectorAll('a.report-card')];
+  if (!cards.length) return;
+  try {
+    const j = await (await fetch('/api/reports')).json();
+    const live = new Set(j.rids || []);
+    let gone = 0;
+    for (const c of cards) {
+      const rid = c.querySelector('.report-del')?.dataset.rid;
+      if (rid && !live.has(rid)) { c.remove(); gone++; }
+    }
+    if (gone) {
+      flash(`有 ${gone} 份报告已不存在，已从列表移除`);
+      if (!document.querySelector('a.report-card')) location.reload();
+    }
+  } catch (e) { /* 服务器不可达：不动页面 */ }
+}
+document.addEventListener('DOMContentLoaded', reconcileReportCards);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) reconcileReportCards(); });
 function sse(url, onEvent, onDone) {
   const es = new EventSource(url);
   es.onmessage = e => {
@@ -1296,7 +1318,10 @@ function handleAgentEvent(ev) {
         flash(`已删除报告 ${j.report_id}`);
         if (!document.querySelector('.report-card')) location.reload();
       }
-    } catch (e) { /* obs 被截断或非 JSON：不动页面 */ }
+    } catch (e) {
+      // obs 被截断或非 JSON：兜底提示手动刷新
+      flash('报告已被删除，页面未能自动更新，请手动刷新（⌘R）');
+    }
   }
   if (ev.type === 'ask') {
     const opts = (ev.choices||[]).map(c=>`<button class="btn small accent" style="margin:3px 3px 0 0" onclick="answerAgent(this.dataset.t)" data-t="${escAttr(c)}">${escHtml(c)}</button>`).join('');
@@ -1319,6 +1344,7 @@ function handleAgentEvent(ev) {
     if (live) { live.removeAttribute('id'); live.innerHTML = renderMd(ev.text); }
     else push(`<div class="answer">${renderMd(ev.text)}</div>`);
     log.scrollTop = log.scrollHeight;
+    reconcileReportCards();  // 每轮回答完兜底对账：删过没删过、同步没同步，都以服务器为准
   }
   if (ev.type === 'error') push(`<div class="step"><span class="lbl" style="color:var(--bad)">出错</span> ${escHtml(ev.text)}</div>`);
 }
