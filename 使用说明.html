@@ -141,6 +141,14 @@ button { font: inherit; cursor: pointer; }
 .report-card .sc.sig-bad  { background: var(--fg); color: var(--bg); }
 .report-card .sc.sig-ok span, .report-card .sc.sig-warn span { color: inherit; opacity: .6; }
 .report-card .sc.sig-bad span { color: inherit; opacity: .7; }
+.report-del { position: absolute; top: 8px; right: 8px; z-index: 3; width: 26px; height: 26px;
+  display: grid; place-items: center; padding: 0; cursor: pointer;
+  background: var(--bg); color: var(--muted); border: 1px solid var(--card-edge); border-radius: 0;
+  font: 700 13px/1 ui-monospace, monospace; opacity: 0; transition: opacity .12s; }
+.report-card:hover .report-del, .report-del:focus-visible { opacity: 1; }
+.report-del:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.report-del[disabled] { opacity: .5; cursor: wait; }
+@media (hover:none){ .report-del { opacity: 1; } }
 
 /* ---- 掠光（仅 holo 响应体：可点卡 + modal + 输入区） ---- */
 .holo-sweep { position: relative; overflow: hidden; }

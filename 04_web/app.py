@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -252,6 +253,14 @@ button { font: inherit; cursor: pointer; }
 .report-card .sc.sig-bad  { background: var(--fg); color: var(--bg); }
 .report-card .sc.sig-ok span, .report-card .sc.sig-warn span { color: inherit; opacity: .6; }
 .report-card .sc.sig-bad span { color: inherit; opacity: .7; }
+.report-del { position: absolute; top: 8px; right: 8px; z-index: 3; width: 26px; height: 26px;
+  display: grid; place-items: center; padding: 0; cursor: pointer;
+  background: var(--bg); color: var(--muted); border: 1px solid var(--card-edge); border-radius: 0;
+  font: 700 13px/1 ui-monospace, monospace; opacity: 0; transition: opacity .12s; }
+.report-card:hover .report-del, .report-del:focus-visible { opacity: 1; }
+.report-del:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.report-del[disabled] { opacity: .5; cursor: wait; }
+@media (hover:none){ .report-del { opacity: 1; } }
 
 /* ---- 掠光（仅 holo 响应体：可点卡 + modal + 输入区） ---- */
 .holo-sweep { position: relative; overflow: hidden; }
@@ -477,6 +486,8 @@ def home_html():
         scdisp = sc if sc is not None else "–"
         cards.append(f"""
 <a class="card report-card" href="/report/{r['rid']}">
+  <button type="button" class="report-del" title="删除该报告" aria-label="删除报告 {esc(r['rid'])}"
+    data-rid="{esc(r['rid'])}" onclick="event.preventDefault();event.stopPropagation();delReport(this.dataset.rid,this)">✕</button>
   <div class="rid mono">{esc(r['rid'])}</div>
   <div class="sc{tier}">{scdisp}<span> /100</span></div>
   <div class="tip">{esc(r['at'])} · findings {r['n']} · {esc(r['engine'])}</div>
@@ -572,7 +583,7 @@ def report_html(rid: str):
   <div class="hbtns"><button class="btn outline" onclick="openSettings()">设置</button>
   <a class="btn primary compact" href="/checkup">体检本机</a></div>
 </div>
-<div class="report-actions">{next_action}<a class="btn outline nav-control" href="/">查看全部报告</a><a class="btn outline nav-control" href="#report-export">导出报告</a></div>
+<div class="report-actions">{next_action}<a class="btn outline nav-control" href="/">查看全部报告</a><a class="btn outline nav-control" href="#report-export">导出报告</a><button type="button" class="btn outline" data-rid="{esc(rid)}" onclick="delReport(this.dataset.rid,this)">删除该报告</button></div>
 <div class="scorehead holo-frame">
   <div class="big">{sc}<span> /100 · 本地健康分</span></div>
   <div>
@@ -945,6 +956,15 @@ class Handler(BaseHTTPRequestHandler):
             body = self._body()
             if path == "/api/scan":
                 return self._api_scan(body)
+            if path == "/api/report/delete":
+                rid = str(body.get("rid") or "")
+                if not re.fullmatch(r"[\w.\-]+", rid) or ".." in rid:
+                    return self._json(400, {"ok": False, "msg": "非法报告 id。"})
+                target = (REPORTS / rid).resolve()
+                if target.parent != REPORTS.resolve() or not target.is_dir():
+                    return self._json(404, {"ok": False, "msg": "找不到该报告。"})
+                shutil.rmtree(target)
+                return self._json(200, {"ok": True, "deleted": rid})
             if path == "/api/config":
                 try:
                     cur = llm_mod.merge_config(llm_mod.load_config(), body)
@@ -1026,6 +1046,25 @@ function flash(msg) {
 async function api(url, body) {
   const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) });
   return r.json();
+}
+async function delReport(rid, btn) {
+  if (!confirm(`确定删除报告 ${rid} ？\n删除后不可恢复（含该目录下全部导出文件）。`)) return;
+  btn.disabled = true;
+  const j = await api('/api/report/delete', { rid });
+  if (j.ok) {
+    const card = btn.closest('.report-card');
+    if (card) {
+      card.remove();
+      flash(`已删除报告 ${rid}`);
+      if (!document.querySelector('.report-card')) location.reload();
+    } else {
+      // 报告详情页：删完回首页
+      location.href = '/';
+    }
+  } else {
+    btn.disabled = false;
+    flash(j.msg || '删除失败');
+  }
 }
 function sse(url, onEvent, onDone) {
   const es = new EventSource(url);
