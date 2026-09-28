@@ -1155,7 +1155,7 @@ function fixFinding(fid, btn) {
     d.innerHTML = `<div style="margin-bottom:6px"><b>修复步骤</b> · <span class="mono">${escHtml(j.rule||'')}</span></div>${steps}
       <div class="tip" style="margin:8px 0">${escHtml(j.note||'')}</div>
       <div class="f-act" style="margin:0">
-        <button class="btn small accent" onclick="agentAsk('帮我操作：${escHtml((f&&f.title)||'')}", true)">交给 Agent 一步步带我</button>
+        <button class="btn small accent" data-q="帮我操作：${escHtml((f&&f.title)||'')}" onclick="agentAsk(this.dataset.q, true)">交给 Agent 一步步带我</button>
         <button class="btn small ghost" onclick="copyFix('${fid}')">📋 复制全部</button>
       </div>`;
     d.dataset.fix = JSON.stringify(j.steps||[]);
