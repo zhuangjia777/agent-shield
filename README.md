@@ -1,27 +1,23 @@
 # AgentShield
 
-![AgentShield：Skill 安全审查、本机体检与攻防模拟](docs/assets/readme-cover.svg)
+**一个会自己动手攻击的 AI 安全智能体。** 先在本机做隐私/漏洞体检评分，再把攻防对抗搬进 Docker 隔离网真打一遍：Kali 攻击机发出真实报文，WAF 真拦真放，战果由靶机自己的记录说话。全程本地运行，MIT 开源。
 
-AgentShield 是一个在本机运行的安全检查工具，可以审查 Agent Skill、检查电脑的安全设置，也可以通过攻防模拟了解不同防护措施的效果。接入模型后，还能用通俗的语言解释发现的问题和修复建议。
+![Docker 实战演练实录：SQL 注入被 WAF 拦截、蓝队关闭 WAF 后同一发命中、裁判以靶机记录判定](docs/assets/live-arena-demo.gif)
+
+上面这段是 AgentShield 实战演练的一次真实运行记录（压缩了模型思考等待）：红队容器用 SQL 注入打管理员登录，WAF 开启时 403 拦下、正常业务不受影响；蓝队误关 WAF 后**同一发 payload** 拿到管理员登录凭证；裁判直接读靶机 API 确认 `loginAdminChallenge` 达成——不听模型自评。结束后一键销毁全部容器，命令与输出全程落盘。
 
 [使用说明](使用说明.md) · [HTML 版使用说明](使用说明.html) · [安装与启动](#安装与启动)
 
 ## 能做什么
 
-- **检查 Skill**：用本地规则查找风险，也可以安装 NVIDIA SkillSpector 进行补充审查。报告会列出发现的问题、对应证据和检查范围。
-- **体检本机**：检查系统安全设置，按需选择局域网探测。本机系统检查目前主要适配 macOS。
-- **模拟攻防**：红黑模型各自选择工具，左侧展示黑方尝试，右侧展示红方防护；也可切换为固定流程演示。调整防护策略后，可以比较攻击结果和正常业务是否受到影响。
+- **实战演练（真实攻防）**：Docker 隔离网内起一座演练场——Kali 容器当红队、可开关的 WAF 当蓝队、OWASP Juice Shop 当靶机。智能体一步步带你打：每个攻击动作先展示完整命令、经你确认才执行；蓝队开/关防护后红队复测同一发攻击，攻防效果当场对比。详见[实战演练](#实战演练需要本机-docker)。
+- **体检本机**：检查系统安全设置，按需选择局域网探测，给出 0–100 健康分和逐项修复建议。本机系统检查目前主要适配 macOS。
+- **检查 Skill**：用本地规则查找 Agent Skill 的安全风险，也可以安装 NVIDIA SkillSpector 进行补充审查。报告会列出发现的问题、对应证据和检查范围。
+- **沙盘推演**：不需要 Docker 和模型的轻量模式。六个攻防场景（公共 Wi-Fi、恶意 Skill、内网横向移动、钓鱼与会话盗用、Web/API 越权、供应链投毒），红黑模型各自决策，工具只改变虚拟场景，不发送真实报文。调整防护策略后可以对比攻击结果和正常业务是否受影响，详见[攻防场景说明](01_specs/extended-arena-2026-09-26.md)。
+- **智能体对话**：右下角 AGENT 呼出，ReAct 循环逐步执行：读报告、查本机、跑命令（只读白名单直跑，其余逐条找你确认）、起演练场、删报告（确认闸）。
 - **解释结果**：不熟悉安全术语时，可以查看模型生成的说明；需要深入检查时，可以查看规则、证据和原始报告。
 
-攻防演练目前有六个场景：公共 Wi-Fi、恶意 Skill、办公内网横向移动、钓鱼与会话盗用、Web/API 越权和依赖供应链投毒。黑方代表黑客，红方代表白帽。场景使用预设规则和模拟数据，不执行真实攻击。具体用法见 [攻防场景说明](01_specs/extended-arena-2026-09-26.md)。
-
 NVIDIA 审查使用原版 SkillSpector 2.12.0，结果与本地检查分开展示。安装方法见 [NVIDIA 集成说明](09_integrations/nvidia/README.md)，已完成的验证见 [集成验证记录](01_specs/nvidia-integration-2026-09-24.md)。
-
-## 攻防演练展示
-
-![公共 Wi-Fi 场景：黑方尝试目标，红方检查业务并启用防护](docs/assets/arena-demo.gif)
-
-公共 Wi-Fi 场景的智能体实测回放，已压缩模型等待时间。左侧是黑方行动，右侧是红方防护；本轮完成 8 次模型决策、1 项虚拟防护变更，最终业务检查 2/2 通过。工具操作的是虚拟环境，不发送真实攻击报文。
 
 ## 实战演练（需要本机 Docker）
 
@@ -136,6 +132,14 @@ uv pip install --python .venv-skillspector/bin/python \
 .venv/bin/python tests/run_evals.py
 ```
 
+实战演练也可以不经网页，直接用控制脚本起停：
+
+```bash
+.venv/bin/python 08_arena/livelab.py start   # 起场（自动做网络隔离校验）
+.venv/bin/python 08_arena/livelab.py status  # 容器与 WAF 状态
+.venv/bin/python 08_arena/livelab.py stop    # 一键销毁
+```
+
 ## 如何看报告
 
 本地健康分从 100 分开始，发现问题后按严重程度扣分：严重问题每项扣 25 分，高危扣 12 分，中危扣 5 分，低危扣 2 分，最低为 0 分。分数由规则计算，模型负责解释，不修改这个分数。
@@ -174,7 +178,7 @@ NVIDIA SkillSpector 的风险分越高，表示风险越大，与本地健康分
 05_skill_eval/   Skill 检查规则及 NVIDIA 扫描入口
 06_samples/      漏洞、加固和正常三个示例 Skill
 07_evals/        评测用例和预期结果
-08_arena/        六种攻防模拟场景
+08_arena/        沙盘推演场景 + 实战演练控制（livelab.py、waf.py）
 09_integrations/ NVIDIA 组件版本、依赖和运行适配
 10_skills/       AgentShield 审计 Skill 草稿，尚未完成效果对照测试
 docs/assets/    README 封面等文档图片
