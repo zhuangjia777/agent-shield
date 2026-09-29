@@ -338,6 +338,15 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
 .overlay.agent-mini .mhead { cursor: pointer; }
 .modal .mhead.agent-drag { cursor: grab; user-select: none; }
 .modal .mhead.agent-drag:active { cursor: grabbing; }
+/* Agent 窗口整体小一号字：标题 13、消息与输入 12.5、按钮 11 */
+#agent-host .mhead h3 { font-size: 13px; }
+#agent-host .mhead h3 .tip { font-size: 11px; }
+#agent-host .answer { font-size: 12.5px; padding: 9px 12px; margin: 8px 0; }
+#agent-host .answer .mono, #agent-host .answer code { font-size: 11.5px; }
+#agent-host .step { font-size: 12.5px; }
+#agent-host .btn.small, #agent-host .btn.compact { font-size: 11px; padding: 4px 10px; }
+#agent-host select, #agent-host input { font-size: 12.5px; }
+#agent-host .agentinput { padding: 9px 12px; }
 .modal { position: relative; }
 .agent-resize { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none;
   background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%,
