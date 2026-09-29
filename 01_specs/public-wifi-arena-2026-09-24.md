@@ -64,7 +64,7 @@ DNS 重定向事件区分 `dns_answer_changed` 和 `request_reached_fake_service
 
 ## NVIDIA 参赛路线的衔接
 
-当前仿真和 Qwen 不计作 NVIDIA 运行组件集成。独立的 Skill 审查入口现已接入原版 SkillSpector，见 [集成验收记录](nvidia-integration-2026-09-24.md)。来源验签、治理产物和动态沙箱继续按 [V3 方案](nvidia-hackathon-strategy-v3-2026-09-24.md) 推进；保留引擎身份和原始结果。不要把 OpenShell 当作无线网络模拟器。
+当前仿真和 Qwen 不计作 NVIDIA 运行组件集成。独立的 Skill 审查入口现已接入原版 SkillSpector，见 [集成验收记录](nvidia-integration-2026-09-24.md)。来源验签、治理产物和动态沙箱继续按 NVIDIA 生态方案推进；保留引擎身份和原始结果。不要把 OpenShell 当作无线网络模拟器。
 
 动态版本另设隔离靶场：独立网络命名空间/虚拟机中的客户端、共享靶机、网关和黑方，固定镜像与自建合成服务；先证明无桥接到宿主内网、无真实凭据、可回滚，再将真实观察适配到当前证据契约。无线关联/恶意热点属于另一实验层，不用普通容器网络假装实现。DGX Spark 可用后仅迁移模型与兼容运行组件，按实际硬件重新测量性能，不能沿用当前 API 时延冒充 Spark 成绩。
 
