@@ -36,6 +36,12 @@ print(f"hardened 高危误报 {n_high_h}   (目标 0)")
 high.append(n_high_h == 0)
 print(f"耗时 vulnerable={t_v:.3f}s hardened={t_h:.3f}s benign={t_b:.3f}s   (目标 <=5min)")
 print(f"vulnerable findings 总数 {len(vuln)}  high+ {n_high_v}")
+ops, t_o = run("ops-agent-skill")
+ops_rules = {f.rule_id for f in ops}
+n_high_o = sum(1 for f in ops if f.level in ("high", "critical"))
+ops_ok = "SK-INSTR-TRUST" in ops_rules and n_high_o >= 1
+print(f"ops-agent-skill 指令注入面检出 {'PASS' if 'SK-INSTR-TRUST' in ops_rules else 'FAIL'}   高危 {n_high_o}（目标 >=1）")
+high.append(ops_ok)
 ok = all(high)
 print("BENCHMARK static gate:", "PASS" if ok else "FAIL")
 sys.exit(0 if ok else 1)

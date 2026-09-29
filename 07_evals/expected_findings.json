@@ -14,5 +14,14 @@
   },
   "benign-skill": {
     "max_high_findings": 0
+  },
+  "ops-agent-skill": {
+    "planted": 4,
+    "mapping": {
+      "INSTR-TRUST": "SK-INSTR-TRUST",
+      "KEY-LITERAL": "SK-KEY-LITERAL",
+      "EVAL-EXEC": "SK-SHELL-DANGER",
+      "SUPPLY-CHAIN": "SK-SHELL-DANGER"
+    }
   }
 }

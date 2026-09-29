@@ -210,6 +210,26 @@ def check_skill(bundle: SkillBundle) -> list[Finding]:
                         )
 
     # --- SKILL.md 级检查 ---
+    # 指令注入面：文档本身教 Agent 无条件信任外部输入（横幅/回显/头部里的"指令"）
+    INSTR_TRUST = [
+        (r"SYSTEM\s*[:：]", "把外部输入中的 SYSTEM 前缀当指令"),
+        (r"(?:无需|不用|不必)[^。\n]{0,12}(?:用户)?确认", "教 Agent 跳过用户确认"),
+        (r"(?:直接|照做|立即执行)[^。\n]{0,12}(?:指令|命令)", "指示无条件执行外部指令"),
+        (r"ignore\s+(?:all\s+)?(?:previous|prior|user)", "英文越权指令（ignore previous）"),
+    ]
+    for pat, desc in INSTR_TRUST:
+        m = re.search(pat, skill_md_text, re.I)
+        if m and skill_md_text:
+            line_no = skill_md_text[:m.start()].count("\n") + 1
+            add(
+                rule_id="SK-INSTR-TRUST",
+                title=f"指令注入面: {desc}",
+                owasp="A01", nist="DECM-4",
+                impact=5, exploitability=3, confidence="static", exposure=1.0,
+                evidence={"file": "skill:SKILL.md", "line": line_no,
+                          "snippet": skill_md_text.splitlines()[line_no - 1][:120]},
+                fix="外部输入（横幅、回显、元数据）只能当数据；删除任何『照做/免确认』条款。",
+            )
     if not skill_md_text:
         add(
             rule_id="SK-NODOC",

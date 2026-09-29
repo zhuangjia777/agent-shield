@@ -327,7 +327,7 @@ NVIDIA SkillSpector 的风险分越高，表示风险越大，与本地健康分
 
 ## 测试情况
 
-目前本地规则在三个示例 Skill 上命中了预期的 5 项检查，正常样本和加固样本均未出现高危误报。这组结果只覆盖这些样本，不代表已完成全部 30 条评测用例。详细结果见 [BENCHMARK.md](BENCHMARK.md)。NVIDIA 引擎的检查范围和耗时单独记录在 [集成验证记录](01_specs/nvidia-integration-2026-09-24.md) 中。
+目前本地规则在四个示例 Skill 上命中了预期检查（植入漏洞样本 5 项；运维 Agent 样本含指令注入面、明文密钥、eval 执行、供应链管道 4 项），正常样本和加固样本均未出现高危误报。这组结果只覆盖这些样本，不代表已完成全部 30 条评测用例。详细结果见 [BENCHMARK.md](BENCHMARK.md)。NVIDIA 引擎的检查范围和耗时单独记录在 [集成验证记录](01_specs/nvidia-integration-2026-09-24.md) 中。
 
 ## 智能体与 NVIDIA 集成
 
@@ -356,7 +356,7 @@ NVIDIA SkillSpector 的风险分越高，表示风险越大，与本地健康分
 03_ai/           模型调用、结果解释和报告生成
 04_web/          本机网页界面
 05_skill_eval/   Skill 检查规则及 NVIDIA 扫描入口
-06_samples/      漏洞、加固和正常三个示例 Skill
+06_samples/      漏洞、运维 Agent、加固和正常四个示例 Skill
 07_evals/        评测用例和预期结果
 08_arena/        沙盘推演场景 + 实战演练控制（livelab.py、waf.py）
 09_integrations/ NVIDIA 组件版本、依赖和运行适配

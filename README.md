@@ -327,7 +327,7 @@ NVIDIA SkillSpector scores go the other way — higher means riskier — and nev
 
 ## Test status
 
-Local rules currently hit all 5 expected checks on the three sample Skills, with no high-severity false positives on the benign and hardened samples. This covers those samples only — not all 30 evaluation cases. Details: [BENCHMARK.md](BENCHMARK.md). The NVIDIA engine's coverage and runtime are logged separately in the [integration log](01_specs/nvidia-integration-2026-09-24.md).
+Local rules currently hit all expected checks on the four sample Skills (5 planted checks in the vulnerable sample; the ops-agent sample covers instruction-trust, plaintext key, eval-exec and supply-chain pipe), with no high-severity false positives on the benign and hardened samples. This covers those samples only — not all 30 evaluation cases. Details: [BENCHMARK.md](BENCHMARK.md). The NVIDIA engine's coverage and runtime are logged separately in the [integration log](01_specs/nvidia-integration-2026-09-24.md).
 
 ## Agents & NVIDIA integration
 
@@ -356,7 +356,7 @@ Next steps, roughly in order:
 03_ai/           model calls, result explanations, report generation
 04_web/          local web UI
 05_skill_eval/   Skill check rules & NVIDIA scan entry
-06_samples/      vulnerable / hardened / benign sample Skills
+06_samples/      vulnerable / ops-agent / hardened / benign sample Skills
 07_evals/        evaluation cases and expected results
 08_arena/        arena simulation + live range control (livelab.py, waf.py)
 09_integrations/ NVIDIA component versions, locks, runtime adapters

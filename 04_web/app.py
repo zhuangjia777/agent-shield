@@ -56,14 +56,14 @@ def nvidia_html():
 <div class="topbar"><a class="brand" href="/">Agent<span class="brand-shield">Shield</span></a><a class="btn outline" href="/arena?scenario=malicious_skill"><span class="nav-hl">Skill 攻防演练</span></a></div>
 <h1>NVIDIA Skill 安全审查</h1><p>使用 NVIDIA SkillSpector 的真实扫描结果，验证项目样本中的风险。保留原始报告、版本、输入内容哈希和覆盖边界。</p>
 <div class="card"><label for="sample">选择项目样本</label><select id="sample" style="font:inherit;padding:8px;width:100%">
-<option value="vulnerable-skill">植入漏洞样本</option><option value="hardened-skill">加固样本</option><option value="benign-skill">普通样本</option></select>
+<option value="vulnerable-skill">植入漏洞样本</option><option value="ops-agent-skill">运维 Agent 样本</option><option value="hardened-skill">加固样本</option><option value="benign-skill">普通样本</option></select>
 <label><input type="checkbox" id="use-model"> 添加私有 Qwen 语义分析</label>
 <p class="tip">默认静态扫描不调用模型。启用语义分析会将所选合成样本交给配置的私有模型，约需数十秒至数分钟。扫描不执行样本脚本。</p>
 <button class="btn primary compact" id="scan">开始官方引擎审查</button><p id="status" role="status" aria-live="polite"></p><a id="result" class="btn compact" hidden>查看完整报告</a></div>
 <p class="tip">SkillSpector 风险分越高风险越大；AgentShield 规则健康分越高越好，两者分开展示。来源 commit 与内容哈希已记录；OMS 发布者签名会随扫描单独验证，未签名不会显示为通过。OpenShell 隔离执行与 Tier 3 对照评测提供独立入口，配置方法见使用说明。</p>
 <script>
 const sampleHint=new URLSearchParams(location.search).get('sample');
-if(['vulnerable-skill','hardened-skill','benign-skill'].includes(sampleHint)) document.getElementById('sample').value=sampleHint;
+if(['vulnerable-skill','ops-agent-skill','hardened-skill','benign-skill'].includes(sampleHint)) document.getElementById('sample').value=sampleHint;
 document.getElementById('scan').onclick=async()=>{
  const b=document.getElementById('scan'),s=document.getElementById('status'),a=document.getElementById('result');
  b.disabled=true;a.hidden=true;s.textContent='正在扫描并核验覆盖范围…';
@@ -930,7 +930,7 @@ class Handler(BaseHTTPRequestHandler):
                     body = self._body()
                     if not isinstance(body, dict) or set(body) - {"sample", "use_llm"}:
                         raise ValueError()
-                    if body.get("sample") not in ("vulnerable-skill", "hardened-skill", "benign-skill") or type(body.get("use_llm", False)) is not bool:
+                    if body.get("sample") not in ("vulnerable-skill", "hardened-skill", "benign-skill", "ops-agent-skill") or type(body.get("use_llm", False)) is not bool:
                         raise ValueError()
                 except (ValueError, TypeError):
                     return self._json(400, {"ok": False, "msg": "仅接受内置样本与语义分析开关。"})

@@ -46,7 +46,7 @@ TOOLS = [
     ("lab_scenario", "在实战演练场跑一个命名攻击场景的自动裁判演示（发真实报文、按需切 WAF、最后恢复）。"
                      "参数: scenario（sqli_session=SQL注入会话劫持 | xss_encoded_bypass=XSS编码绕过 | bac_enumeration=越权枚举；传空则列出全部可选场景）"),
     ("lab_judge", "读取裁判探针：靶机真实记录的被攻克挑战列表 + WAF 状态。无参数"),
-    ("lab_stop", "销毁演练场全部容器与网络，一键清理。默认不自动调用；需 confirmed=true（先经用户同意）。无参数则返回需确认提示"),
+    ("lab_stop", "销毁演练场全部容器与网络，一键清理。默认不自动调用；无参数时返回需确认提示并附将被销毁的清单预览（will_remove），需 confirmed=true（先经用户同意）"),
 ]
 
 # run_command 白名单：argv 前缀命中 = 只读诊断，直接执行。新增条目务必确认该前缀下无破坏性子命令。
@@ -497,11 +497,17 @@ def _execute(tool: str, tin: dict, mode: str = "confirm"):
                     return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
                 if tool == "lab_stop":
                     if tin.get("confirmed") not in (True, "true", "True", "yes", "是"):
-                        return json.dumps({"need_confirm": True, "note":
-                                           "销毁演练场会删除全部容器与网络，演练现场将无法复查。"
-                                           "默认应当保留现场供查看日志和复测。"
-                                           "请先用 Ask 询问用户是否确认清理，同意后再带 confirmed=true 调用。"},
-                                          ensure_ascii=False), True
+                        note = {"need_confirm": True, "note":
+                                "销毁演练场会删除全部容器与网络，演练现场将无法复查。"
+                                "默认应当保留现场供查看日志和复测。"
+                                "请先用 Ask 询问用户是否确认清理（把将销毁的清单念给用户），同意后再带 confirmed=true 调用。"}
+                        try:  # dryRun 预览：只读清单，帮用户看清要拆掉什么
+                            preview = livelab.stop(dry_run=True)
+                            if isinstance(preview, dict):
+                                note["will_remove"] = preview.get("will_remove", [])
+                        except Exception:
+                            pass
+                        return json.dumps(note, ensure_ascii=False), True
                     r = livelab.stop()
                     return json.dumps(r, ensure_ascii=False), True
                 if tool == "lab_scenario":
