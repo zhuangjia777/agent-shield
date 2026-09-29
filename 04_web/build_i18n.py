@@ -454,6 +454,14 @@ R = [
   [r"^🔴 Docker 实战演练\s*$", "🔴 Docker Live Range "],
 ]
 
+S.update({
+    "停止并清理演练场": "Stop and clean up range",
+    "正在停止并清理演练场…": "Stopping and cleaning up range…",
+    "演练场已停止，容器与网络已清理。": "Range stopped; containers and networks removed.",
+    "清理未完成，请检查 Docker 后重试。": "Cleanup incomplete. Check Docker and retry.",
+    "停止请求失败，请刷新状态后重试。": "Stop request failed. Refresh the status and retry.",
+    "当前 Agent 演练任务已停止。": "The current agent range task has been stopped.",
+})
 out = {"strings": S, "regex": R}
 p = pathlib.Path(__file__).resolve().parent.parent / "04_web" / "i18n.json"
 p.write_text(json.dumps(out, ensure_ascii=False, indent=0))

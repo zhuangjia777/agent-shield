@@ -213,10 +213,19 @@ def waf_get() -> dict:
 
 
 def stop() -> dict:
-    _sh(["docker", "rm", "-f", RED_NAME, BLUE_NAME, TARGET_NAME], timeout=30)
-    _sh(["docker", "network", "rm", NET_ISOLATED, NET_LAN], timeout=15)
-    _log({"at": time.strftime("%F %T"), "evt": "lab_stop"})
-    return {"ok": True, "msg": "演练场已销毁"}
+    errors = []
+    # Remove individually: absent resources are harmless on repeated stops.
+    for kind, names in (("container", (RED_NAME, BLUE_NAME, TARGET_NAME)),
+                        ("network", (NET_ISOLATED, NET_LAN))):
+        for name in names:
+            cmd = ["docker", "rm", "-f", name] if kind == "container" else ["docker", "network", "rm", name]
+            code, out = _sh(cmd, timeout=30 if kind == "container" else 15)
+            if code and not ("No such container:" in out or "No such network:" in out
+                             or (kind == "network" and f"network {name} not found" in out)):
+                errors.append(f"{name}: {out[:200]}")
+    ok = not errors
+    _log({"at": time.strftime("%F %T"), "evt": "lab_stop", "ok": ok, "errors": errors})
+    return {"ok": ok, "msg": "演练场已销毁" if ok else "；".join(errors)}
 
 
 def red_exec(cmd: str) -> dict:

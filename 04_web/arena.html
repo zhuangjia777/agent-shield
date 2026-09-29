@@ -12,6 +12,8 @@
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
     <button class="btn primary compact" onclick="agentAsk('起一个 Docker 实战演练场，演示 SQL 注入被 WAF 拦截，然后关掉 WAF 再打一次，最后用裁判探针对比战果并拆场', true)">交给 Agent 一步步带我</button>
     <button class="btn outline compact" id="lab-check" onclick="labStatus()">刷新演练场状态</button>
+    <button class="btn outline compact" id="lab-stop" onclick="labStop()">停止并清理演练场</button>
+    <span class="note" id="lab-message" role="status" aria-live="polite"></span>
   </div>
 </section>
 <details class="details-card"><summary>本轮攻击目标与前置条件</summary><p class="note" id="scenario-focus"></p><ol id="case-list"></ol></details>

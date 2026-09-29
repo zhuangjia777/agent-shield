@@ -156,7 +156,7 @@ class ReActAgent:
         self.history = history  # [{role, content}, ...]
         self.transcript: list[dict] = []  # {step, thought, tool, input, obs_len}
 
-    def run(self, user_msg: str, on_event, answer_callback):
+    def run(self, user_msg: str, on_event, answer_callback, execute_callback=None):
         """generator 友好的同步执行：
         answer_callback(question, choices) -> str  （由 web 端实现，等待用户点选）
         """
@@ -227,7 +227,7 @@ class ReActAgent:
                     messages.append({"role": "user", "content": "Observation: Final Answer 缺少 answer 参数"})
                     continue
                 on_event("tool_call", {"step": step, "tool": tool, "input": tin})
-                obs, ok = _execute(tool, tin)
+                obs, ok = (execute_callback or _execute)(tool, tin)
                 obs_str = obs if len(obs) <= 1500 else obs[:1500] + "…(截断)"
                 on_event("tool_result", {"step": step, "tool": tool, "ok": ok, "obs": obs_str})
                 self.transcript.append({"step": step, "thought": decision["thought"],

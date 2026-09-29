@@ -404,7 +404,13 @@
 "更新准入": "Update admission",
 "禁用安装钩子": "Disable install hooks",
 "构建与发布审计": "Build & release audit",
-"来源校验绑定预先批准的发布身份、版本和内容哈希；不假定包自带签名就可信，也不覆盖受信发布者失陷。": "Source checks bind to pre-approved publisher identity, version and content hash; package-native signatures alone are not trusted, and a compromised trusted publisher is out of scope."
+"来源校验绑定预先批准的发布身份、版本和内容哈希；不假定包自带签名就可信，也不覆盖受信发布者失陷。": "Source checks bind to pre-approved publisher identity, version and content hash; package-native signatures alone are not trusted, and a compromised trusted publisher is out of scope.",
+"停止并清理演练场": "Stop and clean up range",
+"正在停止并清理演练场…": "Stopping and cleaning up range…",
+"演练场已停止，容器与网络已清理。": "Range stopped; containers and networks removed.",
+"清理未完成，请检查 Docker 后重试。": "Cleanup incomplete. Check Docker and retry.",
+"停止请求失败，请刷新状态后重试。": "Stop request failed. Refresh the status and retry.",
+"当前 Agent 演练任务已停止。": "The current agent range task has been stopped."
 },
 "regex": [
 [

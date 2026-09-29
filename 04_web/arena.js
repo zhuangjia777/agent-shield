@@ -219,10 +219,12 @@ fetch('/api/arena/scenarios').then(r=>{if(!r.ok)throw new Error('场景不可用
 }).catch(e=>status('加载失败：'+e.message));
 
 // ── Docker 实战演练状态卡 ──────────────────────────────
+let labStopping = false;
 async function labStatus(){
   const el=$('#lab-state'); if(!el) return;
   try{
-    const r=await fetch('/api/lab/status'); const j=await r.json();
+    const r=await fetch('/api/lab/status'); if(!r.ok) throw new Error(); const j=await r.json();
+    if(labStopping) return;
     el.innerHTML = j.running
       ? `<span class="dot"></span> 运行中 · WAF ${j.waf==='block'?'已开启':'已关闭'} · 人视角 <a href="${j.waf_url}" target="_blank" rel="noopener">${j.waf_url}</a>`
       : j.docker_ok ? '<span class="dot"></span> 就绪（未起场）' : '<span class="dot"></span> Docker 不可用';
@@ -230,5 +232,25 @@ async function labStatus(){
 }
 if($('#lab-check')){ labStatus(); }
 
+async function labStop(){
+  if(labStopping) return;
+  labStopping=true;
+  const buttons=Array.from($('#live-lab-card').querySelectorAll('button'));
+  buttons.forEach(b=>b.disabled=true);
+  const message=$('#lab-message');
+  message.textContent='正在停止并清理演练场…';
+  try{
+    const r=await fetch('/api/lab/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const j=await r.json();
+    message.textContent=r.ok && j.ok ? '演练场已停止，容器与网络已清理。' : '清理未完成，请检查 Docker 后重试。';
+    if(!j.ok && j.msg) message.textContent+=' '+j.msg;
+  }catch(e){message.textContent='停止请求失败，请刷新状态后重试。';}
+  finally{
+    labStopping=false;
+    buttons.forEach(b=>b.disabled=false);
+    await labStatus();
+  }
+}
+window.labStop = labStop;
 window.labStatus = labStatus;
 })();

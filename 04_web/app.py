@@ -626,22 +626,55 @@ class AgentSession:
 
 AGENT_SESSIONS: dict[str, AgentSession] = {}
 SES_LOCK = threading.Lock()
+LAB_ACTION_LOCK = threading.Lock()
+LAB_GENERATION = 0
 
 
-def _agent_worker(sess: AgentSession, message: str):
+def _stop_lab():
+    global LAB_GENERATION
+    # Invalidate old turns before waiting for any in-flight Docker operation.
+    with SES_LOCK:
+        LAB_GENERATION += 1
+    with LAB_ACTION_LOCK:
+        return lab_mod.stop()
+
+
+def _agent_worker(sess: AgentSession, message: str, lab_generation=None):
     a = agent_mod.ReActAgent(sess.history)
+    if lab_generation is None:
+        lab_generation = LAB_GENERATION
+    used_lab = False
+
+    def check_cancelled():
+        if sess.closed or (used_lab and lab_generation != LAB_GENERATION):
+            raise RuntimeError("当前 Agent 演练任务已停止。")
+
+    def execute(tool, tin):
+        nonlocal used_lab
+        check_cancelled()
+        if tool.startswith("lab_"):
+            used_lab = True
+            with LAB_ACTION_LOCK:
+                check_cancelled()
+                return agent_mod._execute(tool, tin)
+        return agent_mod._execute(tool, tin)
 
     def answer_cb(question, choices):
-        try:
-            return sess.answer_q.get(timeout=300)
-        except Empty:
-            return "（用户未回答，请按最稳妥的方式继续）"
+        deadline = time.monotonic() + 300
+        while time.monotonic() < deadline:
+            check_cancelled()
+            try:
+                return sess.answer_q.get(timeout=0.25)
+            except Empty:
+                pass
+        return "（用户未回答，请按最稳妥的方式继续）"
 
     def on_event(kind, payload):
+        check_cancelled()
         sess.q.put({"type": kind, **payload})
 
     try:
-        a.run(message, on_event, answer_cb)
+        a.run(message, on_event, answer_cb, execute_callback=execute)
         sess.history = a.history
     except Exception as e:
         sess.q.put({"type": "error", "text": str(e)[:300]})
@@ -654,7 +687,7 @@ def _run_agent_turn(sess: AgentSession, message: str):
     if sess.running:
         return {"ok": False, "msg": "上一轮还在跑，稍等"}
     sess.running = True
-    threading.Thread(target=_agent_worker, args=(sess, message), daemon=True).start()
+    threading.Thread(target=_agent_worker, args=(sess, message, LAB_GENERATION), daemon=True).start()
     return {"ok": True}
 
 
@@ -963,6 +996,9 @@ class Handler(BaseHTTPRequestHandler):
                     ARENA_REVIEW_LOCK.release()
                 return self._json(200, review)
             body = self._body()
+            if path == "/api/lab/stop":
+                result = _stop_lab()
+                return self._json(200 if result["ok"] else 503, result)
             if path == "/api/scan":
                 return self._api_scan(body)
             if path == "/api/report/delete":
