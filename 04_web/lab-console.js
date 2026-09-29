@@ -11,6 +11,12 @@
   let paused=false, timer=null, version=0;
   const state=panes.map(()=>({request:null, text:''}));
   function cancel(){ version++; clearTimeout(timer); state.forEach(s=>{s.request?.abort(); s.request=null;}); }
+  const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // 关键词高亮：WAF 拦截、非零退出、报错类字样。先整体转义再插 mark，日志样本里的 HTML 不会变成标签。
+  const HL=/(\bBLOCK(?:ED)?\b|403\b|拦截|已拦截|\berror\b|Error|ERROR|Traceback|exit(?:code)?\s*[1-9]\d*|拒绝|blocked)/g;
+  function paint(el,text){
+    el.innerHTML=esc(text).replace(HL,'<mark class="lab-hl">$1</mark>');
+  }
   function say(msg){ const parts=[]; panes.forEach((el,i)=>{ if(state[i].error) parts.push(el.previousElementSibling.textContent+'：'+state[i].error); });
     status.textContent = msg || (parts.length ? parts.join('　') : '已更新 · '+new Date().toLocaleTimeString()); }
   async function fetchPane(i){
@@ -24,7 +30,7 @@
       if(token!==version) return;
       if(!response.ok || !data.ok) throw new Error(data.msg || '日志读取失败');
       s.text=data.text || ''; s.error=null;
-      el.textContent=s.text || '暂无日志。';
+      if(s.text) paint(el,s.text); else el.textContent='暂无日志。';
       if(follow.checked) el.scrollTop=el.scrollHeight;
     }catch(error){
       if(token===version){
