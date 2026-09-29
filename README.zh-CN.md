@@ -280,6 +280,35 @@ uv pip install --python .venv-skillspector/bin/python \
 .venv/bin/python 08_arena/livelab.py stop    # 一键销毁
 ```
 
+### 查看 Docker 控制台与日志
+
+先启动演练场，再在宿主机终端执行 `docker ps`，确认以下容器正在运行：
+
+| 容器 | 用途 |
+| --- | --- |
+| `aslab-red` | Kali 攻击机 |
+| `aslab-blue` | WAF 防护 |
+| `aslab-target` | OWASP Juice Shop 靶机 |
+
+进入 Kali 容器的交互终端：
+
+```bash
+docker exec -it aslab-red bash
+```
+
+查看 WAF 或靶机最近 100 行日志，并持续跟踪新日志（分别在不同终端运行）：
+
+```bash
+docker logs -f --tail 100 aslab-blue
+docker logs -f --tail 100 aslab-target
+```
+
+使用 Docker Desktop 时，在 **Containers** 中选择对应容器，打开 **Exec** 进入终端，或打开 **Logs** 查看日志。
+
+`docker exec` 打开的是新的 shell，不会回放 Agent 之前执行的命令；Agent 的攻击命令与输出记录见项目目录下的 `logs/arena_live/events.jsonl`。容器日志主要显示服务输出。
+
+输入 `exit` 退出容器终端；查看日志时按 `Ctrl+C` 退出跟踪。这两种操作都不会停止容器。若提示容器不存在或未运行，请先启动演练场；结束演练请使用页面的“停止并清理演练场”。
+
 ## 如何看报告
 
 本地健康分从 100 分开始，发现问题后按严重程度扣分：严重问题每项扣 25 分，高危扣 12 分，中危扣 5 分，低危扣 2 分，最低为 0 分。分数由规则计算，模型负责解释，不修改这个分数。

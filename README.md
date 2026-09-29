@@ -280,6 +280,35 @@ The live range can also be driven without the web UI:
 .venv/bin/python 08_arena/livelab.py stop    # tear everything down
 ```
 
+### Docker consoles and logs
+
+Start the range first, then run `docker ps` in a host terminal to check these containers:
+
+| Container | Role |
+| --- | --- |
+| `aslab-red` | Kali attacker |
+| `aslab-blue` | WAF |
+| `aslab-target` | OWASP Juice Shop target |
+
+Open an interactive shell in the Kali container:
+
+```bash
+docker exec -it aslab-red bash
+```
+
+Show the last 100 log lines and follow new output from the WAF or target (use separate terminals):
+
+```bash
+docker logs -f --tail 100 aslab-blue
+docker logs -f --tail 100 aslab-target
+```
+
+In Docker Desktop, select the container under **Containers**, then open **Exec** for a terminal or **Logs** for service output.
+
+`docker exec` opens a new shell; it does not replay the Agent's previous commands. The Agent's attack commands and outputs are recorded in `logs/arena_live/events.jsonl` under the project directory. Container logs primarily contain service output.
+
+Type `exit` to leave the shell, or press `Ctrl+C` to stop following logs. Neither stops the container. If the container is missing or stopped, start the range first. To finish the drill, use **“Stop and clean up range”** in the WebUI.
+
 ## How to read a report
 
 The local health score starts at 100 and loses points per finding: −25 critical, −12 high, −5 medium, −2 low, floor 0. The score is computed by rules; the model explains it but never changes it.
