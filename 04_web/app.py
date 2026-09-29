@@ -857,6 +857,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, arena_mod.catalog())
             if path == "/api/lab/status":
                 return self._json(200, lab_mod.status())
+            if path == "/api/lab/scenarios":
+                return self._json(200, {"ok": True, **lab_mod.scenario_catalog()})
             if path == "/api/reports":
                 return self._json(200, {"rids": [r["rid"] for r in _report_list()]})
             if path == "/api/arena/scenarios":
@@ -999,6 +1001,29 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/lab/stop":
                 result = _stop_lab()
                 return self._json(200 if result["ok"] else 503, result)
+            if path == "/api/lab/scenario/judge":
+                key = str(body.get("scenario") or "")
+                if key not in lab_mod.SCENARIO_KEYS:
+                    return self._json(400, {"ok": False, "msg": "未知实战演练场景。"})
+                return self._json(200, lab_mod.judge_scenario(key))
+            if path == "/api/lab/scenario/run":
+                key = str(body.get("scenario") or "")
+                if key not in lab_mod.SCENARIO_KEYS:
+                    return self._json(400, {"ok": False, "msg": "未知实战演练场景。"})
+                generation = LAB_GENERATION
+                if not LAB_ACTION_LOCK.acquire(blocking=False):
+                    return self._json(409, {"ok": False, "msg": "演练场正在执行其他操作，请稍后重试。"})
+                try:
+                    if generation != LAB_GENERATION:
+                        return self._json(409, {"ok": False, "msg": "演练已停止，请重新运行。"})
+                    result = lab_mod.start()
+                    if result.get("ok") and generation == LAB_GENERATION:
+                        result = lab_mod.run_scenario(key)
+                    elif result.get("ok"):
+                        result = {"ok": False, "msg": "演练已停止，正在清理演练场。"}
+                finally:
+                    LAB_ACTION_LOCK.release()
+                return self._json(200 if result.get("ok") else 503, result)
             if path == "/api/scan":
                 return self._api_scan(body)
             if path == "/api/report/delete":
@@ -1039,7 +1064,6 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(404, {"ok": False})
                 if m.group(2) == "answer":
                     t = (body.get("text") or "").strip()
-                    sess.q.put({"type": "ask_answered", "answer": t})
                     sess.answer_q.put(t)
                     return self._json(200, {"ok": True})
                 return self._json(200, _run_agent_turn(sess, (body.get("message") or "").strip()))
@@ -1319,10 +1343,19 @@ function newAgent() {
   });
 }
 let agentEs = null;
+function agentQuestionChoices(ev) {
+  let choices = ev.choices;
+  if (typeof choices === 'string') choices = choices.split(/[|,，、]/);
+  choices = Array.isArray(choices) ? choices.filter(c=>typeof c==='string' && c.trim()).map(c=>c.trim()).slice(0,4) : [];
+  if (!choices.length && /确认|是否.*(?:执行|继续)|(?:confirm|proceed)/i.test(ev.question || '')) {
+    choices = ['确认执行', '取消'];
+  }
+  return choices;
+}
 function resumeStream() {
   if (!agentId) return;
-  if (agentEs) { try { agentEs.close(); } catch {} }
-  agentEs = sse(`/api/agent/${agentId}/event`, handleAgentEvent, d => {});
+  if (agentEs) return;
+  agentEs = sse(`/api/agent/${agentId}/event`, handleAgentEvent, d => { agentEs = null; });
 }
 function handleAgentEvent(ev) {
   const log = $('#agent-log'); if (!log) return;
@@ -1367,11 +1400,12 @@ function handleAgentEvent(ev) {
     }
   }
   if (ev.type === 'ask') {
-    const opts = (ev.choices||[]).map(c=>`<button class="btn small accent" style="margin:3px 3px 0 0" onclick="answerAgent(this.dataset.t)" data-t="${escAttr(c)}">${escHtml(c)}</button>`).join('');
+    const opts = agentQuestionChoices(ev).map(c=>`<button class="btn small accent" style="margin:3px 3px 0 0" onclick="answerAgent(this.dataset.t)" data-t="${escAttr(c)}">${escHtml(c)}</button>`).join('');
     push(`<div class="step" style="border-left-color:var(--accent)"><span class="lbl tool">问你一下</span>
       <div style="margin-top:4px">${escHtml(ev.question)}</div>
       <div style="margin-top:8px">${opts}
-        <input id="ask-other" type="text" placeholder="或者自己打（回车发送）" onkeydown="if(event.key==='Enter'&&this.value.trim())answerAgent(this.value.trim())"></div></div>`);
+        <input id="ask-other" type="text" placeholder="输入你的回答（回车发送）" onkeydown="if(event.key==='Enter'&&this.value.trim())answerAgent(this.value.trim())">
+        <button class="btn small" data-t="" onclick="answerAgent(document.getElementById('ask-other')?.value.trim())">提交回答</button></div></div>`);
   }
   if (ev.type === 'ask_answered') push(`<div class="step tip">你的回答：<b>${escHtml(ev.answer)}</b></div>`);
   if (ev.type === 'final_delta') {
@@ -1398,6 +1432,7 @@ function renderMd(t) {
 function sendAgent() {
   const inp = $('#agent-input'); if (!inp || !agentId) return;
   const t = inp.value.trim(); if (!t) return;
+  if ($('#ask-other')) { inp.value=''; answerAgent(t); return; }
   inp.value = '';
   $('#agent-log').insertAdjacentHTML('beforeend', `<div class="answer you"><b>你：</b>${escHtml(t)}</div>`);
   resumeStream();  // 上一轮 done 会关掉 EventSource——发消息前必须重挂事件流，否则回答生成也看不见
@@ -1407,7 +1442,9 @@ async function answerAgent(text) {
   if (!agentId || !text) return;
   const o = $('#ask-other'); if (o) o.remove();
   document.querySelectorAll('[data-t]').forEach(b=>{ b.classList.add('btn'); b.style.opacity=.35; b.disabled=true; });
-  resumeStream();
+  // Keep the active subscriber: replacing it can leave two readers competing
+  // for the same queue and lose the next confirmation or tool result.
+  if (!agentEs) resumeStream();
   const j = await api(`/api/agent/${agentId}/answer`, { text: text });
   if (j && j.ok === false) {
     // 会话过期（服务重启等）：给出可见反馈，而不是点完按钮死寂

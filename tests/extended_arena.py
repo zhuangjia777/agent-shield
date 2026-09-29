@@ -12,7 +12,8 @@ sys.path.insert(0, str(ROOT / "04_web"))
 import app
 
 sim = app.arena_mod
-NEW_SCENARIOS = ("office_lateral", "phishing_identity", "api_authorization", "dependency_supply_chain")
+NEW_SCENARIOS = ("office_lateral", "phishing_identity", "api_authorization", "dependency_supply_chain",
+                 "agent_prompt_injection", "device_guest_access", "cloud_bucket_key")
 
 
 class ExtendedArenaTests(unittest.TestCase):
@@ -25,7 +26,9 @@ class ExtendedArenaTests(unittest.TestCase):
 
     def test_presets_and_lockdown_business_cost(self):
         for scenario, daily, locked_business in (("office_lateral", 2, 0), ("phishing_identity", 2, 0),
-                                                 ("api_authorization", 3, 0), ("dependency_supply_chain", 3, 1)):
+                                                 ("api_authorization", 3, 0), ("dependency_supply_chain", 3, 1),
+                                                 ("agent_prompt_injection", 0, 0), ("device_guest_access", 0, 2),
+                                                 ("cloud_bucket_key", 1, 0)):
             for preset, before, business in (("exposed", 4, 2), ("everyday", daily, 2), ("hardened", 0, locked_business)):
                 with self.subTest(scenario=scenario, preset=preset):
                     result = sim.simulate({"scenario": scenario, "controls": sim.catalog(scenario)["presets"][preset]})
@@ -71,13 +74,57 @@ class ExtendedArenaTests(unittest.TestCase):
         self.assertEqual(result["before"]["metrics"]["detected_attempts"], 1)
         self.assertTrue(all(not x["attempted"] for x in result["before"]["outcomes"][1:]))
 
+    def test_agent_injection_context_gate_and_tool_scope_are_separate(self):
+        self.assertEqual(self.goals(self.run_case("agent_prompt_injection", context_sanitize=True)),
+                         {"injected_instruction": False, "tool_overreach": False, "silent_exfil": False, "callback": False})
+        overreach = self.run_case("agent_prompt_injection", context_sanitize=True)["before"]["outcomes"][1]
+        self.assertFalse(overreach["attempted"])
+        self.assertEqual(overreach["unmet_prerequisites"], ["injected_instruction"])
+        # limit/confirmation only stop tool actions; input injection still requires normalization, and callback additionally requires signature verification.
+        self.assertEqual(
+            self.goals(self.run_case("agent_prompt_injection", egress_allowlist=False)),
+            {"injected_instruction": True, "tool_overreach": True, "silent_exfil": True, "callback": True})
+        self.assertEqual(
+            self.goals(self.run_case("agent_prompt_injection",
+                                     tool_allowlist=True, approval_gate=True, response_signing=True)),
+            {"injected_instruction": True, "tool_overreach": False, "silent_exfil": False, "callback": False})
+        block_exfil = self.run_case("agent_prompt_injection", egress_allowlist=True)
+        self.assertEqual(self.goals(block_exfil),
+                         {"injected_instruction": True, "tool_overreach": True, "silent_exfil": False, "callback": True})
+        freeze = self.run_case("agent_prompt_injection", manual_review=True)
+        self.assertEqual(self.goals(freeze),
+                         {"injected_instruction": False, "tool_overreach": False, "silent_exfil": False, "callback": False})
+        self.assertEqual(freeze["before"]["metrics"]["business_passed"], 0)
+
+    def test_device_guest_segmentation_does_not_match_local_authentication(self):
+        self.assertEqual(self.goals(self.run_case("device_guest_access", guest_isolation=True)),
+                         {"guest_printer": True, "guest_peer": False, "segment_mgmt": False, "intranet_exfil": False})
+        segment = self.run_case("device_guest_access", segmentation=True)
+        self.assertEqual(self.goals(segment),
+                         {"guest_printer": False, "guest_peer": False, "segment_mgmt": False, "intranet_exfil": False})
+        # The employee-side business goes through an independent internal network channel, and the visitor segment strategy does not affect it.
+        self.assertEqual(segment["before"]["metrics"]["business_passed"], 2)
+        unplugged = self.run_case("device_guest_access", disconnect_dev=True)
+        self.assertEqual(unplugged["before"]["metrics"]["business_passed"], 2)
+        self.assertFalse(any(self.goals(unplugged).values()))
+
+    def test_cloud_key_scope_download_and_recovery_are_independent(self):
+        self.assertEqual(self.goals(self.run_case("cloud_bucket_key", endpoint_binding=True)),
+                         {"key_read": True, "bucket_list": False, "object_download": False, "cross_region": False})
+        self.assertEqual(
+            self.goals(self.run_case("cloud_bucket_key", download_allowlist=True, backup_scope=True)),
+            {"key_read": True, "bucket_list": True, "object_download": False, "cross_region": False})
+        revoked = self.run_case("cloud_bucket_key", revoke_key=True)
+        self.assertFalse(any(self.goals(revoked).values()))
+        self.assertEqual(revoked["before"]["metrics"]["business_passed"], 0)
+
     def test_audit_alone_never_changes_goals(self):
         for scenario in NEW_SCENARIOS:
             quiet, observed = self.run_case(scenario), self.run_case(scenario, detection=True)
             self.assertEqual(self.goals(quiet), self.goals(observed))
             self.assertEqual(observed["before"]["metrics"]["detected_attempts"], 4)
 
-    def test_all_384_policies_causal_evidence_reproducible_and_non_regressing(self):
+    def test_all_policies_causal_evidence_reproducible_and_non_regressing(self):
         count = 0
         for scenario in NEW_SCENARIOS:
             for bits in itertools.product((False, True), repeat=len(sim.catalog(scenario)["controls"])):
@@ -105,7 +152,7 @@ class ExtendedArenaTests(unittest.TestCase):
                         if event["side"] == "red":
                             self.assertEqual(events[event["evidence"]["related_event"]]["side"], "black")
                 count += 1
-        self.assertEqual(count, 384)
+        self.assertEqual(count, 768)
 
     def test_catalog_copies_cannot_change_policy_and_run_identity_is_scenario_specific(self):
         selected = sim.catalog("office_lateral")
@@ -113,7 +160,7 @@ class ExtendedArenaTests(unittest.TestCase):
         selected["attack_goals"][2]["requires"].clear()
         self.assertNotEqual(sim.catalog("office_lateral")["controls"]["share_auth"]["name"], "changed")
         self.assertEqual(sim.catalog("office_lateral")["attack_goals"][2]["requires"], ["remote_login"])
-        self.assertEqual(len({self.run_case(key)["run_id"] for key in NEW_SCENARIOS}), 4)
+        self.assertEqual(len({self.run_case(key)["run_id"] for key in NEW_SCENARIOS}), 7)
 
     def test_no_files_network_or_subprocess_execution(self):
         with patch("socket.socket", side_effect=AssertionError("network")), \

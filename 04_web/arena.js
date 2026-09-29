@@ -190,7 +190,23 @@ $('#export').onclick = () => {
   const a=document.createElement('a');a.href=url;a.download='arena-'+result.scenario+'-'+result.run_id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
 function selectScenario(key) {
-  if (running || !catalogs[key]) return;
+  if (running || labStopping) return;
+  if (key.startsWith('live:')) {
+    const id=key.slice(5), spec=labScenarios[id];
+    if(!spec) return;
+    catalog=null; $('#scenario').value=key;
+    document.title=spec.name+' · AgentShield';
+    $('#scenario-eyebrow').textContent='DOCKER / LIVE ARENA';
+    $('#scenario-intro').textContent=spec.blurb;
+    $('#arena-kind').textContent='Docker / 本机隔离实战';
+    $('#virtual-arena').hidden=true;
+    history.replaceState(history.state,'',location.pathname+'?scenario='+encodeURIComponent(key));
+    labSyncScenario();
+    return;
+  }
+  if (!catalogs[key]) return;
+  $('#virtual-arena').hidden=false;
+  $('#arena-kind').textContent='模型智能体 / 虚拟环境';
   catalog=catalogs[key]; $('#scenario').value=key;
   document.title=catalog.name+' · AgentShield';
   $('#scenario-eyebrow').textContent=catalog.eyebrow; $('#scenario-intro').textContent=catalog.description;
@@ -204,7 +220,7 @@ function selectScenario(key) {
   $('#assumptions').innerHTML=catalog.assumptions.map(x=>'<li>'+escapeHTML(x)+'</li>').join('');
   document.querySelector('[data-preset="hardened"]').textContent=catalog.hardened_label || '全面加固';
   history.replaceState(history.state,'',location.pathname+'?scenario='+encodeURIComponent(key));
-  preset('everyday'); setRunning(false);
+  preset('everyday'); setRunning(false); labSyncScenario();
   document.dispatchEvent(new Event('agentshield:scenario-ready'));
 }
 $('#arena-mode').onchange=()=>{syncMode();invalidate();};
@@ -214,8 +230,9 @@ $('#controls').addEventListener('change',invalidate);
 fetch('/api/arena/scenarios').then(r=>{if(!r.ok)throw new Error('场景不可用');return r.json();}).then(data=>{
   catalogs=data.scenarios;
   $('#scenario').innerHTML=Object.entries(catalogs).map(([key,c])=>`<option value="${escapeHTML(key)}">${escapeHTML(c.name)}</option>`).join('');
+  labAddOptions();
   const requested=new URLSearchParams(location.search).get('scenario');
-  selectScenario(Object.hasOwn(catalogs,requested) ? requested : data.default);
+  selectScenario(Object.hasOwn(catalogs,requested) || (requested || '').startsWith('live:') ? requested : data.default);
 }).catch(e=>status('加载失败：'+e.message));
 
 // ── Docker 实战演练状态卡 ──────────────────────────────
@@ -248,9 +265,68 @@ async function labStop(){
   finally{
     labStopping=false;
     buttons.forEach(b=>b.disabled=false);
+    labScenarioUpdate();
     await labStatus();
   }
 }
 window.labStop = labStop;
 window.labStatus = labStatus;
+
+// ── Docker 场景与 Agent 引导 ───────────────
+const labScenarios = {};
+async function labScenariosLoad(){
+  const sel = $('#lab-scenario'); if(!sel) return;
+  try{
+    const r = await fetch('/api/lab/scenarios'); if(!r.ok) throw new Error();
+    const j = await r.json();
+    Object.assign(labScenarios, j.scenarios || {});
+    labAddOptions();
+    const requested=new URLSearchParams(location.search).get('scenario');
+    if(catalogs && (requested || '').startsWith('live:')) selectScenario(requested);
+    labSyncScenario();
+  }catch(e){ sel.innerHTML='<option>场景加载失败</option>'; }
+}
+function labAddOptions(){
+  const select=$('#scenario'); if(!select || !catalogs) return;
+  const selected=select.value;
+  for(const [id,s] of Object.entries(labScenarios).reverse()){
+    if(id==='bac_enumeration' || select.querySelector(`option[value="live:${id}"]`)) continue;
+    const option=document.createElement('option'); option.value='live:'+id;
+    option.textContent=s.name+' · Docker 实战'; select.prepend(option);
+  }
+  select.value=selected;
+}
+function labSyncScenario(){
+  const sel=$('#lab-scenario'); if(!sel) return;
+  const key=$('#scenario').value;
+  $('#lab-message').textContent='';
+  const id=key==='api_authorization' ? 'bac_enumeration' : key.startsWith('live:') ? key.slice(5) : '';
+  const spec=labScenarios[id];
+  sel.innerHTML=spec ? `<option value="${escapeHTML(id)}">${escapeHTML(spec.name)}</option>` : '<option value="">当前场景暂无 Docker 实战</option>';
+  sel.disabled=true;
+  $('#lab-scenario-note').textContent=spec
+    ? spec.blurb+'  裁判判据：'+spec.oracle+(key==='api_authorization'?'（实战仅覆盖跨用户枚举，其他用例仍为合成推演。）':'')
+    : '当前场景仅支持下方合成环境推演。要运行 Docker，请在上方选择 Web / API 越权访问、SQL 注入或 XSS 编码绕过。';
+  labScenarioUpdate();
+}
+function labScenarioUpdate(){
+  const sel=$('#lab-scenario'); if(!sel) return;
+  const busy=labStopping;
+  const unavailable=!labScenarios[sel.value];
+  for(const id of ['#lab-guide']){
+    if($(id)) $(id).disabled=busy || unavailable;
+  }
+  if($('#scenario')) $('#scenario').disabled=busy || running || !catalogs;
+}
+function labGuide(){
+  const key=$('#lab-scenario').value, spec=labScenarios[key];
+  if(!spec || labStopping) return;
+  agentAsk(`在 Docker 实战演练场里一步步引导用户验证「${spec.name}」（scenario=${key}）。验证目标：${spec.oracle}。覆盖边界：${spec.boundary || spec.blurb}。先检查并按需启动隔离演练场，再根据工具反馈规划每一步；攻击前展示完整命令并等待用户确认，确认后通过 lab_attack 执行，结合工具返回与靶机记录解释结果；如切换 WAF，结束后恢复原状态。不要调用 lab_scenario 一键固定剧本。`, true);
+}
+window.labGuide=labGuide;
+if($('#lab-scenario')){
+  labScenariosLoad().then(labScenarioUpdate);
+  $('#lab-scenario').addEventListener('change', labScenarioUpdate);
+
+}
 })();

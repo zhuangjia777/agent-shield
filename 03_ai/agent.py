@@ -43,6 +43,8 @@ TOOLS = [
                    "命令里的目标主机必须写 aslab-blue:8080（唯一攻击入口，容器内不存在 localhost/127.0.0.1 服务）。"
                    "真实攻击：第一次调用不带 confirmed 只会收到确认提示；必须先 Ask 用户确认命令后再带 confirmed=true 调用"),
     ("lab_waf", "蓝队开关：开启或关闭靶机前的 WAF。参数: mode（block=开防护 / bypass=关防护）"),
+    ("lab_scenario", "在实战演练场跑一个命名攻击场景的自动裁判演示（发真实报文、按需切 WAF、最后恢复）。"
+                     "参数: scenario（sqli_session=SQL注入会话劫持 | xss_encoded_bypass=XSS编码绕过 | bac_enumeration=越权枚举；传空则列出全部可选场景）"),
     ("lab_judge", "读取裁判探针：靶机真实记录的被攻克挑战列表 + WAF 状态。无参数"),
     ("lab_stop", "销毁演练场全部容器与网络，一键清理。无参数"),
 ]
@@ -135,7 +137,9 @@ Observation 会由系统给你。
 不确定用户指的是哪份报告/哪个对象时，不要猜，输出（选项用竖线分隔，一行内）:
 Ask: <给用户的简短问题>
 Choices: <选项1> | <选项2> | <选项3>
+确认命令时也使用上面的 Ask/Choices 格式。若使用工具格式，必须写 Action: Ask 和 ActionInput: {{"question":"完整问题与命令","choices":["确认执行","取消"]}}。
 实战演练(lab_*)流程: lab_start 起场 → lab_attack 前先 Ask 展示完整攻击命令 → 确认后执行 → 用 lab_judge 读靶机真实记录当战果（不要凭攻击命令的输出来猜）→ 演示完 lab_stop 拆场。
+快捷演示: 用户只想看某类攻击效果时，可直接 lab_scenario(scenario=..., confirmed=true) 让系统自动跑标准剧本并返回裁判 verdict，省去逐条 lab_attack；但同样要先 Ask 确认。
 实战省步纪律: 拓扑固定为 aslab-blue:8080 → Juice Shop，起场后不需要 nmap 反复侦察。Juice Shop 已验证 SQLi: POST /rest/user/login，JSON body 里 email 字段填 admin@juice-sh.op' OR 1=1 --（printf 写 /tmp/p.json 再 curl -d @/tmp/p.json；printf 里单引号写 \\047）。拿到战果后尽快 lab_judge → lab_stop → Final Answer，不要加戏。
 限制: {max_steps} 步内必须 Final。跑过的工具不需要重复跑。
 """
@@ -190,6 +194,10 @@ class ReActAgent:
                         if new:
                             on_event("final_delta", {"step": step, "text": new})
             decision = _parse(decision := buffer, messages)
+            # Keep the exact proposed command/question alongside the user's reply.
+            # Without this, a bare confirmation has no referent on the next turn.
+            if buffer.strip():
+                messages.append({"role": "assistant", "content": buffer})
             if decision is None:
                 # 流中断且解析不出 -> 把整个 buffer 当 final
                 final_text = buffer.strip()
@@ -209,8 +217,9 @@ class ReActAgent:
                     if isinstance(choices, str):
                         choices = [c.strip() for c in re.split(r"[|,，、]", choices) if c.strip()]
                     if not question:
-                        messages.append({"role": "user", "content": "Observation: Ask 缺少 question 参数"})
-                        continue
+                        final_text = "模型未提供可展示的确认问题或完整命令，本轮已停止，未执行该操作。请重新提出任务。"
+                        on_event("error", {"text": final_text})
+                        break
                     on_event("ask", {"step": step, "question": question, "choices": choices[:4]})
                     answer = answer_callback(question, choices[:4])
                     on_event("ask_answered", {"answer": answer})
@@ -305,6 +314,7 @@ def _normalize_tool(name: str) -> str:
         "lab_start": "lab_start", "start_lab": "lab_start", "起场": "lab_start",
         "lab_attack": "lab_attack", "attack": "lab_attack", "red_exec": "lab_attack", "红队攻击": "lab_attack",
         "lab_waf": "lab_waf", "waf": "lab_waf", "blue_team": "lab_waf", "蓝队": "lab_waf",
+        "lab_scenario": "lab_scenario", "scenario": "lab_scenario", "实战场景": "lab_scenario",
         "lab_judge": "lab_judge", "judge": "lab_judge", "裁判": "lab_judge",
         "lab_stop": "lab_stop", "stop_lab": "lab_stop", "拆场": "lab_stop",
         "final": "final_answer", "final answer": "final_answer", "final_answer": "final_answer",
@@ -315,6 +325,9 @@ def _normalize_tool(name: str) -> str:
 
 def _parse(buf: str, messages: list) -> dict | None:
     s = buf.strip()
+    # Normalize protocol labels only, never rewrite quoted commands/payloads.
+    s = re.sub(r"(?im)^\s*(?:\*\*)?(Action\s*Input|Action|Ask|Choices|Thought|Final Answer)(?:\*\*)?\s*[:：](?:\*\*)?\s*",
+               lambda m: {"actioninput":"ActionInput", "action":"Action", "ask":"Ask", "choices":"Choices", "thought":"Thought", "finalanswer":"Final Answer"}[re.sub(r"\s+", "", m.group(1)).lower()] + ": ", s)
     if "Final Answer:" in s:
         return {"kind": "final", "text": s.split("Final Answer:", 1)[1].strip(),
                 "thought": _grab_thought(s), "tool": None, "input": {}}
@@ -347,6 +360,24 @@ def _parse(buf: str, messages: list) -> dict | None:
                     tin = json.loads(raw[raw.find("{"):raw.rfind("}") + 1])
                 except Exception:
                     tin = {"detail": raw}
+        if _normalize_tool(tool) == "ask":
+            # Providers sometimes emit a JSON string, plain question, or fenced
+            # JSON instead of the documented object. Preserve the full question.
+            if isinstance(tin, str):
+                tin = {"question": tin}
+            elif isinstance(tin, dict):
+                tin = dict(tin)
+                if not (tin.get("question") or tin.get("text")):
+                    text = tin.get("prompt") or tin.get("message") or tin.get("detail")
+                    if isinstance(text, str) and text.strip():
+                        text, _, cpart = text.partition("Choices:")
+                        tin["question"] = text.strip()
+                        if cpart and not tin.get("choices"):
+                            tin["choices"] = [c.strip() for c in cpart.split("|") if c.strip()]
+            else:
+                tin = {}
+        if not isinstance(tin, dict):
+            tin = {}
         return {"kind": "think_action", "thought": _grab_thought(s), "tool": tool, "input": tin}
     return None
 
@@ -414,7 +445,7 @@ def _execute(tool: str, tin: dict):
         if tool == "run_command":
             return _run_command(str(tin.get("cmd") or tin.get("command") or ""),
                                 tin.get("confirmed") in (True, "true", "True", "yes", "是"))
-        if tool in ("lab_start", "lab_attack", "lab_waf", "lab_judge", "lab_stop"):
+        if tool in ("lab_start", "lab_attack", "lab_waf", "lab_judge", "lab_stop", "lab_scenario"):
             try:
                 if tool == "lab_start":
                     r = livelab.start()
@@ -443,6 +474,23 @@ def _execute(tool: str, tin: dict):
                 if tool == "lab_stop":
                     r = livelab.stop()
                     return json.dumps(r, ensure_ascii=False), True
+                if tool == "lab_scenario":
+                    key = str(tin.get("scenario") or "").strip()
+                    if not key:
+                        return json.dumps({"ok": True, "hint": "未指定场景", "scenarios": livelab.scenario_list()},
+                                           ensure_ascii=False), True
+                    if key not in livelab.SCENARIO_KEYS:
+                        return json.dumps({"ok": False, "msg": f"未知实战场景 {key}", "可选": livelab.SCENARIO_KEYS},
+                                           ensure_ascii=False), True
+                    if tin.get("confirmed") not in (True, "true", "True", "yes", "是"):
+                        sc = livelab.SCENARIOS[key]
+                        return json.dumps({"need_confirm": True, "scenario": key, "name": sc["name"],
+                                           "blurb": sc["blurb"], "oracle": sc["oracle"],
+                                           "note": f"这是真实攻击报文（只打隔离网内靶机 {livelab.TARGET_NAME}）。"
+                                                   "请先用 Ask 向用户展示本场景将做什么并说明意图，用户同意后再带 confirmed=true 调用。"},
+                                          ensure_ascii=False), True
+                    r = livelab.run_scenario(key)
+                    return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
             except Exception as e:
                 return json.dumps({"error": f"演练场操作失败: {str(e)[:200]}"}, ensure_ascii=False), False
         if tool == "delete_report":
