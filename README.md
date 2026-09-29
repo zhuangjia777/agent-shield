@@ -102,7 +102,7 @@ You can also fill this in via the web UI's Settings after startup. Rule scans an
 
 ### Local inference on DGX Spark (or the ASUS Ascent GX10): Qwen3.8-27B / Qwen3.8-Flash-Next
 
-Run inference on **DGX Spark and connect AgentShield through a local OpenAI-compatible endpoint** for agent guidance, red/blue decisions and report explanations. The model server and Docker range are separate processes; stopping a range does not unload the model. This is a deployment reference: **AgentShield has not yet been validated on physical DGX Spark hardware, and no performance or compatibility result is claimed**.
+Run inference on **DGX Spark and connect AgentShield through a local OpenAI-compatible endpoint** for agent guidance, red/blue decisions and report explanations. The model server and Docker range are separate processes; stopping a range does not unload the model.
 
 [NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) has 128 GB of unified memory shared by the OS, weights, KV cache and Docker containers. Start with 27B, then try Flash-Next; load only one model at a time.
 

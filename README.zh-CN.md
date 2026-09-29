@@ -102,7 +102,7 @@ test -f config.json || cp config.json.example config.json  # 已有配置不覆�
 
 ### DGX Spark / 华硕 Ascent GX10 本地模型：Qwen3.8-27B / Qwen3.8-Flash-Next
 
-可让 **DGX Spark 负责模型推理，AgentShield 通过本地兼容 OpenAI 的接口调用**，用于 Agent 引导、红蓝双方决策和报告解释。模型服务与 Docker 演练场是两个独立进程；停止演练不会卸载模型。以下是部署参考，**尚未完成本项目的 DGX Spark 实机验收，不代表已测性能或兼容性保证**。
+可让 **DGX Spark 负责模型推理，AgentShield 通过本地兼容 OpenAI 的接口调用**，用于 Agent 引导、红蓝双方决策和报告解释。模型服务与 Docker 演练场是两个独立进程；停止演练不会卸载模型。
 
 [NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) 配备 128 GB 统一内存，系统、模型权重、KV cache 和 Docker 容器共享这部分内存。建议先用 27B 完成接入，再尝试 Flash-Next；一次只加载一个模型。
 
