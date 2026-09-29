@@ -54,7 +54,7 @@ NVIDIA review uses unmodified SkillSpector 2.12.0, with results shown separately
 The regular arena is a simulation. **Live drills** move the duel into a Docker-isolated network where red team really fires packets and blue team really changes protection settings — the entry point is the "🔴 Docker Live Range" card on the arena page; click "Let the Agent guide me" to have the agent walk you through:
 
 - **Requirements**: Docker (no Kali installation needed — the attacker box is the official Kali arm64 container image). The red-team container plus a deliberately vulnerable target (OWASP Juice Shop) run inside an internal network with no egress; attacks cannot reach your router or the internet.
-- **How it plays**: the red-team model invokes real in-container tools (nmap/sqlmap/curl etc.); every attack action shows the full command and executes only after your confirmation. Blue team's moves are enabling/disabling the WAF in front of the target (red team cannot route around the WAF at the network level). Wins are judged by HTTP probes against the target, not model self-assessment. One click destroys all containers afterwards; every command and output is persisted.
+- **How it plays**: the red-team model invokes real in-container tools (nmap/sqlmap/curl etc.); every attack action shows the full command and executes only after your confirmation. Blue team's moves are enabling/disabling the WAF in front of the target (red team cannot route around the WAF at the network level). Wins are judged by HTTP probes against the target, not model self-assessment. When a drill ends the scene stays up — browse logs and re-test as long as you like, then tear everything down with one click; every command and output is persisted.
 - **Named scenario scripts**: three one-click drills with objective oracles — SQL injection session hijack (`sqli_session`), XSS encoded WAF bypass (`xss_encoded_bypass`), broken access-control user enumeration (`bac_enumeration`). The range card's scenario picker (or `livelab.py run <scenario>`) demos the attack, flips the WAF, re-fires, judges from the target's own records, and restores the WAF to `block`. See [live drill scenarios spec](01_specs/live-drill-scenarios-2026-09-29.md).
 - **Boundaries**: network and web-application layers only. Wi-Fi RF scenarios (MITM, deauth) are out — Apple Silicon's built-in Wi-Fi has no monitor mode; that needs an external USB adapter plus a full Kali VM, a possible future option. The target ships with real vulnerabilities and must only ever run inside the isolated network, never exposed to any reachable network; red-team munitions are allowed only against in-range targets — if isolation fails, the lab refuses to start.
 - **Legality**: only the targets inside your own containers may be engaged. Testing any system you don't own or lack written authorization for is illegal; this project neither provides nor assists such capability.
@@ -281,6 +281,8 @@ The live range can also be driven without the web UI:
 ```
 
 ### Docker consoles and logs
+
+Open **“Live console”** in the Docker range card to switch between WAF logs, target logs and Agent attack output. It refreshes every two seconds and supports pause, auto-scroll and copy. Polling stops while collapsed or the page is hidden. This is read-only; attack output appears after commands finish, and history may be truncated.
 
 Start the range first, then run `docker ps` in a host terminal to check these containers:
 

@@ -331,6 +331,11 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
                    text-shadow: var(--echo); }
 .modal .mbody { padding: 16px 18px; overflow: auto; }
 .modal .mfoot { padding: 12px 18px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 8px; }
+/* Agent 窗口最小化：收成右下角一条标题栏，会话与事件流保持运行 */
+.overlay.agent-mini { justify-content: flex-end; align-items: flex-end; background: transparent; pointer-events: none; }
+.overlay.agent-mini .modal { width: min(430px, 92vw) !important; height: auto !important; pointer-events: auto; box-shadow: 0 10px 32px rgba(0,0,0,.35); }
+.overlay.agent-mini .mbody, .overlay.agent-mini .agentinput { display: none; }
+.overlay.agent-mini .mhead { cursor: pointer; }
 /* reticle 角标：瞄准框语汇 */
 .reticle { position: absolute; width: 12px; height: 12px; pointer-events: none; }
 .reticle.tl { top: -7px; left: -7px; border-top: 2px solid var(--fg); border-left: 2px solid var(--fg); }
@@ -853,6 +858,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, (ROOT / "04_web" / "i18n.json").read_text(), "application/json; charset=utf-8")
             if path == "/arena.js":
                 return self._send(200, (ROOT / "04_web" / "arena.js").read_text(), "text/javascript; charset=utf-8")
+            if path == "/lab-console.js":
+                return self._send(200, (ROOT / "04_web" / "lab-console.js").read_text(), "text/javascript; charset=utf-8")
+            if path == "/api/lab/logs":
+                source = parse_qs(urlparse(self.path).query).get("source", ["waf"])[0]
+                if source not in ("waf", "target", "agent"):
+                    return self._json(400, {"ok": False, "msg": "未知日志来源。"})
+                result = lab_mod.console_logs(source)
+                return self._json(200 if result["ok"] else 503, result)
             if path == "/api/arena/catalog":
                 return self._json(200, arena_mod.catalog())
             if path == "/api/lab/status":
@@ -1304,18 +1317,21 @@ let agentId = null, agentOpenFlag = false;
 function escAttr(s){ return escHtml(s).replace(/'/g, "\\'").replace(/\n/g,'\\n'); }
 function openAgent(prefill) {
   if (agentOpenFlag) {
+    const ov = document.querySelector('#agent-host .overlay');
+    if (ov && ov.classList.contains('agent-mini')) toggleAgentMini();  // 从最小化恢复再填话
     if (prefill) { $('#agent-input').value = prefill; $('#agent-input').focus(); }
-    document.querySelector('.overlay') && document.querySelector('.overlay').scrollIntoView();
+    ov && ov.scrollIntoView();
     return;
   }
   $('#agent-host').innerHTML = `
   <div class="overlay" onclick="if(event.target===this)closeAgent()">
     <div class="modal" style="width:min(780px,94vw);height:min(660px,84vh)">
-      <div class="mhead">
+      <div class="mhead" onclick="if(this.closest('.overlay').classList.contains('agent-mini'))toggleAgentMini()">
         <h3>AgentShield 智能体 <span class="tip mono" style="font-weight:400">ReAct · 本地工具 · 流式</span></h3>
         <div class="hbtns">
-          <button class="btn ghost small" onclick="newAgent()">↺ 新会话</button>
-          <button class="btn ghost small" onclick="closeAgent()">✕</button>
+          <button class="btn ghost small" onclick="event.stopPropagation();newAgent()">↺ 新会话</button>
+          <button class="btn ghost small" title="最小化到右下角，会话继续运行" onclick="event.stopPropagation();toggleAgentMini()">－</button>
+          <button class="btn ghost small" onclick="event.stopPropagation();closeAgent()">✕</button>
         </div>
       </div>
       <div class="mbody" id="agent-log"></div>
@@ -1462,6 +1478,13 @@ function closeAgent() {
   if (agentEs) { try { agentEs.close(); } catch {} agentEs = null; }
   if (agentId) { api('/api/agent/close', { agent_id: agentId }); agentId = null; }
 }
+function toggleAgentMini() {
+  const ov = document.querySelector('#agent-host .overlay');
+  if (!ov) return;
+  ov.classList.toggle('agent-mini');
+  if (!ov.classList.contains('agent-mini')) setTimeout(()=>{ const i=$('#agent-input'); i && i.focus(); }, 50);
+}
+window.toggleAgentMini = toggleAgentMini;
 // 悬浮入口 + 快捷键
 (function(){
   const b = document.createElement('button');
@@ -1481,7 +1504,7 @@ function closeAgent() {
   window.addEventListener('keydown', e => {
     if ((e.metaKey||e.ctrlKey) && e.shiftKey && e.key==='A') { e.preventDefault(); openAgent(null); }
     if (e.key==='Enter' && e.target && e.target.id==='agent-input') { e.preventDefault(); sendAgent(); }
-    if (e.key==='Escape') closeAgent();
+    if (e.key==='Escape') { const ov=document.querySelector('#agent-host .overlay'); if (ov && ov.classList.contains('agent-mini')) toggleAgentMini(); else closeAgent(); }
   });
 })();
 """

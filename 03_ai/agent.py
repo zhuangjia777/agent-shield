@@ -46,7 +46,7 @@ TOOLS = [
     ("lab_scenario", "在实战演练场跑一个命名攻击场景的自动裁判演示（发真实报文、按需切 WAF、最后恢复）。"
                      "参数: scenario（sqli_session=SQL注入会话劫持 | xss_encoded_bypass=XSS编码绕过 | bac_enumeration=越权枚举；传空则列出全部可选场景）"),
     ("lab_judge", "读取裁判探针：靶机真实记录的被攻克挑战列表 + WAF 状态。无参数"),
-    ("lab_stop", "销毁演练场全部容器与网络，一键清理。无参数"),
+    ("lab_stop", "销毁演练场全部容器与网络，一键清理。默认不自动调用；需 confirmed=true（先经用户同意）。无参数则返回需确认提示"),
 ]
 
 # run_command 白名单：argv 前缀命中 = 只读诊断，直接执行。新增条目务必确认该前缀下无破坏性子命令。
@@ -138,9 +138,9 @@ Observation 会由系统给你。
 Ask: <给用户的简短问题>
 Choices: <选项1> | <选项2> | <选项3>
 确认命令时也使用上面的 Ask/Choices 格式。若使用工具格式，必须写 Action: Ask 和 ActionInput: {{"question":"完整问题与命令","choices":["确认执行","取消"]}}。
-实战演练(lab_*)流程: lab_start 起场 → lab_attack 前先 Ask 展示完整攻击命令 → 确认后执行 → 用 lab_judge 读靶机真实记录当战果（不要凭攻击命令的输出来猜）→ 演示完 lab_stop 拆场。
+实战演练(lab_*)流程: lab_start 起场 → lab_attack 前先 Ask 展示完整攻击命令 → 确认后执行 → 用 lab_judge 读靶机真实记录当战果（不要凭攻击命令的输出来猜）。演示结束后默认保留演练场（容器留着，方便用户看日志、复测），只在用户明确同意拆场时才 lab_stop（confirmed=true），不要自动拆场。
 快捷演示: 用户只想看某类攻击效果时，可直接 lab_scenario(scenario=..., confirmed=true) 让系统自动跑标准剧本并返回裁判 verdict，省去逐条 lab_attack；但同样要先 Ask 确认。
-实战省步纪律: 拓扑固定为 aslab-blue:8080 → Juice Shop，起场后不需要 nmap 反复侦察。Juice Shop 已验证 SQLi: POST /rest/user/login，JSON body 里 email 字段填 admin@juice-sh.op' OR 1=1 --（printf 写 /tmp/p.json 再 curl -d @/tmp/p.json；printf 里单引号写 \\047）。拿到战果后尽快 lab_judge → lab_stop → Final Answer，不要加戏。
+实战省步纪律: 拓扑固定为 aslab-blue:8080 → Juice Shop，起场后不需要 nmap 反复侦察。Juice Shop 已验证 SQLi: POST /rest/user/login，JSON body 里 email 字段填 admin@juice-sh.op' OR 1=1 --（printf 写 /tmp/p.json 再 curl -d @/tmp/p.json；printf 里单引号写 \\047）。拿到战果后尽快 lab_judge → Final Answer（演练场保留），不要加戏。
 限制: {max_steps} 步内必须 Final。跑过的工具不需要重复跑。
 """
 
@@ -472,6 +472,12 @@ def _execute(tool: str, tin: dict):
                     r["waf"] = w.get("waf")
                     return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
                 if tool == "lab_stop":
+                    if tin.get("confirmed") not in (True, "true", "True", "yes", "是"):
+                        return json.dumps({"need_confirm": True, "note":
+                                           "销毁演练场会删除全部容器与网络，演练现场将无法复查。"
+                                           "默认应当保留现场供查看日志和复测。"
+                                           "请先用 Ask 询问用户是否确认清理，同意后再带 confirmed=true 调用。"},
+                                          ensure_ascii=False), True
                     r = livelab.stop()
                     return json.dumps(r, ensure_ascii=False), True
                 if tool == "lab_scenario":
