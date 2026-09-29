@@ -8,6 +8,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / '04_web'))
 import app
 
 class LabStopTests(unittest.TestCase):
+    def test_confirmation_timeout_does_not_execute_pending_action(self):
+        sess = app.AgentSession()
+        def run(agent, message, on_event, answer, execute_callback):
+            answer('Confirm attack?', ['确认执行', '取消'])
+            execute_callback('lab_attack', {'confirmed': True})
+        with patch.object(app.agent_mod.ReActAgent, 'run', run), \
+             patch.object(app.time, 'monotonic', side_effect=[0, 301]), \
+             patch.object(app.agent_mod, '_execute') as execute:
+            app._agent_worker(sess, 'test')
+        execute.assert_not_called()
+        event = sess.q.get_nowait()
+        self.assertEqual(event['type'], 'error')
+        self.assertIn('超时', event['text'])
+
     def test_cleanup_success_and_missing_resources(self):
         for response in ((0, ''), (1, 'Error: No such container: gone'),
                          (1, 'Error: No such network: gone')):

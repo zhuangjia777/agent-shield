@@ -667,7 +667,7 @@ def _agent_worker(sess: AgentSession, message: str, lab_generation=None):
                 return sess.answer_q.get(timeout=0.25)
             except Empty:
                 pass
-        return "（用户未回答，请按最稳妥的方式继续）"
+        raise RuntimeError("等待用户确认超时，本轮已停止，未执行待确认操作。请重新发起任务。")
 
     def on_event(kind, payload):
         check_cancelled()

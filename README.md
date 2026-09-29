@@ -43,7 +43,7 @@ This clip shows the **fixed-flow rules simulation**, with red/blue event feeds a
 - **Live drills (real attacks)**: spin up a training range inside a Docker-isolated network — a Kali container as red team, a toggleable WAF as blue team, OWASP Juice Shop as the vulnerable target. The agent walks you through the fight step by step: every attack action shows the full command first and runs only after you confirm; after blue team enables/disables protection, red team re-fires the same attack, so defense effectiveness is compared on the spot. See [Live drills](#live-drills-requires-local-docker).
 - **Machine checkup**: checks system security settings, optional LAN probing, outputs a 0–100 health score with per-item fix advice. System checks are currently mainly adapted for macOS.
 - **Skill auditing**: local rules find security risks in Agent Skills; NVIDIA SkillSpector can be installed as a complementary review. Reports list findings, supporting evidence and scan scope.
-- **Simulated arena**: the lightweight mode needing neither Docker nor models. Nine attack/defense scenarios (public Wi-Fi, malicious Skill, lateral movement, phishing & session theft, Web/API privilege escalation, supply-chain poisoning, AI agent prompt injection, guest device / office appliance access, cloud key & storage bucket); red and blue models decide on their own, and tools only mutate the virtual scenario — no real packets. Tune the defense policy and compare both attack outcomes and normal-business impact. See [arena scenario spec](01_specs/extended-arena-2026-09-26.md) and [live drill scenarios spec](01_specs/live-drill-scenarios-2026-09-29.md).
+- **Simulated arena**: rules mode needs neither Docker nor a model; agent mode requires models. Nine attack/defense scenarios (public Wi-Fi, malicious Skill, lateral movement, phishing & session theft, Web/API privilege escalation, supply-chain poisoning, AI agent prompt injection, guest device / office appliance access, cloud key & storage bucket); red and blue models decide on their own, and tools only mutate the virtual scenario — no real packets. Tune the defense policy and compare both attack outcomes and normal-business impact. See [arena scenario spec](01_specs/extended-arena-2026-09-26.md) and [live drill scenarios spec](01_specs/live-drill-scenarios-2026-09-29.md).
 - **Agent chat**: hit AGENT at the bottom right — a ReAct loop acting step by step: read reports, audit skills, run commands (read-only whitelist runs directly, everything else asks you one by one), start the live range, delete reports (confirmation gate).
 - **Plain-language explanations**: unfamiliar with security jargon? Read the model-generated explanations; want to dig deeper? Inspect the rules, evidence and raw reports.
 
@@ -56,8 +56,26 @@ The regular arena is a simulation. **Live drills** move the duel into a Docker-i
 - **Requirements**: Docker (no Kali installation needed — the attacker box is the official Kali arm64 container image). The red-team container plus a deliberately vulnerable target (OWASP Juice Shop) run inside an internal network with no egress; attacks cannot reach your router or the internet.
 - **How it plays**: the red-team model invokes real in-container tools (nmap/sqlmap/curl etc.); every attack action shows the full command and executes only after your confirmation. Blue team's moves are enabling/disabling the WAF in front of the target (red team cannot route around the WAF at the network level). Wins are judged by HTTP probes against the target, not model self-assessment. One click destroys all containers afterwards; every command and output is persisted.
 - **Named scenario scripts**: three one-click drills with objective oracles — SQL injection session hijack (`sqli_session`), XSS encoded WAF bypass (`xss_encoded_bypass`), broken access-control user enumeration (`bac_enumeration`). The range card's scenario picker (or `livelab.py run <scenario>`) demos the attack, flips the WAF, re-fires, judges from the target's own records, and restores the WAF to `block`. See [live drill scenarios spec](01_specs/live-drill-scenarios-2026-09-29.md).
-- **Boundaries (the ugly truth first)**: network and web-application layers only. Wi-Fi RF scenarios (MITM, deauth) are out — Apple Silicon's built-in Wi-Fi has no monitor mode; that needs an external USB adapter plus a full Kali VM, a possible future option. The target ships with real vulnerabilities and must only ever run inside the isolated network, never exposed to any reachable network; red-team munitions are allowed only against in-range targets — if isolation fails, the lab refuses to start.
+- **Boundaries**: network and web-application layers only. Wi-Fi RF scenarios (MITM, deauth) are out — Apple Silicon's built-in Wi-Fi has no monitor mode; that needs an external USB adapter plus a full Kali VM, a possible future option. The target ships with real vulnerabilities and must only ever run inside the isolated network, never exposed to any reachable network; red-team munitions are allowed only against in-range targets — if isolation fails, the lab refuses to start.
 - **Legality**: only the targets inside your own containers may be engaged. Testing any system you don't own or lack written authorization for is illegal; this project neither provides nor assists such capability.
+
+### Using the current UI
+
+1. Start local Docker, configure and test a model connection in Settings, then open the arena.
+2. Choose from the shared scenario list. **SQL injection and XSS encoding-bypass Docker scenarios appear first.**
+3. Click **“Let the Agent guide me”**. The Agent checks or starts the range and plans each step from tool feedback. Review the complete command, then confirm, cancel, or enter your own response.
+4. Refresh the range status to check containers and WAF mode. Use **“Stop and clean up range”** to finish; closing the page does not stop containers.
+
+| Scenario | Docker coverage |
+| --- | --- |
+| SQL injection / session hijacking | Compare login requests with the WAF enabled and disabled |
+| XSS encoding bypass | Compare literal and encoded input filtering; an accepted request does not prove browser-side XSS execution |
+| Web / API authorization | Cross-user enumeration only; other cases remain synthetic |
+| AI agent injection, malicious Skills and other scenarios | Synthetic simulation only; Docker guidance is disabled with an explanation |
+
+There is one Agent guidance entry. The fixed-script run button has been removed; backend scripts remain for reproduction and regression checks. The synthetic rules demo needs no model; Agent guidance and red/blue model decisions require a model service.
+
+When a confirmation question has no model-supplied choices, the UI supplies confirm/cancel buttons. Open questions have a text field and submit button. An unparseable Ask stops the turn instead of repeatedly retrying. After updating code and restarting the WebUI, reload the page and start a new conversation; sessions do not survive a server restart. Existing videos and GIFs show earlier recordings, so their button layout may differ from the current UI.
 
 ## Scope & limitations
 

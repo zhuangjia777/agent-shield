@@ -92,7 +92,8 @@ class SkillArenaTests(unittest.TestCase):
         handler._json=lambda code,body:(code,body)
         code,data=handler.do_GET();self.assertEqual(code,200)
         self.assertEqual(set(data['scenarios']),{'public_wifi','malicious_skill','office_lateral',
-                                               'phishing_identity','api_authorization','dependency_supply_chain'})
+                                               'phishing_identity','api_authorization','dependency_supply_chain',
+                                               'agent_prompt_injection','device_guest_access','cloud_bucket_key'})
         handler.path='/api/arena/run';handler.headers={'Content-Length':'30'}
         handler._body=lambda:{'scenario':'malicious_skill'}
         code,result=handler.do_POST();self.assertEqual(code,200)
