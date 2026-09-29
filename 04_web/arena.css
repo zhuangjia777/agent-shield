@@ -37,6 +37,11 @@ body.arena-page{max-width:1440px}
 .divider{display:flex;align-items:center;gap:10px;font:12px ui-monospace,monospace;color:var(--muted);margin:18px 0 8px}.divider::after{content:'';height:1px;background:var(--line);flex:1}.correlation{font:11px/1.6 ui-monospace,monospace;color:var(--muted);margin-top:10px}
 .expert-only{display:none}body.expert .expert-only{display:block}.arena pre{font-size:12px}
 .bottom{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;margin:22px 0}.tabs{display:flex;flex-wrap:wrap;gap:12px}.tabs button[aria-pressed=true]{border-bottom:3px solid var(--fg);font-weight:700;color:var(--fg)}
+/* 实时控制台三源平铺 */
+.lab-log-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.lab-log-pane b{display:block;font-size:12px;letter-spacing:.5px;color:var(--muted);margin-bottom:6px;text-transform:uppercase}
+.lab-log-output{height:280px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#111820;color:#d9e4ec;padding:14px;border-radius:8px;margin:0}
+@media(max-width:1000px){.lab-log-grid{grid-template-columns:1fr}}
 .review{white-space:pre-wrap;font-size:13px}.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.hidden{display:none!important}
 @media(max-width:1000px){.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.lane-head{padding:14px}.lane-status{display:none}.feed{padding:6px 12px 16px}.metric{padding:12px}.metric strong{font-size:26px}}
 @media(max-width:640px){.arena-heading{align-items:flex-start;flex-wrap:wrap}.arena-heading h1{font-size:25px}.arena{grid-template-columns:1fr}.feed{height:360px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.stage{padding:10px 6px;font-size:11px;text-align:center}.topology{flex-wrap:wrap;justify-content:flex-start;gap:10px}.topology .line{flex:0 0 12px}.review-grid{grid-template-columns:1fr}.livebar{align-items:flex-start;flex-wrap:wrap}.config summary span{display:none}.controls{grid-template-columns:1fr}.scenario-picker select{width:100%}.run-actions{row-gap:16px}}

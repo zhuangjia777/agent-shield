@@ -25,16 +25,18 @@
     </div>
   </div>
   <details id="lab-console" class="details-card" open>
-    <summary>实时控制台 · 只读日志</summary>
+    <summary>实时控制台 · 只读日志（三源平铺）</summary>
     <div class="run-actions" style="margin:10px 0;flex-wrap:wrap">
-      <label for="lab-log-source">日志来源</label>
-      <select id="lab-log-source"><option value="waf">WAF 日志</option><option value="target">靶机日志</option><option value="agent">Agent 攻击命令与输出</option></select>
       <button id="lab-log-pause" class="btn outline small" aria-pressed="false">暂停刷新</button>
-      <button id="lab-log-copy" class="btn outline small">复制日志</button>
+      <button id="lab-log-copy" class="btn outline small">复制全部日志</button>
       <label><input type="checkbox" id="lab-log-follow" checked>自动滚动</label>
     </div>
-    <p class="note">每 2 秒刷新最近日志；暂停只影响显示。攻击输出在命令结束后出现，保留历史记录且可能截断。此处不能输入或执行命令。</p>
-    <pre id="lab-log-output" tabindex="0" aria-label="Docker 控制台日志" style="height:280px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#111820;color:#d9e4ec;padding:14px;border-radius:8px">正在读取日志…</pre>
+    <p class="note">WAF、靶机、Agent 三个日志窗口同时平铺刷新（每 2 秒）；暂停只影响显示。攻击输出在命令结束后出现，保留历史记录且可能截断。此处不能输入或执行命令。</p>
+    <div class="lab-log-grid">
+      <div class="lab-log-pane"><b>WAF 日志</b><pre class="lab-log-output" data-source="waf" tabindex="0" aria-label="WAF 日志">正在读取日志…</pre></div>
+      <div class="lab-log-pane"><b>靶机日志</b><pre class="lab-log-output" data-source="target" tabindex="0" aria-label="靶机日志">正在读取日志…</pre></div>
+      <div class="lab-log-pane"><b>Agent 攻击命令与输出</b><pre class="lab-log-output" data-source="agent" tabindex="0" aria-label="Agent 攻击命令与输出">正在读取日志…</pre></div>
+    </div>
     <p id="lab-log-status" class="note" role="status" aria-live="polite"></p>
   </details>
 </section>
