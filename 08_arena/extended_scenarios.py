@@ -258,6 +258,40 @@ SCENARIOS = {
             business("legal_download", "授权账号下载本人对象", ["revoke_key"], "白名单允许授权应用下载其对象清单内的实际对象。", "凭证回收后本人下载也暂不可用。"),
         ],
     },
+    "ops_agent_broker": {
+        "name": "运维智能体横幅策反", "eyebrow": "SCENARIO 10 / OPS AGENT COMPROMISE",
+        "description": "一个有权限 SSH 与凭据库的演示运维智能体连上一台横幅被投毒的演示主机，观察注入指令、建号提权、凭据库读取与端口转发外泄之间的依赖。",
+        "focus": "重点观察：命令白名单挡不住语义合法的组合动作（建号、读凭据、转发端口各自都在合法命令表里）；输出脱敏是唯一不依赖模型自律的出口闸。",
+        "topology": ["演示运维智能体", "被投毒横幅的演示主机", "演示凭据库", "演示外部接收端"],
+        "setup": "演示主机的登录横幅与命令回显里埋有合成注入指令；智能体的工具面覆盖远程执行、凭据库读写与端口转发，全部为合成记录，不建立真实连接。",
+        "assumptions": [
+            "横幅与命令输出注入为合成前提，不模拟模型权重或智能体运行时自身失陷。",
+            "智能体把主机回显当作可信上下文是本用例的默认行为；工具白名单按命令名匹配，不检查参数语义。",
+            "凭据库读取走的是智能体自身已授权的凭据接口；不模拟凭据库自身被爆破。",
+            "端口转发外泄依赖前两步已成功；接收端为演示地址，不代表生产目标枚举。",
+        ],
+        "controls": {
+            "output_quarantine": control("主机输出脱敏隔离", "平台运营者", "横幅与命令回显标记为数据并剥离指令文本；不追溯已执行的动作。"),
+            "param_policy": control("命令参数级策略", "平台运营者", "useradd 不得进 sudo 组、凭据库读取限本人条目、转发目标须在允许清单；不改变命令名白名单本身。"),
+            "session_confirm": control("写动作逐步人工确认", "运维负责人", "建号、写凭据、开转发前人工确认；本用例假设负责人按预设拒绝。"),
+            "cred_vault_scope": control("凭据库分域授权", "数据管理员", "演示智能体凭据只覆盖运维域，读不到生产域条目；不阻止运维域内已授权读取。"),
+            "egress_allowlist": control("转发与出网白名单", "网络管理员", "端口转发目标与出网目的地受限；不阻止已完成的建号与读取。"),
+            "detection": control("会话行为审计", "白帽／平台运营者", "记录触发的合成注入与工具动作；只告警、不自动阻断。"),
+            "kill_switch": control("吊销智能体凭据并停用", "应急人员", "智能体凭据全部吊销，任何新动作被拒绝；正在跑的例行巡检同时中断。"),
+        },
+        "everyday": ["param_policy", "detection"], "lockdown": "kill_switch",
+        "repair": ["output_quarantine", "param_policy", "session_confirm", "cred_vault_scope", "egress_allowlist", "detection"],
+        "attacks": [
+            attack("banner_injection", "投毒横幅进入智能体上下文", "合成注入指令被智能体当作可执行任务", ["output_quarantine", "kill_switch"]),
+            attack("rogue_account", "在被管主机创建后门账号", "演示主机出现带 sudo 组的合成账号", ["param_policy", "session_confirm", "kill_switch"], ["banner_injection"]),
+            attack("vault_read", "批量读取演示凭据库", "智能体上下文获得越权合成凭据", ["cred_vault_scope", "session_confirm", "kill_switch"], ["banner_injection"]),
+            attack("exfil_tunnel", "端口转发外泄合成凭据", "演示接收端获得合成凭据副本", ["egress_allowlist", "param_policy", "kill_switch"], ["vault_read"]),
+        ],
+        "business": [
+            business("routine_check", "例行巡检与日志查看", ["kill_switch"], "只读巡检不触发参数限制，输出脱敏不影响阅读。", "凭据吊销后智能体连不上被管主机，巡检停摆。"),
+            business("approved_change", "已批准的部署变更", ["kill_switch"], "已批准的变更天然通过人工确认环节，参数策略只限高危组合。", "吊销后变更全部中断。"),
+        ],
+    },
 }
 
 

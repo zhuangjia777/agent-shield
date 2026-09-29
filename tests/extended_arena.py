@@ -13,7 +13,7 @@ import app
 
 sim = app.arena_mod
 NEW_SCENARIOS = ("office_lateral", "phishing_identity", "api_authorization", "dependency_supply_chain",
-                 "agent_prompt_injection", "device_guest_access", "cloud_bucket_key")
+                 "agent_prompt_injection", "device_guest_access", "cloud_bucket_key", "ops_agent_broker")
 
 
 class ExtendedArenaTests(unittest.TestCase):
@@ -28,7 +28,7 @@ class ExtendedArenaTests(unittest.TestCase):
         for scenario, daily, locked_business in (("office_lateral", 2, 0), ("phishing_identity", 2, 0),
                                                  ("api_authorization", 3, 0), ("dependency_supply_chain", 3, 1),
                                                  ("agent_prompt_injection", 0, 0), ("device_guest_access", 0, 2),
-                                                 ("cloud_bucket_key", 1, 0)):
+                                                 ("cloud_bucket_key", 1, 0), ("ops_agent_broker", 2, 0)):
             for preset, before, business in (("exposed", 4, 2), ("everyday", daily, 2), ("hardened", 0, locked_business)):
                 with self.subTest(scenario=scenario, preset=preset):
                     result = sim.simulate({"scenario": scenario, "controls": sim.catalog(scenario)["presets"][preset]})
@@ -152,7 +152,7 @@ class ExtendedArenaTests(unittest.TestCase):
                         if event["side"] == "red":
                             self.assertEqual(events[event["evidence"]["related_event"]]["side"], "black")
                 count += 1
-        self.assertEqual(count, 768)
+        self.assertEqual(count, 896)
 
     def test_catalog_copies_cannot_change_policy_and_run_identity_is_scenario_specific(self):
         selected = sim.catalog("office_lateral")
@@ -160,7 +160,7 @@ class ExtendedArenaTests(unittest.TestCase):
         selected["attack_goals"][2]["requires"].clear()
         self.assertNotEqual(sim.catalog("office_lateral")["controls"]["share_auth"]["name"], "changed")
         self.assertEqual(sim.catalog("office_lateral")["attack_goals"][2]["requires"], ["remote_login"])
-        self.assertEqual(len({self.run_case(key)["run_id"] for key in NEW_SCENARIOS}), 7)
+        self.assertEqual(len({self.run_case(key)["run_id"] for key in NEW_SCENARIOS}), 8)
 
     def test_no_files_network_or_subprocess_execution(self):
         with patch("socket.socket", side_effect=AssertionError("network")), \
