@@ -624,6 +624,7 @@ class AgentSession:
         self.answer_q: Queue = Queue()
         self.running = False
         self.closed = False
+        self.mode = "confirm"  # observer | confirm | auto
 
     def close(self):
         self.closed = True
@@ -654,15 +655,15 @@ def _agent_worker(sess: AgentSession, message: str, lab_generation=None):
         if sess.closed or (used_lab and lab_generation != LAB_GENERATION):
             raise RuntimeError("当前 Agent 演练任务已停止。")
 
-    def execute(tool, tin):
+    def execute(tool, tin, mode="confirm"):
         nonlocal used_lab
         check_cancelled()
         if tool.startswith("lab_"):
             used_lab = True
             with LAB_ACTION_LOCK:
                 check_cancelled()
-                return agent_mod._execute(tool, tin)
-        return agent_mod._execute(tool, tin)
+                return agent_mod._execute(tool, tin, mode)
+        return agent_mod._execute(tool, tin, mode)
 
     def answer_cb(question, choices):
         deadline = time.monotonic() + 300
@@ -679,7 +680,7 @@ def _agent_worker(sess: AgentSession, message: str, lab_generation=None):
         sess.q.put({"type": kind, **payload})
 
     try:
-        a.run(message, on_event, answer_cb, execute_callback=execute)
+        a.run(message, on_event, answer_cb, execute_callback=execute, mode=sess.mode)
         sess.history = a.history
     except Exception as e:
         sess.q.put({"type": "error", "text": str(e)[:300]})
@@ -1080,6 +1081,15 @@ class Handler(BaseHTTPRequestHandler):
                     sess.answer_q.put(t)
                     return self._json(200, {"ok": True})
                 return self._json(200, _run_agent_turn(sess, (body.get("message") or "").strip()))
+            if path == "/api/agent/mode":
+                sess = AGENT_SESSIONS.get(body.get("agent_id", ""))
+                if not sess:
+                    return self._json(404, {"ok": False, "msg": "会话不存在"})
+                mode = (body.get("mode") or "").strip()
+                if mode not in ("observer", "confirm", "auto"):
+                    return self._json(400, {"ok": False, "msg": "未知权限模式"})
+                sess.mode = mode
+                return self._json(200, {"ok": True, "mode": mode})
             if path == "/api/agent/close":
                 sess = AGENT_SESSIONS.pop(body.get("agent_id", ""), None)
                 if sess:
@@ -1329,6 +1339,12 @@ function openAgent(prefill) {
       <div class="mhead" onclick="if(this.closest('.overlay').classList.contains('agent-mini'))toggleAgentMini()">
         <h3>AgentShield 智能体 <span class="tip mono" style="font-weight:400">ReAct · 本地工具 · 流式</span></h3>
         <div class="hbtns">
+          <select id="agent-mode" title="权限模式：观察=只看不动；逐步确认=写操作逐个批；自动=标准剧本与 WAF 免确认（攻击/清理/陌生命令永远要批）"
+                  onchange="setAgentMode(this.value)" style="font-size:12px">
+            <option value="observer">观察</option>
+            <option value="confirm" selected>逐步确认</option>
+            <option value="auto">自动</option>
+          </select>
           <button class="btn ghost small" onclick="event.stopPropagation();newAgent()">↺ 新会话</button>
           <button class="btn ghost small" title="最小化到右下角，会话继续运行" onclick="event.stopPropagation();toggleAgentMini()">－</button>
           <button class="btn ghost small" onclick="event.stopPropagation();closeAgent()">✕</button>
@@ -1485,6 +1501,11 @@ function toggleAgentMini() {
   if (!ov.classList.contains('agent-mini')) setTimeout(()=>{ const i=$('#agent-input'); i && i.focus(); }, 50);
 }
 window.toggleAgentMini = toggleAgentMini;
+function setAgentMode(mode) {
+  if (!agentId) return;
+  api('/api/agent/mode', { agent_id: agentId, mode });
+}
+window.setAgentMode = setAgentMode;
 // 悬浮入口 + 快捷键
 (function(){
   const b = document.createElement('button');

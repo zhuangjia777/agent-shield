@@ -160,13 +160,24 @@ class ReActAgent:
         self.history = history  # [{role, content}, ...]
         self.transcript: list[dict] = []  # {step, thought, tool, input, obs_len}
 
-    def run(self, user_msg: str, on_event, answer_callback, execute_callback=None):
+    def run(self, user_msg: str, on_event, answer_callback, execute_callback=None, mode="confirm"):
         """generator 友好的同步执行：
         answer_callback(question, choices) -> str  （由 web 端实现，等待用户点选）
+        mode: observer（只读）/ confirm（逐步确认，默认）/ auto（自动，硬底线仍确认）
         """
+        # system 消息保持全静态（工具表与规则均不随轮次变化），llama.cpp 等
+        # provider 的前缀缓存才能跨轮命中；动态内容（信息快照、权限模式）
+        # 挪到紧随其后的独立 user 消息里，保住 provider 前缀缓存命中。
+        mode_note = {
+            "observer": "当前权限模式：observer（观察）——只读工具可用，任何写操作（起停演练场、攻击、改防护、执行命令）会被系统直接拒绝。不要反复尝试写操作。",
+            "auto": "当前权限模式：auto（自动）——lab_scenario 标准剧本与 WAF 开关无需逐步确认；lab_attack、非白名单 run_command、lab_stop 仍必须先 Ask 确认。",
+        }.get(mode, "")
+        dynamic = f"当前可得信息: {json.dumps(json.loads(_observations()), ensure_ascii=False)}（系统快照，不必回应本条）"
+        if mode_note:
+            dynamic += "\n" + mode_note
         messages = [{"role": "system", "content": SYSTEM.format(
-            tools="\n".join(f"- {n}: {d}" for n, d in TOOLS), max_steps=MAX_STEPS)
-            + f"\n当前可得信息: {json.dumps(json.loads(_observations()), ensure_ascii=False)}"}]
+            tools="\n".join(f"- {n}: {d}" for n, d in TOOLS), max_steps=MAX_STEPS)},
+            {"role": "user", "content": dynamic}]
         messages += self.history
         messages.append({"role": "user", "content": user_msg})
 
@@ -236,7 +247,7 @@ class ReActAgent:
                     messages.append({"role": "user", "content": "Observation: Final Answer 缺少 answer 参数"})
                     continue
                 on_event("tool_call", {"step": step, "tool": tool, "input": tin})
-                obs, ok = (execute_callback or _execute)(tool, tin)
+                obs, ok = (execute_callback or _execute)(tool, tin, mode)
                 obs_str = obs if len(obs) <= 1500 else obs[:1500] + "…(截断)"
                 on_event("tool_result", {"step": step, "tool": tool, "ok": ok, "obs": obs_str})
                 self.transcript.append({"step": step, "thought": decision["thought"],
@@ -384,7 +395,20 @@ def _parse(buf: str, messages: list) -> dict | None:
 
 # ---------- 工具执行 ----------
 
-def _execute(tool: str, tin: dict):
+WRITE_TOOLS = {"lab_start", "lab_attack", "lab_waf", "lab_stop", "lab_scenario", "run_command"}
+# auto 模式下可免逐步确认的写工具；lab_attack / lab_stop / 非白名单
+# run_command 是硬底线，任何模式都要 Ask 确认（对应各自分支里的 confirmed 闸）。
+AUTO_OK = {"lab_start", "lab_waf", "lab_scenario"}
+
+
+def _execute(tool: str, tin: dict, mode: str = "confirm"):
+    if mode == "observer" and tool in WRITE_TOOLS:
+        return json.dumps({"blocked": True, "note":
+                           "当前为观察模式（observer）：只允许查看报告、扫描与诊断等只读操作，"
+                           "写操作被系统拒绝。请改用只读工具完成任务，或让用户切换权限模式。"},
+                          ensure_ascii=False), False
+    if mode == "auto" and tool in AUTO_OK:
+        tin = {**tin, "confirmed": True}
     try:
         if tool == "list_reports":
             return json.dumps(json.loads(_observations())["recent_reports"], ensure_ascii=False), True

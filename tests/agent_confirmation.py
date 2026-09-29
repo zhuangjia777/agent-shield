@@ -20,7 +20,7 @@ class ConfirmationContextTests(unittest.TestCase):
                 events=[]
                 with patch.object(agent,'chat_stream',stream), patch.object(agent,'_observations',return_value='{}'):
                     agent.ReActAgent([]).run('Test',lambda k,v:events.append(k),lambda q,c:'Yes',
-                                             execute_callback=lambda t,i:('demo-result',True))
+                                             execute_callback=lambda t,i,m='confirm':('demo-result',True))
                 self.assertIn({'role':'assistant','content':ask},seen[1])
                 self.assertIn({'role':'assistant','content':action},seen[2])
                 self.assertEqual(events.count('ask'),1)
