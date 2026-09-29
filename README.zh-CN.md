@@ -4,9 +4,22 @@
 
 **一个会自己动手攻击的 AI 安全智能体。** 先在本机做隐私/漏洞体检评分，再把攻防对抗搬进 Docker 隔离网真打一遍：Kali 攻击机发出真实报文，WAF 真拦真放，战果由靶机自己的记录说话。全程本地运行，MIT 开源。
 
+## 视频：红蓝实战与 Agent 设计
+
+[![视频：红蓝实战与 Agent 设计](docs/assets/agent-shield-live-agent-v2.jpg)](docs/assets/agent-shield-live-agent-v2.mp4)
+
+**[▶ 观看完整视频（2 分 42 秒，中文配音＋字幕）](docs/assets/agent-shield-live-agent-v2.mp4)** · [字幕文件](docs/assets/agent-shield-live-agent-v2.zh-CN.srt)
+
+以已有 Docker 实测回放为主线：同一条攻击在 WAF 开启时被拦截，关闭防护后命中，恢复防护后再次被拦截。视频介绍 ReAct 工具决策、人工确认、隔离校验和靶机独立裁判。当前实战由一个 Agent 编排红队工具与蓝队 WAF。
+
+<details>
+<summary>展开无声快速预览</summary>
+
 ![Docker 实战演练实录：SQL 注入被 WAF 拦截、蓝队关闭 WAF 后同一发命中、裁判以靶机记录判定](docs/assets/live-arena-demo.gif)
 
 上面这段是 AgentShield 实战演练的一次真实运行记录（压缩了模型思考等待）：红队容器用 SQL 注入打管理员登录，WAF 开启时 403 拦下、正常业务不受影响；蓝队误关 WAF 后**同一发 payload** 拿到管理员登录凭证；裁判直接读靶机 API 确认 `loginAdminChallenge` 达成——不听模型自评。结束后一键销毁全部容器，命令与输出全程落盘。
+
+</details>
 
 [使用说明](使用说明.md) · [HTML 版使用说明](使用说明.html) · [安装与启动](#安装与启动)
 

@@ -4,9 +4,22 @@
 
 **An AI security agent that actually launches the attacks itself.** It starts by auditing and scoring your machine for privacy and vulnerabilities, then moves the red-vs-blue duel into a real Docker-isolated network: a Kali attacker box sends real packets, the WAF really blocks and really allows, and the outcome is judged by the target's own records. Runs 100% locally, MIT licensed.
 
+## Video: live red–blue drill & Agent design
+
+[![Video: live red–blue drill & Agent design](docs/assets/agent-shield-live-agent-v2.jpg)](docs/assets/agent-shield-live-agent-v2.mp4)
+
+**[▶ Watch the full video (2:42, Chinese narration and subtitles)](docs/assets/agent-shield-live-agent-v2.mp4)** · [Subtitle file](docs/assets/agent-shield-live-agent-v2.zh-CN.srt)
+
+A replay of an existing Docker drill: the same attack is blocked with the WAF enabled, succeeds with protection disabled, and is blocked again after protection is restored. The walkthrough explains the ReAct tool loop, human confirmation, isolation checks, and target-based judging. In live mode, one Agent coordinates the red-team tools and blue-team WAF.
+
+<details>
+<summary>Quick silent preview</summary>
+
 ![Live Docker drill recording: a SQL injection blocked by the WAF, the same payload landing after blue team turns the WAF off, and the judge confirming the win from the target's own records](docs/assets/live-arena-demo.gif)
 
 The GIF above is a real run recording from an AgentShield live drill (model thinking pauses compressed): the red-team container attacks an admin login with SQL injection — 403-blocked while the WAF is on, normal traffic unaffected; after blue team mistakenly turns the WAF off, **the very same payload** obtains admin login credentials; the judge reads the target's own API to confirm `loginAdminChallenge` — model self-assessment is not trusted. When the drill ends, one click destroys every container, and all commands and outputs are persisted to disk.
+
+</details>
 
 [User guide (Chinese)](README.zh-CN.md) · [Install & run](#install--run)
 
