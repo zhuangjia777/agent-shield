@@ -338,6 +338,11 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
 .overlay.agent-mini .mhead { cursor: pointer; }
 .modal .mhead.agent-drag { cursor: grab; user-select: none; }
 .modal .mhead.agent-drag:active { cursor: grabbing; }
+.modal { position: relative; }
+.agent-resize { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, var(--muted) 50%, var(--muted) 58%, transparent 58%,
+              transparent 70%, var(--muted) 70%, var(--muted) 78%, transparent 78%); border-bottom-right-radius: inherit; }
+.overlay.agent-mini .agent-resize { display: none; }
 /* reticle 角标：瞄准框语汇 */
 .reticle { position: absolute; width: 12px; height: 12px; pointer-events: none; }
 .reticle.tl { top: -7px; left: -7px; border-top: 2px solid var(--fg); border-left: 2px solid var(--fg); }
@@ -1357,6 +1362,7 @@ function openAgent(prefill) {
         <input id="agent-input" type="text" placeholder="说人话就行，比如：这个密钥问题到底怎么修？" ${prefill?'value="'+escAttr(prefill)+'"':''}>
         <button class="btn primary compact" onclick="sendAgent()">发送</button>
       </div>
+      <div class="agent-resize" title="拖动调整窗口大小"></div>
     </div>
   </div>`;
   agentOpenFlag = true;
@@ -1551,6 +1557,31 @@ function toggleAgentMini() {
       setTimeout(()=>document.removeEventListener('click', block, {capture:true}), 250); } };
   document.addEventListener('pointerup', up);
   document.addEventListener('pointercancel', up);
+})();
+// 右下角手柄拉拽调整大小（最小 360x260，最大不超视口；首次拉伸先把 flex 居中转固定定位）
+(function(){
+  let sx=0, sy=0, ow=0, oh=0, rz=null;
+  document.addEventListener('pointerdown', e => {
+    const grip = e.target.closest('.agent-resize');
+    if (!grip) return;
+    const modal = grip.closest('.modal');
+    if (!modal.style.left) {
+      const r = modal.getBoundingClientRect();
+      modal.style.position='fixed'; modal.style.left=r.left+'px'; modal.style.top=r.top+'px'; modal.dataset.placed='1';
+    }
+    rz=e.pointerId; sx=e.clientX; sy=e.clientY; ow=modal.offsetWidth; oh=modal.offsetHeight;
+    grip.setPointerCapture(rz); e.preventDefault(); e.stopPropagation();
+  });
+  document.addEventListener('pointermove', e => {
+    if (rz===null || e.pointerId!==rz) return;
+    const modal = document.querySelector('#agent-host .modal'); if (!modal) return;
+    const x=parseFloat(modal.style.left), y=parseFloat(modal.style.top);
+    modal.style.width  = Math.min(Math.max(ow+e.clientX-sx, 360), innerWidth-x-4) + 'px';
+    modal.style.height = Math.min(Math.max(oh+e.clientY-sy, 260), innerHeight-y-4) + 'px';
+  });
+  const end = e => { if (rz!==null && e.pointerId===rz) rz=null; };
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', end);
 })();
 window.toggleAgentMini = toggleAgentMini;
 function setAgentMode(mode) {
