@@ -98,7 +98,7 @@ test -f config.json || cp config.json.example config.json  # 已有配置不覆�
 
 也可以启动后在网页的“设置”中填写。规则检查和固定流程演示不需要模型；红蓝智能体、AI 解释和文字复盘需要连接模型服务。红蓝双方默认沿用主模型，也可在设置中各自配置接口、模型及密钥。`config.json` 已被 Git 忽略，不要将密钥写入示例配置。
 
-任何兼容 OpenAI API 的服务商都能用，项目不关心 `base_url` 背后是谁。**阶跃星辰 StepFun** 是可选的云端供应商：`base_url` 填 `https://api.stepfun.com/v1`，`model` 填当前在售的 Step 模型 ID（如 `step-3.7-flash`，见 [StepFun 快速开始](https://platform.stepfun.com/docs/zh/quickstart/overview)），密钥在 [StepFun 开放平台接口密钥页](https://platform.stepfun.com/interface-key)创建。丑话说在前：云端推理会把提示词和演练上下文发到你的机器外面，介意的话优先用下面的本地方案。
+任何兼容 OpenAI API 的服务商都能用，项目不关心 `base_url` 背后是谁。**阶跃星辰 StepFun** 是可选的云端供应商：`base_url` 填 `https://api.stepfun.com/v1`，`model` 填当前在售的 Step 模型 ID（如 `step-3.7-flash`，见 [StepFun 快速开始](https://platform.stepfun.com/docs/zh/quickstart/overview)），密钥在 [StepFun 开放平台接口密钥页](https://platform.stepfun.com/interface-key)创建。
 
 ### DGX Spark / 华硕 Ascent GX10 本地模型：Qwen3.8-27B / Qwen3.8-Flash-Next
 

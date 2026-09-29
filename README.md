@@ -98,7 +98,7 @@ Edit the three fields under `cloud` in `config.json`:
 
 You can also fill this in via the web UI's Settings after startup. Rule scans and scripted demos need no model; red/blue agents, AI explanations and narrative reports do. Both arena sides inherit the main model by default, and each can be configured with its own endpoint, model and key in Settings. `config.json` is Git-ignored — never put real keys in the example config.
 
-Any OpenAI-compatible provider works; AgentShield doesn't care who is behind the URL. **StepFun (阶跃星辰)** is a supported cloud option: set `base_url` to `https://api.stepfun.com/v1` and `model` to a current Step model ID (e.g. `step-3.7-flash`; see [StepFun quick start](https://platform.stepfun.com/docs/zh/quickstart/overview)), with the key created in the [StepFun console](https://platform.stepfun.com/interface-key). Honest caveat: cloud inference sends prompts and drill context off your machine — prefer the local options below if that's a problem.
+Any OpenAI-compatible provider works; AgentShield doesn't care who is behind the URL. **StepFun (阶跃星辰)** is a supported cloud option: set `base_url` to `https://api.stepfun.com/v1` and `model` to a current Step model ID (e.g. `step-3.7-flash`; see [StepFun quick start](https://platform.stepfun.com/docs/zh/quickstart/overview)), with the key created in the [StepFun console](https://platform.stepfun.com/interface-key).
 
 ### Local inference on DGX Spark (or the ASUS Ascent GX10): Qwen3.8-27B / Qwen3.8-Flash-Next
 
