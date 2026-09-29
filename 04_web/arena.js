@@ -5,8 +5,8 @@ const escapeHTML = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','
 let catalogs, catalog, result, generation = 0, reviewing = false, lastReview = null;
 let controller = null, running = false, packets = [], shown = 0, total = 0;
 let counters, currentPhase = 'before';
-const names = {black:'黑方 · 黑客', red:'红方 · 白帽', judge:'规则裁判'};
-const stages = {agents:'智能体对攻',before:'初始对攻', repair:'红方加固', after:'同场景复测', complete:'结果复盘'};
+const names = {black:'红队 · 攻击', red:'蓝队 · 防守', judge:'规则裁判'};
+const stages = {agents:'智能体对攻',before:'初始对攻', repair:'蓝队加固', after:'同场景复测', complete:'结果复盘'};
 const verdicts = {applied:'已应用',observed:'已观察',finished:'本方结束',success:'目标达成', blocked:'已阻断', skipped:'前置未满足', alert:'已检测', unobserved:'未监测', reachable:'可达', accepted:'生效', pass:'通过', regression:'业务受影响'};
 const status = text => { $('#status').textContent = text; };
 async function post(url, body) {
@@ -40,7 +40,7 @@ function invalidate() {
   if (running) return;
   generation++; reset(); setRunning(false);
   $('#black-state').textContent = '等待演练'; $('#red-state').textContent = '等待演练';
-  $('#black-feed').innerHTML = '<div class="empty"><b>进攻视角已就绪</b>开始后显示黑方路径与目标结果</div>';
+  $('#black-feed').innerHTML = '<div class="empty"><b>进攻视角已就绪</b>开始后显示红队路径与目标结果</div>';
   $('#red-feed').innerHTML = '<div class="empty"><b>防守视角已就绪</b>开始后显示对应检测、加固与复测</div>';
   status('配置已就绪，点击开始实时演练。');
 }
@@ -71,7 +71,7 @@ function toolSummary(e) {
   return '本方已结束本轮行动。';
 }
 function syncMode() {
-  const labels=$('#arena-mode').value==='agents'?['01 观察环境','02 自主决策','03 调用工具','04 裁判复测']:['01 初始对攻','02 红方加固','03 同场景复测','04 结果复盘'];
+  const labels=$('#arena-mode').value==='agents'?['01 观察环境','02 自主决策','03 调用工具','04 裁判复测']:['01 初始对攻','02 蓝队加固','03 同场景复测','04 结果复盘'];
   document.querySelectorAll('[data-stage]').forEach((e,i)=>e.textContent=labels[i]);
   document.querySelectorAll('[data-phase]').forEach(e=>e.hidden=$('#arena-mode').value==='agents'&&e.dataset.phase!=='all');
 }
@@ -83,7 +83,7 @@ function showPacket(packet) {
     append('red', `<article class="event"><div class="event-meta"><span>虚拟策略变更</span><span class="verdict">已应用</span></div><b>${escapeHTML(r.name)}</b><p>${escapeHTML(r.description)}</p><div class="correlation">实施角色：${escapeHTML(r.owner)}</div><pre class="expert-only">${escapeHTML(JSON.stringify(r,null,2))}</pre></article>`);
   } else if (packet.type === 'event') {
     const e = packet.event;
-    append(e.side, `<article class="event ${escapeHTML(e.side)}"><div class="event-meta"><span>${escapeHTML(stages[packet.phase])} / ${escapeHTML(e.id)} / 步 ${e.tick}</span><span class="verdict ${escapeHTML(e.result)}">${escapeHTML(verdicts[e.result] || e.result)}</span></div><b>${e.side === 'judge' ? '业务裁判 · ' : ''}${escapeHTML(({observe:'观察环境',attempt_goal:'尝试目标',inspect_alerts:'核对告警',set_control:'应用防护',check_business:'检查业务',finish:'结束行动'})[e.action]||e.action)}</b><p>${escapeHTML(e.detail)}</p>${e.model_selected?`<div class="correlation">模型 ${escapeHTML(e.evidence.model)} · 第 ${e.evidence.round} 轮 · ${escapeHTML(toolSummary(e))}</div>`:''}${e.evidence.related_event ? `<div class="correlation">↳ 对应黑方 ${escapeHTML(stages[packet.phase])} / ${escapeHTML(e.evidence.related_event)}</div>` : ''}<pre class="expert-only">${escapeHTML(JSON.stringify(e.evidence,null,2))}</pre></article>`);
+    append(e.side, `<article class="event ${escapeHTML(e.side)}"><div class="event-meta"><span>${escapeHTML(stages[packet.phase])} / ${escapeHTML(e.id)} / 步 ${e.tick}</span><span class="verdict ${escapeHTML(e.result)}">${escapeHTML(verdicts[e.result] || e.result)}</span></div><b>${e.side === 'judge' ? '业务裁判 · ' : ''}${escapeHTML(({observe:'观察环境',attempt_goal:'尝试目标',inspect_alerts:'核对告警',set_control:'应用防护',check_business:'检查业务',finish:'结束行动'})[e.action]||e.action)}</b><p>${escapeHTML(e.detail)}</p>${e.model_selected?`<div class="correlation">模型 ${escapeHTML(e.evidence.model)} · 第 ${e.evidence.round} 轮 · ${escapeHTML(toolSummary(e))}</div>`:''}${e.evidence.related_event ? `<div class="correlation">↳ 对应红队 ${escapeHTML(stages[packet.phase])} / ${escapeHTML(e.evidence.related_event)}</div>` : ''}<pre class="expert-only">${escapeHTML(JSON.stringify(e.evidence,null,2))}</pre></article>`);
   }
 }
 function receive(packet) {
@@ -94,7 +94,7 @@ function receive(packet) {
     status(names[packet.side]+' · '+packet.model+' 正在选择工具…');return;
   }
 
-  if (packet.type === 'start') { total = packet.total_events; $('#run-label').textContent = 'RUN / '+packet.run_id; if(packet.mode==='llm_agents'){setStage('agents');status('红黑智能体已连接，等待首个决策…');} return; }
+  if (packet.type === 'start') { total = packet.total_events; $('#run-label').textContent = 'RUN / '+packet.run_id; if(packet.mode==='llm_agents'){setStage('agents');status('红蓝智能体已连接，等待首个决策…');} return; }
   if (packet.type === 'complete') {
     result = packet.result; setStage('complete');
     $('#progress-text').textContent = '已完成 · '+shown+' 条事件';
@@ -176,7 +176,7 @@ document.querySelectorAll('[data-preset]').forEach(b => { b.disabled=true; b.onc
 $('#review').onclick = async () => {
   if (!result || reviewing || running) return;
   const current=generation; reviewing=true; $('#review').disabled=true;
-  $('#reviews').classList.remove('hidden'); $('#reviews').textContent='私有模型正在分别复盘黑方与红方行为…';
+  $('#reviews').classList.remove('hidden'); $('#reviews').textContent='私有模型正在分别复盘红队与蓝队行为…';
   try {
     const review=await post('/api/arena/review', {scenario:result.scenario,controls:result.before.controls});
     if (current !== generation) return; lastReview=review;

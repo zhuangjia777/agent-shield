@@ -20,7 +20,7 @@ CONTROLS = {
     "https_only": {"name": "严格 HTTPS", "owner": "设备使用者", "description": "业务仅用 HTTPS，证书校验失败即停止，不忽略警告。"},
     "vpn": {"name": "可信全隧道 VPN", "owner": "设备使用者", "description": "假设隧道已建立、含 DNS 且无旁路；不改变本地共享权限。"},
     "verify_portal": {"name": "核验认证页身份", "owner": "设备使用者", "description": "用户拒绝在未核验域名的认证页提交账号；HTTPS 本身不证明网站可信。"},
-    "detection": {"name": "开启红方监测", "owner": "白帽／管理员", "description": "观察合成服务日志和终端遥测；只告警，不自动阻断。"},
+    "detection": {"name": "开启蓝队监测", "owner": "白帽／管理员", "description": "观察合成服务日志和终端遥测；只告警，不自动阻断。"},
 }
 PRESETS = {
     "exposed": {key: False for key in CONTROLS},
@@ -45,13 +45,13 @@ def catalog(scenario="public_wifi"):
     return {
         "scenario": "public_wifi", "version": VERSION,
         "name": "公共 Wi-Fi 同网攻防", "eyebrow": "SCENARIO 01 / PUBLIC WI-FI",
-        "description": "同一个公共 Wi-Fi 下，黑方尝试四个预设攻击目标，红方监测并加固，再用相同场景复测。两侧随事件流同步更新。",
+        "description": "同一个公共 Wi-Fi 下，红队尝试四个预设攻击目标，蓝队监测并加固，再用相同场景复测。两侧随事件流同步更新。",
         "controls_note": "开关只修改虚拟场景。默认日常配置启用 HTTPS、共享认证与监测。",
         "attack_goals_total": 4, "business_total": 2,
         "attack_goals": [{"id": key, "name": name, "requires": []} for key, name, _, _ in ATTACKS],
         "controls": CONTROLS, "presets": PRESETS,
         "topology": [
-            {"id": "black", "name": "黑方 · 同网访客", "address": "192.0.2.66"},
+            {"id": "black", "name": "红队 · 同网访客", "address": "192.0.2.66"},
             {"id": "ap", "name": "咖啡店热点", "address": "192.0.2.1"},
             {"id": "client", "name": "普通用户笔记本", "address": "192.0.2.20"},
             {"id": "share", "name": "演示共享设备", "address": "192.0.2.30"},
@@ -59,7 +59,7 @@ def catalog(scenario="public_wifi"):
         ],
         "assumptions": [
             "这是规则推演，所有 IP、事件、文件与账号均为合成数据；不发送网络探测或攻击报文。",
-            "黑方已接入同一热点，未控制网关、终端或证书颁发机构；共享服务与访客处于同一二层域。",
+            "红队已接入同一热点，未控制网关、终端或证书颁发机构；共享服务与访客处于同一二层域。",
             "HTTP 窃听和 DNS 重定向都以伪造网关绑定成功为前提；不表示同 Wi-Fi 就能读取 HTTPS。",
             "伪造认证页通过用户可见的诱导链接呈现，域名为独立假站点；不要求局域网直连，模拟用户是否提交。",
             "全隧道 VPN 与网关校验均假定正确部署；未模拟无线破解、真实漏洞利用、恶意热点或管理员被攻陷。",
@@ -98,7 +98,7 @@ def _run(controls):
          "可到达演示终端与共享设备。" if peer else "热点隔离阻断客户端互访。",
          {"peer_reachable": peer, "source": "192.0.2.66", "destination": "192.0.2.30"})
     emit("black", "尝试改变网关绑定", "accepted" if mitm else "blocked",
-         "规则允许黑方成为模拟中间节点。" if mitm else "隔离或绑定校验阻断该路径。",
+         "规则允许红队成为模拟中间节点。" if mitm else "隔离或绑定校验阻断该路径。",
          {"gateway_binding_changed": mitm, "rule": "peer_reachable AND NOT arp_guard"})
     for action, title, goal, blockers in ATTACKS:
         prevented = [key for key in blockers if controls[key]]

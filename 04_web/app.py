@@ -83,15 +83,15 @@ def arena_review(result):
     configs = {role: llm_mod.role_cloud_cfg(role, cfg, main) for role in ("black", "red")}
     for role, c in configs.items():
         if not c.get("base_url") or not c.get("model"):
-            raise RuntimeError(("黑方" if role == "black" else "红方") + "模型尚未配置完整。")
+            raise RuntimeError(("红队" if role == "black" else "蓝队") + "模型尚未配置完整。")
     evidence = json.dumps({"scenario": result["scenario"], "mode": result["mode"], "assumptions": result["assumptions"],
                            "before": result["before"]["outcomes"],
                            "after": result["after"]["outcomes"],
                            "repair": result["repair"],
                            "business": result["after"]["business_checks"]}, ensure_ascii=False)
     reviews = []
-    for role, task in (("black", "你是黑方黑客的演练分析员。解释哪些预设目标成功、哪些前提受阻，以及未覆盖的场景假设。"),
-                       ("red", "你是红方白帽分析员。解释修复为什么有效、谁能实施、业务副作用和复测局限。")):
+    for role, task in (("black", "你是红队攻击的演练分析员。解释哪些预设目标成功、哪些前提受阻，以及未覆盖的场景假设。"),
+                       ("red", "你是蓝队防守分析员。解释修复为什么有效、谁能实施、业务副作用和复测局限。")):
         c = configs[role]
         messages = [{"role": "system", "content": task + "这是合成的" + result.get("scenario_name", result["scenario"]) + "规则演练。用中文，先给普通用户两句结论，再给专业人士两条证据解读。总计不超过300字。不得声称进行了实网攻击或执行了工具，不生成命令，不修改规则裁判计数，不虚构日志。"},
                     {"role": "user", "content": evidence}]
@@ -502,7 +502,7 @@ def home_html():
   <div class="hbtns">
     <a class="btn outline" href="/help">使用说明</a>
     <a class="btn outline" href="/nvidia">NVIDIA Skill 审查</a>
-    <a class="btn outline" href="/arena"><span class="nav-hl">红黑攻防演练</span></a>
+    <a class="btn outline" href="/arena"><span class="nav-hl">红蓝攻防演练</span></a>
     <button class="btn outline" onclick="openSettings()">设置</button>
     <a class="btn primary compact" href="/checkup">体检本机</a>
   </div>
@@ -1167,9 +1167,9 @@ function openSettings() {
           <div><label for="c-tok">max_tokens</label><input id="c-tok" type="number" value="${Number(c.max_tokens)||2500}"></div></div>
           <label for="o-url">Ollama URL</label><input id="o-url" value="${escHtml(o.url||'')}" placeholder="留空=不用 Ollama">
           <label for="o-model">Ollama 模型</label><input id="o-model" value="${escHtml(o.model||'')}">
-          <h4>红黑智能体与复盘</h4><p class="tip">红黑双方默认使用主模型的 API 配置。独立设置用于该方的智能体行动和模型复盘，模型需要支持 tools 工具调用。规则裁判仍独立判定结果。独立接口不会继承主模型密钥，失败也不会切换到其他模型。</p>
-          ${roleSettings('black','黑方 · 黑客',roles.black||{},c)}
-          ${roleSettings('red','红方 · 白帽',roles.red||{},c)}
+          <h4>红蓝智能体与复盘</h4><p class="tip">红蓝双方默认使用主模型的 API 配置。独立设置用于该方的智能体行动和模型复盘，模型需要支持 tools 工具调用。规则裁判仍独立判定结果。独立接口不会继承主模型密钥，失败也不会切换到其他模型。</p>
+          ${roleSettings('black','红队 · 攻击',roles.black||{},c)}
+          ${roleSettings('red','蓝队 · 防守',roles.red||{},c)}
         </div>
         <div class="mfoot"><button class="btn compact" id="btn-test" onclick="testLLM()">测试主模型已保存配置</button><button class="btn primary compact" onclick="saveSettings()">保存</button></div>
         <div class="tip" id="test-out" role="status" style="padding:0 18px 14px;white-space:pre-wrap;max-height:140px;overflow:auto"></div>
@@ -1195,7 +1195,7 @@ async function saveSettings() {
 }
 function testLLM(role='main') {
   settingsTest?.close();
-  const out=$('#test-out');out.textContent=({main:'主模型',black:'黑方',red:'红方'}[role])+'：正在测试已保存配置…';
+  const out=$('#test-out');out.textContent=({main:'主模型',black:'红队',red:'蓝队'}[role])+'：正在测试已保存配置…';
   settingsTest=sse('/api/llm-test?role='+role,ev=>{
     if(ev.type==='token')out.textContent+=ev.text;
     if(ev.type==='error')out.textContent+='\n'+ev.text;

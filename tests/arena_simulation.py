@@ -97,11 +97,11 @@ class ArenaTests(unittest.TestCase):
         result = self.run_case()
         before = json.dumps(result)
         with patch.object(app.llm_mod, "cloud_cfg", return_value={"api_key": "FAKE", "base_url": "http://test.invalid", "model": "test"}), \
-             patch.object(app.llm_mod, "_cloud_stream", side_effect=[iter([("content", "黑方复盘")]), iter([("content", "红方复盘")])]) as stream:
+             patch.object(app.llm_mod, "_cloud_stream", side_effect=[iter([("content", "红队复盘")]), iter([("content", "蓝队复盘")])]) as stream:
             review = app.arena_review(result)
         self.assertEqual([r["role"] for r in review["reviews"]], ["black", "red"])
         self.assertEqual(len(stream.call_args_list[1].args[0]), 2)
-        self.assertNotIn("黑方复盘", json.dumps(stream.call_args_list[1].args[0]))
+        self.assertNotIn("红队复盘", json.dumps(stream.call_args_list[1].args[0]))
         self.assertEqual(before, json.dumps(result))
         self.assertTrue(review["advisory_only"])
 

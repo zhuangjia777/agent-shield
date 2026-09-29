@@ -84,9 +84,9 @@ def merge_config(current: dict, updates: dict) -> dict:
         return cfg
     roles = updates["arena_models"]
     if not isinstance(roles, dict) or set(roles) - {"black", "red"}:
-        raise ValueError("仅支持红方与黑方模型配置。")
+        raise ValueError("仅支持蓝队与红队模型配置。")
     for role, patch in roles.items():
-        label = "黑方" if role == "black" else "红方"
+        label = "红队" if role == "black" else "蓝队"
         if not isinstance(patch, dict) or set(patch) - {"inherit_main", "base_url", "api_key", "model", "max_tokens", "clear_api_key"}:
             raise ValueError(label + "模型配置格式不正确。")
         previous = cfg.setdefault("arena_models", {}).get(role, {})

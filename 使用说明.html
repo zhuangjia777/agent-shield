@@ -613,7 +613,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 })();
 </script></head><body class="guide-page"><header class="topbar"><div class="brand">Agent<span class="brand-shield">Shield</span><small>使用说明 · 2026-09-26</small></div><a class="btn outline small" href="http://127.0.0.1:8787/">打开应用 ↗</a></header><div class="guide-layout"><aside><small>CONTENTS / 目录</small><a href="#section-1">1. 先选择你要做的事</a><a href="#section-2">2. 启动与关闭</a><a href="#section-3">3. 配置私有模型</a><a href="#section-4">4. 使用左右分屏攻防演练</a><a href="#section-5">5. 使用 NVIDIA Skill 安全审查</a><a href="#section-6">6. 读取、导出与分享报告</a><a href="#section-7">7. 专业用户：审查自己的 Skill</a><a href="#section-8">8. 本机体检与智能体助手</a><a href="#section-9">9. 常见问题</a><a href="#section-10">10. 演示顺序与当前能力范围</a></aside><main class="guide-main"><h1>AgentShield 使用说明</h1>
 <p>适用版本：2026-09-26 当前本地实现。建议普通用户先阅读第 1–5 节，开发者与安全人员继续阅读第 6–10 节。</p>
-<p>AgentShield 提供 Agent Skill 安全审查、六种红黑攻防仿真，以及本机系统与网络体检。场景涵盖公共 Wi-Fi、恶意 Skill、办公内网、身份会话、Web/API 和依赖供应链。黑方代表黑客，红方代表白帽。当前可使用已配置的私有 Qwen 模型；使用这些功能不需要先准备 DGX Spark。</p>
+<p>AgentShield 提供 Agent Skill 安全审查、六种红蓝攻防仿真，以及本机系统与网络体检。场景涵盖公共 Wi-Fi、恶意 Skill、办公内网、身份会话、Web/API 和依赖供应链。红队扮演攻击方（黑客视角），蓝队扮演防守方（白帽视角）。当前可使用已配置的私有 Qwen 模型；使用这些功能不需要先准备 DGX Spark。</p>
 <h2 id="section-1">1. 先选择你要做的事</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -633,7 +633,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 </tr>
 <tr>
 <td>看懂公共 Wi-Fi 下的攻击与防护</td>
-<td><a href="http://127.0.0.1:8787/arena">红黑攻防演练</a></td>
+<td><a href="http://127.0.0.1:8787/arena">红蓝攻防演练</a></td>
 <td>规则演示不需要；智能体与复盘需要</td>
 <td>在虚拟场景中推演、展示合成事件，不发送攻击报文</td>
 </tr>
@@ -669,7 +669,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 </tr>
 </tbody>
 </table></div>
-<p><strong>首次体验推荐：先运行一次红黑演练，再做一次 NVIDIA 静态审查。</strong> 如果只是演示公共 Wi-Fi 场景，使用「红黑攻防演练」即可；「体检本机」涉及当前真实网络，应在自己管理或已获授权的网络中使用。</p>
+<p><strong>首次体验推荐：先运行一次红蓝演练，再做一次 NVIDIA 静态审查。</strong> 如果只是演示公共 Wi-Fi 场景，使用「红蓝攻防演练」即可；「体检本机」涉及当前真实网络，应在自己管理或已获授权的网络中使用。</p>
 <h2 id="section-2">2. 启动与关闭</h2>
 <p>如果页面已经能打开，无需再次启动服务。否则在终端执行：</p>
 <pre><code class="language-sh">cd &quot;$HOME/myProjects/agent-shield&quot;
@@ -746,7 +746,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <td>明确显示失败或覆盖缺口；不会用模板冒充语义分析成功</td>
 </tr>
 <tr>
-<td>演练「私有模型 · 红黑复盘」</td>
+<td>演练「私有模型 · 红蓝复盘」</td>
 <td>提示复盘未完成，已生成的规则演练结果保留</td>
 </tr>
 <tr>
@@ -756,20 +756,20 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 </tbody>
 </table></div>
 <p>高级用户注意：通用解释客户端支持 <code>OPENAI_*</code>、<code>OLLAMA_*</code> 环境变量覆盖；NVIDIA 子进程适配器读取项目配置并剥离继承的提供方配置。遇到不同入口调用了不同模型，先检查启动终端中的相关环境变量。</p>
-<h3>红黑双方使用不同模型</h3>
-<p>打开顶部「设置」，主模型下方有黑方与红方两组设置。默认勾选「沿用主模型」；取消后可单独填写 API 地址、模型名称、密钥和 max_tokens。保存后再点对应的测试按钮。空密钥输入会保留该角色原先的密钥；换接口时需重新填写密钥，或勾选清除密钥用于免密接口。独立配置不会继承主模型密钥，也不会在失败时切换到其他模型。</p>
+<h3>红蓝双方使用不同模型</h3>
+<p>打开顶部「设置」，主模型下方有红队与蓝队两组设置。默认勾选「沿用主模型」；取消后可单独填写 API 地址、模型名称、密钥和 max_tokens。保存后再点对应的测试按钮。空密钥输入会保留该角色原先的密钥；换接口时需重新填写密钥，或勾选清除密钥用于免密接口。独立配置不会继承主模型密钥，也不会在失败时切换到其他模型。</p>
 <p>双方配置用于智能体行动和规则演示后的文字复盘，智能体模式要求模型支持 OpenAI 兼容的 tools 工具调用。它们默认继承主模型的 API 配置，不继承 Ollama 兜底。</p>
 <h2 id="section-4">4. 使用左右分屏攻防演练</h2>
 <h3>4.1 完成第一轮</h3>
 <ol>
-<li>打开 <a href="http://127.0.0.1:8787/arena">红黑攻防演练</a>，在「演练场景」中选择「公共 Wi-Fi 同网攻防」。</li>
+<li>打开 <a href="http://127.0.0.1:8787/arena">红蓝攻防演练</a>，在「演练场景」中选择「公共 Wi-Fi 同网攻防」。</li>
 <li>展开「场景防护设置」，选择「日常配置」。也可以先保留默认设置。</li>
 <li>点击「开始实时演练」。页面会进入演练工作区，锁定本轮配置。</li>
-<li><strong>左侧黑方</strong>显示同网观察、路径尝试和四个攻击目标的结果；<strong>右侧红方</strong>显示对应监测、虚拟加固和正常业务检查。</li>
+<li><strong>左侧红队</strong>显示同网观察、路径尝试和四个攻击目标的结果；<strong>右侧蓝队</strong>显示对应监测、虚拟加固和正常业务检查。</li>
 <li>在「运行方式」选择智能体或规则演示。智能体会依次显示模型决策与工具结果；规则演示按初始对攻、加固和复测顺序展示。</li>
 <li>出现「演练完成」后，使用「初始对攻」「修复后复测」切换记录，比较同一目标的变化。</li>
 </ol>
-<p>默认选择「红黑智能体」：模型分别观察环境、选择本方工具、读取结果并继续行动，每方最多 4 次决策。黑方不能改防护，红方不能调用攻击工具；双方不共享内部对话。左侧显示黑方选择，右侧显示红方响应，易读视图给出操作摘要，专业视图保留参数和工具结果。模型连接失败会显示未完成，不改用固定流程代替。</p>
+<p>默认选择「红蓝智能体」：模型分别观察环境、选择本方工具、读取结果并继续行动，每方最多 4 次决策。红队不能改防护，蓝队不能调用攻击工具；双方不共享内部对话。左侧显示红队选择，右侧显示蓝队响应，易读视图给出操作摘要，专业视图保留参数和工具结果。模型连接失败会显示未完成，不改用固定流程代替。</p>
 <p>若选择「规则演示」，系统先计算固定流程，再逐条播放。两种模式都只操作合成环境，不发送攻击报文。上方前后指标是裁判检查所有预设目标的结果，不是模型实际尝试的成功率。</p>
 <h3>4.2 三种配置会看到什么</h3>
 <p>下表是选择「规则演示」时，公共 Wi-Fi 场景当前规则版本的预期结果，目标总数固定为 4：</p>
@@ -777,8 +777,8 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <thead>
 <tr>
 <th>配置</th>
-<th style="text-align:right">初始黑方达成目标</th>
-<th style="text-align:right">红方修复后达成目标</th>
+<th style="text-align:right">初始红队达成目标</th>
+<th style="text-align:right">蓝队修复后达成目标</th>
 <th style="text-align:right">修复后业务检查</th>
 </tr>
 </thead>
@@ -839,33 +839,33 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <td>拒绝向未核验域名提交演示账号</td>
 </tr>
 <tr>
-<td>开启红方监测</td>
+<td>开启蓝队监测</td>
 <td>记录尝试并告警；开启监测本身不会阻断攻击</td>
 </tr>
 </tbody>
 </table></div>
-<p>这些开关只影响虚拟场景，不会修改电脑、路由器或热点的真实设置。红方修复阶段也是虚拟策略变更。</p>
+<p>这些开关只影响虚拟场景，不会修改电脑、路由器或热点的真实设置。蓝队修复阶段也是虚拟策略变更。</p>
 <h3>4.4 看进度、停下来与查看证据</h3>
 <ul>
 <li><strong>跟随最新事件</strong>：开启时两侧自动滚动到新记录；关闭后可以停留阅读旧事件。</li>
 <li><strong>停止演练</strong>：中止当前事件流；智能体正在进行的模型请求返回或超时后结束，再停止后续动作。保留已收到的记录；本轮标为未完成，完整导出与模型复盘不可用。再次点击开始会建立新一轮展示。</li>
 <li><strong>阅读深度 → 易读</strong>：只显示行为、影响与结果。</li>
-<li><strong>阅读深度 → 专业证据</strong>：额外显示判定字段和证据 JSON。右侧记录中的“对应黑方”指出同一阶段内的关联事件。</li>
+<li><strong>阅读深度 → 专业证据</strong>：额外显示判定字段和证据 JSON。右侧记录中的“对应红队”指出同一阶段内的关联事件。</li>
 <li><strong>专业视图 · 判定规则与证据 JSON</strong>：运行中显示已收到事件，完成后显示完整结果。</li>
-<li><strong>私有模型 · 红黑复盘</strong>：仅规则演示完成后可用，分别请求模型解释黑方和红方行为。智能体模式已经逐步给出行动目的和工具结果。模型解读不修改胜负与计数。</li>
+<li><strong>私有模型 · 红蓝复盘</strong>：仅规则演示完成后可用，分别请求模型解释红队和蓝队行为。智能体模式已经逐步给出行动目的和工具结果。模型解读不修改胜负与计数。</li>
 <li><strong>导出完整证据 JSON</strong>：把本轮结果下载到浏览器下载目录；若本轮已完成模型复盘，也会包含该复盘文本。</li>
 </ul>
 <p>修改场景设置会清除页面中的上一轮结果；需要留档时先导出。演练结果主要保存在当前页面，刷新页面前也应先导出。</p>
 <p>当前版本通过手动阅读深度切换与展开证据适配不同用户，尚未实现经过验证的“自动识别用户专业程度”。</p>
 <h3>4.5 恶意 Skill / 提示注入</h3>
 <p>在「演练场景」中选择「恶意 Skill / 提示注入」，或直接打开 <a href="http://127.0.0.1:8787/arena?scenario=malicious_skill">Skill 攻防场景</a>。页面会替换拓扑、策略开关和场景前提；运行中不能切换场景。切换会清空当前页面结果，先导出需要保留的记录。</p>
-<p>黑方四个预设目标分别是：越权读取工作区外的演示凭据、把已取得的演示凭据外传、诱导高权限工具动作、篡改受保护的最终报告。红方检查同一请求在修复前后的策略结果，并检查正常文档整理和报告发布。</p>
+<p>红队四个预设目标分别是：越权读取工作区外的演示凭据、把已取得的演示凭据外传、诱导高权限工具动作、篡改受保护的最终报告。蓝队检查同一请求在修复前后的策略结果，并检查正常文档整理和报告发布。</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>配置</th>
-<th style="text-align:right">初始黑方达成目标</th>
-<th style="text-align:right">修复后黑方达成目标</th>
+<th style="text-align:right">初始红队达成目标</th>
+<th style="text-align:right">修复后红队达成目标</th>
 <th style="text-align:right">修复后业务检查</th>
 </tr>
 </thead>
@@ -899,8 +899,8 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <thead>
 <tr>
 <th>场景入口</th>
-<th>黑方尝试</th>
-<th>红方重点</th>
+<th>红队尝试</th>
+<th>蓝队重点</th>
 <th>日常配置：初始 → 修复后</th>
 </tr>
 </thead>
@@ -1136,7 +1136,7 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <td>这是未完成的一轮；重新开始并等待出现「演练完成」</td>
 </tr>
 <tr>
-<td>攻击被阻断却仍有红方告警</td>
+<td>攻击被阻断却仍有蓝队告警</td>
 <td>监测记录的是尝试，告警不等于攻击成功；也不等于告警本身完成阻断</td>
 </tr>
 <tr>
@@ -1162,15 +1162,15 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 <p>推荐的演示顺序：</p>
 <ol>
 <li>用薄弱配置展示左右分屏，观察 4 个攻击目标。</li>
-<li>看红方虚拟加固及同场景复测，确认正常业务仍可用。</li>
+<li>看蓝队虚拟加固及同场景复测，确认正常业务仍可用。</li>
 <li>展开专业证据，说明每个结果有对应规则与合成事件。</li>
 <li>运行一次 NVIDIA 静态审查，展示官方原始 JSON、版本和覆盖范围。</li>
-<li>私有模型可用时展示语义分析或红黑复盘，说明模型与规则各自负责什么。</li>
+<li>私有模型可用时展示语义分析或红蓝复盘，说明模型与规则各自负责什么。</li>
 </ol>
 <h3>10.3 已实现能力与维护验证</h3>
 <p>NVIDIA SkillSpector 2.12.0 已运行接入。OMS 发布者验签已集成，严格校验内容与信任证书；OpenShell 已提供限定工具与策略适配，真实运行还需要隔离网关；SkillEvaluator Tier 3 已提供同模型对照任务与官方运行入口，完整效果结论要以实际实验为准。DGX Spark 实机部署仍待完成。</p>
 <p>命令和安装方法见项目 <code>09_integrations/README.md</code>。这三个流程的来源、权限和效果结论分开记录。</p>
-<p>当前红黑演练不包含真实 Wi-Fi 破解、中间人攻击执行或自主漏洞利用。自研 <code>10_skills/agentshield-audit</code> 是依赖本项目的 Skill 草稿；语法验证通过不等于独立分发、签名验证或完整技能评测通过。</p>
+<p>当前红蓝演练不包含真实 Wi-Fi 破解、中间人攻击执行或自主漏洞利用。自研 <code>10_skills/agentshield-audit</code> 是依赖本项目的 Skill 草稿；语法验证通过不等于独立分发、签名验证或完整技能评测通过。</p>
 <p>维护者复查时可运行：</p>
 <pre><code class="language-sh">.venv/bin/python tests/arena_simulation.py
 .venv/bin/python tests/skill_arena.py
