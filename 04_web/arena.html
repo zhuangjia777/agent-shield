@@ -24,6 +24,19 @@
       <p class="note" id="lab-scenario-note" style="margin-top:6px">Agent 根据当前场景逐步规划操作，经你确认后执行，并依据工具返回与靶机记录解释结果。需要本机 Docker 和已配置的模型。</p>
     </div>
   </div>
+  <details id="lab-console" class="details-card" open>
+    <summary>实时控制台 · 只读日志</summary>
+    <div class="run-actions" style="margin:10px 0;flex-wrap:wrap">
+      <label for="lab-log-source">日志来源</label>
+      <select id="lab-log-source"><option value="waf">WAF 日志</option><option value="target">靶机日志</option><option value="agent">Agent 攻击命令与输出</option></select>
+      <button id="lab-log-pause" class="btn outline small" aria-pressed="false">暂停刷新</button>
+      <button id="lab-log-copy" class="btn outline small">复制日志</button>
+      <label><input type="checkbox" id="lab-log-follow" checked>自动滚动</label>
+    </div>
+    <p class="note">每 2 秒刷新最近日志；暂停只影响显示。攻击输出在命令结束后出现，保留历史记录且可能截断。此处不能输入或执行命令。</p>
+    <pre id="lab-log-output" tabindex="0" aria-label="Docker 控制台日志" style="height:280px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#111820;color:#d9e4ec;padding:14px;border-radius:8px">正在读取日志…</pre>
+    <p id="lab-log-status" class="note" role="status" aria-live="polite"></p>
+  </details>
 </section>
 <div id="virtual-arena"><details class="details-card"><summary>本轮攻击目标与前置条件</summary><p class="note" id="scenario-focus"></p><ol id="case-list"></ol></details>
 <div id="skill-workflow" class="details-card hidden"><b>从 Skill 审查到攻防推演</b><p class="note">先用 NVIDIA 引擎审查内置样本，再观察下方四个合成请求的权限边界，最后对照修复和正常业务。审查报告与演练证据分别保留，扫描线索不会自动判定攻击成功。</p><a class="btn outline small" href="/nvidia?sample=vulnerable-skill">打开 NVIDIA 样本审查 ↗</a></div>
@@ -46,4 +59,4 @@
 <footer>AgentShield / 红蓝智能体与规则演练 · 上方推演场景只操作虚拟环境；Docker 实战演练发送真实报文，但被隔离网限制在本机容器内。OpenShell 文件与服务执行需另行配置隔离网关。</footer>
 <div id="agent-host"></div><div id="modal-host"></div>
 <script src="/app.js"></script>
-<script src="/arena.js"></script></body></html>
+<script src="/arena.js"></script><script src="/lab-console.js"></script></body></html>

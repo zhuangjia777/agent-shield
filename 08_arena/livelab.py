@@ -80,6 +80,39 @@ def status() -> dict:
             "target_url": TARGET_HTTP, "waf_url": WAF_HTTP}
 
 
+def console_logs(source: str) -> dict:
+    """Read a bounded snapshot from fixed range sources; never execute user input."""
+    if source not in ("waf", "target", "agent"):
+        return {"ok": False, "msg": "未知日志来源。"}
+    if source != "agent":
+        container = BLUE_NAME if source == "waf" else TARGET_NAME
+        code, out = _sh(["docker", "logs", "--timestamps", "--tail", "200", container], timeout=8)
+        if code:
+            return {"ok": False, "msg": "无法读取容器日志，请检查 Docker 和演练场状态。", "text": out[-2000:]}
+        return {"ok": True, "source": source, "text": out[-65536:]}
+    try:
+        with open(LOGDIR / "events.jsonl", "rb") as f:
+            f.seek(0, 2)
+            offset = max(0, f.tell() - 65536)
+            f.seek(offset)
+            if offset:
+                f.readline()  # Discard a potentially incomplete first record.
+            lines = f.read().decode("utf-8", errors="replace").splitlines()
+    except FileNotFoundError:
+        return {"ok": True, "source": source, "text": ""}
+    chunks = []
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue  # A writer may still be appending the last record.
+        if not isinstance(event, dict) or event.get("evt") != "red_exec":
+            continue
+        chunks.append(f"[{event.get('at', '')}] $ {event.get('cmd', '')}\n"
+                      f"{event.get('out', '')}\n[exit={event.get('exit')} · {event.get('secs')}s]")
+    return {"ok": True, "source": source, "text": "\n\n".join(chunks)[-65536:]}
+
+
 def _isolation_check() -> tuple[bool, str]:
     """实测红队容器是否真上不了网。任何一条探测成功 = 隔离失效 = 失败。"""
     probes = [
