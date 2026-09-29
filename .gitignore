@@ -22,3 +22,6 @@ reports/
 .venv-evaluator/
 logs/arena_live/
 08_arena/red_image/
+
+# Local video production sources and intermediate renders
+/docs/videos/2026-09-29/
