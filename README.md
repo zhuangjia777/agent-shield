@@ -2,13 +2,15 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
+![AgentShield](docs/assets/readme-cover.svg)
+
 **An AI security agent that actually launches the attacks itself.** It starts by auditing and scoring your machine for privacy and vulnerabilities, then moves the red-vs-blue duel into a real Docker-isolated network: a Kali attacker box sends real packets, the WAF really blocks and really allows, and the outcome is judged by the target's own records. Runs 100% locally, MIT licensed.
 
 ## Video: live red–blue drill & Agent design
 
-[![Video: live red–blue drill & Agent design](docs/assets/agent-shield-live-agent-v2.jpg)](docs/assets/agent-shield-live-agent-v2.mp4)
+https://github.com/user-attachments/assets/7d859898-fcee-42a4-bb74-403a42390e1d
 
-**[▶ Watch the full video (2:42, Chinese narration and subtitles)](docs/assets/agent-shield-live-agent-v2.mp4)** · [Subtitle file](docs/assets/agent-shield-live-agent-v2.zh-CN.srt)
+**[Download video (2:42, Chinese narration and subtitles)](docs/assets/agent-shield-live-agent-v2.mp4)** · [Subtitle file](docs/assets/agent-shield-live-agent-v2.zh-CN.srt)
 
 A replay of an existing Docker drill: the same attack is blocked with the WAF enabled, succeeds with protection disabled, and is blocked again after protection is restored. The walkthrough explains the ReAct tool loop, human confirmation, isolation checks, and target-based judging. In live mode, one Agent coordinates the red-team tools and blue-team WAF.
 

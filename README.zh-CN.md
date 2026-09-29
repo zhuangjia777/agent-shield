@@ -2,13 +2,15 @@
 
 [English](README.md) | **简体中文**
 
+![AgentShield](docs/assets/readme-cover.svg)
+
 **一个会自己动手攻击的 AI 安全智能体。** 先在本机做隐私/漏洞体检评分，再把攻防对抗搬进 Docker 隔离网真打一遍：Kali 攻击机发出真实报文，WAF 真拦真放，战果由靶机自己的记录说话。全程本地运行，MIT 开源。
 
 ## 视频：红蓝实战与 Agent 设计
 
-[![视频：红蓝实战与 Agent 设计](docs/assets/agent-shield-live-agent-v2.jpg)](docs/assets/agent-shield-live-agent-v2.mp4)
+https://github.com/user-attachments/assets/7d859898-fcee-42a4-bb74-403a42390e1d
 
-**[▶ 观看完整视频（2 分 42 秒，中文配音＋字幕）](docs/assets/agent-shield-live-agent-v2.mp4)** · [字幕文件](docs/assets/agent-shield-live-agent-v2.zh-CN.srt)
+**[下载视频（2 分 42 秒，中文配音＋字幕）](docs/assets/agent-shield-live-agent-v2.mp4)** · [字幕文件](docs/assets/agent-shield-live-agent-v2.zh-CN.srt)
 
 以已有 Docker 实测回放为主线：同一条攻击在 WAF 开启时被拦截，关闭防护后命中，恢复防护后再次被拦截。视频介绍 ReAct 工具决策、人工确认、隔离校验和靶机独立裁判。当前实战由一个 Agent 编排红队工具与蓝队 WAF。
 
