@@ -97,6 +97,91 @@ test -f config.json || cp config.json.example config.json  # 已有配置不覆�
 
 也可以启动后在网页的“设置”中填写。规则检查和固定流程演示不需要模型；红蓝智能体、AI 解释和文字复盘需要连接模型服务。红蓝双方默认沿用主模型，也可在设置中各自配置接口、模型及密钥。`config.json` 已被 Git 忽略，不要将密钥写入示例配置。
 
+### DGX Spark 本地模型：Qwen3.8-27B / Qwen3.8-Flash-Next
+
+可让 **DGX Spark 负责模型推理，AgentShield 通过本地兼容 OpenAI 的接口调用**，用于 Agent 引导、红蓝双方决策和报告解释。模型服务与 Docker 演练场是两个独立进程；停止演练不会卸载模型。以下是部署参考，**尚未完成本项目的 DGX Spark 实机验收，不代表已测性能或兼容性保证**。
+
+[NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) 配备 128 GB 统一内存，系统、模型权重、KV cache 和 Docker 容器共享这部分内存。建议先用 27B 完成接入，再尝试 Flash-Next；一次只加载一个模型。
+
+| 模型 | 本地起步方案 | 选择说明 |
+| --- | --- | --- |
+| [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) | [Unsloth GGUF](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF) `UD-Q4_K_M` | 27B 稠密模型，作为首次部署方案，为其他服务留出内存 |
+| [Qwen3.8-Flash-Next](https://huggingface.co/Qwen/Qwen3.8-Flash-Next) | [Unsloth GGUF](https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF) `UD-Q3_K_XL`，实验选项 | 125B MoE、激活 6B，另含 51B n-gram embedding 与 4B MTP；不能按“6B 模型”估算内存。该量化文件约 90 GB，加载后的总内存还会增加 |
+
+GGUF 是 Unsloth 发布的第三方量化版本，非 Qwen 原始权重。Flash-Next 的 `UD-Q4_K_XL` 文件约 111 GB，在单台 Spark 上留给系统与运行时的余量很小，因此这里从较低量化和 8K 上下文开始。实际容量、质量与速度需在目标机器确认，模型名称中的 Flash 不等于本项目实测更快。
+
+**1. 在 Spark 上编译 CUDA 版 llama.cpp。** 使用 Spark 自带或已正确配置的 NVIDIA 驱动与 CUDA Toolkit，先确认 `nvidia-smi`、`nvcc --version` 正常。下列命令在 Spark 的 Linux 终端执行；需要联网下载源码和模型。编译方法来自 [llama.cpp 构建文档](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md)。
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git cmake build-essential libssl-dev libcurl4-openssl-dev
+mkdir -p "$HOME/llm"
+cd "$HOME/llm"
+git clone https://github.com/ggml-org/llama.cpp.git
+cd llama.cpp
+cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release -j 4 --target llama-server
+# 记录版本，便于复现；新模型需要支持其架构的近期版本
+git rev-parse HEAD
+```
+
+**2. 启动一个模型。** 以下两段二选一；从上面的 `llama.cpp` 目录运行。首次启动自动下载量化权重，等待日志确认加载完成。参数含义见 [llama-server 文档](https://github.com/ggml-org/llama.cpp/tree/master/tools/server)。
+
+```bash
+# 方案 A：Qwen3.8-27B
+./build/bin/llama-server \
+  -hf unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_M \
+  --alias agent-shield-local --host 127.0.0.1 --port 8000 \
+  --api-key spark-local -ngl 99 -c 16384 -np 1 \
+  --jinja --chat-template-kwargs '{"enable_thinking":false}'
+```
+
+```bash
+# 方案 B：Qwen3.8-Flash-Next（先 Ctrl+C 停止方案 A）
+./build/bin/llama-server \
+  -hf unsloth/Qwen3.8-Flash-Next-GGUF:UD-Q3_K_XL \
+  --alias agent-shield-local --host 127.0.0.1 --port 8000 \
+  --api-key spark-local -ngl 99 -c 8192 -np 1 \
+  --jinja --chat-template-kwargs '{"enable_thinking":false}'
+```
+
+这里使用非思考模式作为接入起点，避免有限的输出额度被思考内容占满；这不是模型能力或最优采样配置的评测。若出现未知模型架构或模板错误，更新到支持该模型的 llama.cpp 版本后重新编译。若内存不足，先缩短上下文或换回 27B；Spark 的 CPU/GPU 共享内存，CPU offload 不会增加机器的物理内存。
+
+**3. 验证接口并接入 AgentShield。** 在另一个 Spark 终端执行：
+
+```bash
+curl --fail http://127.0.0.1:8000/v1/models \
+  -H 'Authorization: Bearer spark-local'
+curl --fail http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Authorization: Bearer spark-local' -H 'Content-Type: application/json' \
+  -d '{"model":"agent-shield-local","messages":[{"role":"user","content":"请用一句话介绍你自己。"}],"max_tokens":256}'
+```
+
+确认返回非空 `choices[0].message.content` 后，在 AgentShield 网页“设置”中填写，或合并以下内容到已有 `config.json` 的 `cloud` 字段（保留其他配置）：
+
+```json
+{
+  "cloud": {
+    "base_url": "http://127.0.0.1:8000/v1",
+    "api_key": "spark-local",
+    "model": "agent-shield-local",
+    "max_tokens": 4096
+  }
+}
+```
+
+`cloud` 是项目里兼容 OpenAI 接口的配置名称，这里的推理仍在 Spark 本地执行。**API key 不要留空**：当前客户端以非空 key 启用该调用路径；示例 key 与上面的服务端参数一致，仅用于回环地址示例。若设置了 `OPENAI_BASE_URL`、`OPENAI_API_KEY`、`OPENAI_MODEL`，它们会覆盖主模型的文件配置。红蓝双方选择“沿用主模型”，共享一个模型服务，但保留各自的对话上下文。
+
+如果 AgentShield 运行在你的 Mac/PC，模型运行在 Spark，在 Mac/PC 上保持以下 SSH 隧道运行（替换用户名和主机名）：
+
+```bash
+ssh -N -L 8000:127.0.0.1:8000 spark-user@spark-host
+```
+
+AgentShield 仍填写 `http://127.0.0.1:8000/v1`，不需要把模型端口开放到公网。按前面的快速开始启动 AgentShield，再依次测试设置中的模型连接、Agent 问答和红蓝演练。Spark 只提供远程推理时，系统体检及 Docker 工具仍在运行 AgentShield 的那台主机执行；本机体检目前主要适配 macOS。
+
+退出：模型终端 `Ctrl+C` 释放模型占用；SSH 隧道终端 `Ctrl+C` 关闭转发；Docker 演练使用页面的“停止并清理演练场”。实机验收时记录 llama.cpp commit、量化文件版本、上下文长度、首字延迟、生成速度及峰值内存。
+
 ### 3. 启动网页
 
 在项目目录运行：

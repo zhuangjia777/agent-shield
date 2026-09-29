@@ -97,6 +97,91 @@ Edit the three fields under `cloud` in `config.json`:
 
 You can also fill this in via the web UI's Settings after startup. Rule scans and scripted demos need no model; red/blue agents, AI explanations and narrative reports do. Both arena sides inherit the main model by default, and each can be configured with its own endpoint, model and key in Settings. `config.json` is Git-ignored — never put real keys in the example config.
 
+### Local inference on DGX Spark: Qwen3.8-27B / Qwen3.8-Flash-Next
+
+Run inference on **DGX Spark and connect AgentShield through a local OpenAI-compatible endpoint** for agent guidance, red/blue decisions and report explanations. The model server and Docker range are separate processes; stopping a range does not unload the model. This is a deployment reference: **AgentShield has not yet been validated on physical DGX Spark hardware, and no performance or compatibility result is claimed**.
+
+[NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) has 128 GB of unified memory shared by the OS, weights, KV cache and Docker containers. Start with 27B, then try Flash-Next; load only one model at a time.
+
+| Model | Starting configuration | Selection notes |
+| --- | --- | --- |
+| [Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) | [Unsloth GGUF](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF) `UD-Q4_K_M` | A dense 27B model; the initial option to leave room for other services |
+| [Qwen3.8-Flash-Next](https://huggingface.co/Qwen/Qwen3.8-Flash-Next) | [Unsloth GGUF](https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF) `UD-Q3_K_XL`, experimental | 125B MoE with 6B active, plus 51B n-gram embeddings and 4B MTP. Do not size it as a 6B model. This quantization is about 90 GB on disk, with additional runtime memory required |
+
+These are third-party Unsloth quantizations, not original Qwen weights. Flash-Next `UD-Q4_K_XL` is about 111 GB on disk, leaving little room on one Spark, so this example starts with a smaller quantization and 8K context. Validate capacity, quality and speed on your hardware; “Flash” is not a measured AgentShield speed claim.
+
+**1. Build llama.cpp with CUDA on Spark.** First check that `nvidia-smi` and `nvcc --version` work with the installed NVIDIA driver and CUDA Toolkit. Run the following in Spark's Linux terminal; downloading source and weights requires network access. See the [llama.cpp build instructions](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md).
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git cmake build-essential libssl-dev libcurl4-openssl-dev
+mkdir -p "$HOME/llm"
+cd "$HOME/llm"
+git clone https://github.com/ggml-org/llama.cpp.git
+cd llama.cpp
+cmake -B build -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release -j 4 --target llama-server
+# Record the revision; use a recent version supporting the model architecture
+git rev-parse HEAD
+```
+
+**2. Start one model.** Choose one command below, from the `llama.cpp` directory. The first launch downloads weights; wait for successful loading. Options are documented in the [llama-server reference](https://github.com/ggml-org/llama.cpp/tree/master/tools/server).
+
+```bash
+# Option A: Qwen3.8-27B
+./build/bin/llama-server \
+  -hf unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_M \
+  --alias agent-shield-local --host 127.0.0.1 --port 8000 \
+  --api-key spark-local -ngl 99 -c 16384 -np 1 \
+  --jinja --chat-template-kwargs '{"enable_thinking":false}'
+```
+
+```bash
+# Option B: Qwen3.8-Flash-Next (stop option A with Ctrl+C first)
+./build/bin/llama-server \
+  -hf unsloth/Qwen3.8-Flash-Next-GGUF:UD-Q3_K_XL \
+  --alias agent-shield-local --host 127.0.0.1 --port 8000 \
+  --api-key spark-local -ngl 99 -c 8192 -np 1 \
+  --jinja --chat-template-kwargs '{"enable_thinking":false}'
+```
+
+Non-thinking mode is an integration starting point so reasoning does not consume the limited output budget; this is not an optimal sampling recipe or capability benchmark. For unknown architecture/template errors, rebuild a llama.cpp version supporting the model. If memory runs out, reduce context or return to 27B. CPU offloading does not add physical memory on Spark's shared-memory system.
+
+**3. Check the endpoint and connect AgentShield.** In another Spark terminal:
+
+```bash
+curl --fail http://127.0.0.1:8000/v1/models \
+  -H 'Authorization: Bearer spark-local'
+curl --fail http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Authorization: Bearer spark-local' -H 'Content-Type: application/json' \
+  -d '{"model":"agent-shield-local","messages":[{"role":"user","content":"Introduce yourself in one sentence."}],"max_tokens":256}'
+```
+
+Check for nonempty `choices[0].message.content`. Enter the following values in AgentShield Settings, or merge this `cloud` object into your existing `config.json`, keeping other configuration:
+
+```json
+{
+  "cloud": {
+    "base_url": "http://127.0.0.1:8000/v1",
+    "api_key": "spark-local",
+    "model": "agent-shield-local",
+    "max_tokens": 4096
+  }
+}
+```
+
+`cloud` is the project's configuration name for OpenAI-compatible endpoints; inference here remains local to Spark. **Do not leave the key empty**: the current client requires a nonempty key to enable this path. The example key matches the server flag and is for loopback use. `OPENAI_BASE_URL`, `OPENAI_API_KEY` and `OPENAI_MODEL`, when set, override the main model's file configuration. Let both arena roles inherit the main model: they share the server but keep separate conversation contexts.
+
+If AgentShield runs on a Mac/PC and the model runs on Spark, keep this SSH tunnel running on the Mac/PC, replacing the user and hostname:
+
+```bash
+ssh -N -L 8000:127.0.0.1:8000 spark-user@spark-host
+```
+
+Keep AgentShield's URL as `http://127.0.0.1:8000/v1`; the model port need not be public. Start AgentShield using the quick start, then test the model connection in Settings, an agent conversation and a red/blue drill. When Spark only supplies inference, system checks and Docker tools still execute on the AgentShield host. System checks currently primarily target macOS.
+
+To stop: press `Ctrl+C` in the model terminal to release model memory, `Ctrl+C` in the tunnel terminal to close forwarding, and use “Stop and clean up range” for Docker. For hardware validation, record the llama.cpp commit, quantization revision, context length, time to first token, generation speed and peak memory.
+
 ### 3. Start the web UI
 
 In the project directory:
