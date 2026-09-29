@@ -12,14 +12,27 @@
 
 以已有 Docker 实测回放为主线：同一条攻击在 WAF 开启时被拦截，关闭防护后命中，恢复防护后再次被拦截。视频介绍 ReAct 工具决策、人工确认、隔离校验和靶机独立裁判。当前实战由一个 Agent 编排红队工具与蓝队 WAF。
 
-<details>
-<summary>展开无声快速预览</summary>
+## WebUI 界面
+
+![AgentShield WebUI：报告列表、健康分、功能导航和 Agent 入口](docs/assets/webui-overview.png)
+
+## Docker 红蓝实战演练
 
 ![Docker 实战演练实录：SQL 注入被 WAF 拦截、蓝队关闭 WAF 后同一发命中、裁判以靶机记录判定](docs/assets/live-arena-demo.gif)
 
 上面这段是 AgentShield 实战演练的一次真实运行记录（压缩了模型思考等待）：红队容器用 SQL 注入打管理员登录，WAF 开启时 403 拦下、正常业务不受影响；蓝队误关 WAF 后**同一发 payload** 拿到管理员登录凭证；裁判直接读靶机 API 确认 `loginAdminChallenge` 达成——不听模型自评。结束后一键销毁全部容器，命令与输出全程落盘。
 
-</details>
+## 交给 Agent 一步步带我
+
+![真实 WebUI 操作：点击交给 Agent 一步步带我，查看工具反馈，在完整攻击命令前选择确认或取消](docs/assets/agent-guided-demo.gif)
+
+从 Docker 实战入口发起的实际操作：Agent 检查已有演练场、提出命令，收到 `need_confirm` 后展示完整命令并等待用户确认或取消。录制停在确认处，本次录制未执行攻击；模型等待时间已缩短。
+
+## 攻防演练 WebUI：对攻、加固与复测
+
+![攻防演练 WebUI：红蓝事件流、加固、复测和前后指标对比](docs/assets/webui-arena-demo.gif)
+
+此动图展示**固定流程规则沙盘**的红蓝事件流与前后指标，使用合成事件，不发送真实攻击报文；上方 Docker 实战动图展示真实执行。
 
 [使用说明](使用说明.md) · [HTML 版使用说明](使用说明.html) · [安装与启动](#安装与启动)
 

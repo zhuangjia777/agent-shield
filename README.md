@@ -12,14 +12,27 @@
 
 A replay of an existing Docker drill: the same attack is blocked with the WAF enabled, succeeds with protection disabled, and is blocked again after protection is restored. The walkthrough explains the ReAct tool loop, human confirmation, isolation checks, and target-based judging. In live mode, one Agent coordinates the red-team tools and blue-team WAF.
 
-<details>
-<summary>Quick silent preview</summary>
+## WebUI overview
+
+![AgentShield WebUI: report cards, health scores, navigation and Agent entry](docs/assets/webui-overview.png)
+
+## Live Docker drill
 
 ![Live Docker drill recording: a SQL injection blocked by the WAF, the same payload landing after blue team turns the WAF off, and the judge confirming the win from the target's own records](docs/assets/live-arena-demo.gif)
 
 The GIF above is a real run recording from an AgentShield live drill (model thinking pauses compressed): the red-team container attacks an admin login with SQL injection — 403-blocked while the WAF is on, normal traffic unaffected; after blue team mistakenly turns the WAF off, **the very same payload** obtains admin login credentials; the judge reads the target's own API to confirm `loginAdminChallenge` — model self-assessment is not trusted. When the drill ends, one click destroys every container, and all commands and outputs are persisted to disk.
 
-</details>
+## Let the Agent guide me
+
+![Actual WebUI recording: click Let the Agent guide me, inspect tool feedback, then confirm or cancel the proposed attack command](docs/assets/agent-guided-demo.gif)
+
+An actual run through the Docker live-range entry: the Agent checks the existing range, proposes a command, receives `need_confirm`, and asks the user to confirm or cancel. The recording stops at confirmation; no attack was executed for this capture. Model waiting time is shortened.
+
+## Arena WebUI: attack, defense and retest
+
+![Arena WebUI replay: attack events, defensive changes, retesting and before/after metrics](docs/assets/webui-arena-demo.gif)
+
+This clip shows the **fixed-flow rules simulation**, with red/blue event feeds and before/after metrics. It uses synthetic events and sends no real attack packets; the Docker drill above demonstrates real execution.
 
 [User guide (Chinese)](README.zh-CN.md) · [Install & run](#install--run)
 
