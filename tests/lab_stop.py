@@ -27,14 +27,14 @@ class LabStopTests(unittest.TestCase):
                          (1, 'Error: No such network: gone')):
             with patch.object(app.lab_mod, '_sh', return_value=response) as sh, patch.object(app.lab_mod, '_log'):
                 self.assertTrue(app.lab_mod.stop()['ok'])
-                self.assertEqual(sh.call_count, 5)
+                self.assertEqual(sh.call_count, 6)
 
     def test_cleanup_failure_is_reported_and_other_resources_attempted(self):
         with patch.object(app.lab_mod, '_sh', return_value=(1, 'Cannot connect to Docker daemon')) as sh, patch.object(app.lab_mod, '_log'):
             result = app.lab_mod.stop()
             self.assertFalse(result['ok'])
             self.assertIn('Cannot connect', result['msg'])
-            self.assertEqual(sh.call_count, 5)
+            self.assertEqual(sh.call_count, 6)
 
     def test_endpoint_reports_failure(self):
         h = object.__new__(app.Handler)

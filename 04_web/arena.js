@@ -300,7 +300,7 @@ function labSyncScenario(){
   const sel=$('#lab-scenario'); if(!sel) return;
   const key=$('#scenario').value;
   $('#lab-message').textContent='';
-  const id=key==='api_authorization' ? 'bac_enumeration' : key.startsWith('live:') ? key.slice(5) : '';
+  const id=key==='api_authorization' ? 'bac_enumeration' : key==='ops_agent_broker' ? 'ssh_banner_agent' : key.startsWith('live:') ? key.slice(5) : '';
   const spec=labScenarios[id];
   sel.innerHTML=spec ? `<option value="${escapeHTML(id)}">${escapeHTML(spec.name)}</option>` : '<option value="">当前场景暂无 Docker 实战</option>';
   sel.disabled=true;
