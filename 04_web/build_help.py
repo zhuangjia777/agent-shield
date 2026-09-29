@@ -24,6 +24,11 @@ module = ast.parse((ROOT / '04_web' / 'app.py').read_text())
 shared_css = next(ast.literal_eval(node.value) for node in module.body
                   if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'BASE_CSS' for t in node.targets))
 theme_js = (ROOT / '04_web' / 'navigation.js').read_text() + '\n' + (ROOT / '04_web' / 'theme.js').read_text()
+# Inline the bilingual dictionary so the offline guide (file://) switches too.
+# NOTE: separate <script> tags — concatenated IIFEs in ONE tag share a scope and
+# their top-level `const read =` collide (SyntaxError kills the whole block).
+i18n_data = (ROOT / '04_web' / 'i18n.json').read_text()
+i18n_js = (ROOT / '04_web' / 'i18n.js').read_text()
 guide_css = """
 body.guide-page{max-width:1288px}.guide-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:22px;margin-top:22px}
 aside{align-self:start;position:sticky;top:22px}aside small{display:block;color:var(--muted);font:12px ui-monospace,monospace;letter-spacing:1px;margin-bottom:12px}
@@ -35,6 +40,6 @@ aside a{display:block;color:var(--muted);font-size:12px;padding:8px 10px;border:
 @media(max-width:800px){.guide-layout{grid-template-columns:1fr}aside{position:static;display:grid;grid-template-columns:1fr 1fr}aside small{grid-column:1/-1}.guide-main{padding:18px}}
 @media print{.guide-layout{display:block}aside,.topbar{display:none}.guide-main{border:0;padding:0}h2{break-after:avoid}.table-wrap{overflow:visible}tr{break-inside:avoid}table,th,td,code{font-size:12pt}}
 """
-page = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AgentShield 使用说明</title><style>' + shared_css + guide_css + '</style><script>' + theme_js + '</script></head><body class="guide-page"><header class="topbar"><div class="brand">Agent<span class="brand-shield">Shield</span><small>使用说明 · 2026-09-26</small></div><a class="btn outline small" href="http://127.0.0.1:8787/">打开应用 ↗</a></header><div class="guide-layout"><aside><small>CONTENTS / 目录</small>' + nav + '</aside><main class="guide-main">' + body + '<footer>由项目根目录「使用说明.md」生成。浏览器可直接打开此文件，也可使用打印功能另存为 PDF。</footer></main></div></body></html>'
+page = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AgentShield 使用说明</title><style>' + shared_css + guide_css + '</style><script>' + theme_js + '</script><script>window.__AS_I18N__=' + i18n_data + ';</script><script>' + i18n_js + '</script></head><body class="guide-page"><header class="topbar"><div class="brand">Agent<span class="brand-shield">Shield</span><small>使用说明 · 2026-09-26</small></div><a class="btn outline small" href="http://127.0.0.1:8787/">打开应用 ↗</a></header><div class="guide-layout"><aside><small>CONTENTS / 目录</small>' + nav + '</aside><main class="guide-main">' + body + '<footer>由项目根目录「使用说明.md」生成。浏览器可直接打开此文件，也可使用打印功能另存为 PDF。</footer></main></div></body></html>'
 (ROOT / '使用说明.html').write_text(page)
 print('Built 使用说明.html')

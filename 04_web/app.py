@@ -52,7 +52,7 @@ NVIDIA_SCAN_LOCK = threading.Lock()
 
 def nvidia_html():
     return '''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NVIDIA Skill 审查 · AgentShield</title><link rel="stylesheet" href="/style.css"><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
+<title>NVIDIA Skill 审查 · AgentShield</title><link rel="stylesheet" href="/style.css"><script src="/navigation.js"></script><script src="/theme.js"></script><script src="/i18n.js"></script></head><body>
 <div class="topbar"><a class="brand" href="/">Agent<span class="brand-shield">Shield</span></a><a class="btn outline" href="/arena?scenario=malicious_skill"><span class="nav-hl">Skill 攻防演练</span></a></div>
 <h1>NVIDIA Skill 安全审查</h1><p>使用 NVIDIA SkillSpector 的真实扫描结果，验证项目样本中的风险。保留原始报告、版本、输入内容哈希和覆盖边界。</p>
 <div class="card"><label for="sample">选择项目样本</label><select id="sample" style="font:inherit;padding:8px;width:100%">
@@ -496,7 +496,7 @@ def home_html():
 </a>""")
     return f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AgentShield</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
+<title>AgentShield</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script><script src="/i18n.js"></script></head><body>
 <div class="topbar">
   <div class="brand">Agent<span class="brand-shield">Shield</span><small>规则评分 · LLM 解释 · 本地运行</small></div>
   <div class="hbtns">
@@ -519,7 +519,7 @@ def home_html():
 def checkup_html():
     return f"""<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>体检本机 · AgentShield</title>
-<style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body>
+<style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script><script src="/i18n.js"></script></head><body>
 <div class="topbar"><a class="brand" href="/">Agent<span class="brand-shield">Shield</span><small>本机安全体检</small></a><a class="btn outline" href="/">← 返回首页</a></div>
 <nav class="breadcrumbs" aria-label="当前位置"><a href="/">首页</a><span>/</span><span>体检本机</span></nav>
 <h1>体检本机</h1><p class="tip">选择检查范围，生成报告，再查看问题与修复建议。</p>
@@ -578,7 +578,7 @@ def report_html(rid: str):
     findings_json = json.dumps(d.get("findings", []), ensure_ascii=False).replace("</", "<\\/")
     return f"""<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AgentShield · {esc(rid)}</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script></head><body data-nav-section="{section}" data-nav-label="{page_label}">
+<title>AgentShield · {esc(rid)}</title><style>{BASE_CSS}</style><script src="/navigation.js"></script><script src="/theme.js"></script><script src="/i18n.js"></script></head><body data-nav-section="{section}" data-nav-label="{page_label}">
 <div class="topbar">
   <a class="brand" href="/">Agent<span class="brand-shield">Shield</span></a>
   <div class="hbtns"><button class="btn outline" onclick="openSettings()">设置</button>
@@ -814,6 +814,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, (ROOT / "04_web" / "navigation.js").read_text(), "text/javascript; charset=utf-8")
             if path == "/theme.js":
                 return self._send(200, (ROOT / "04_web" / "theme.js").read_text(), "text/javascript; charset=utf-8")
+            if path == "/i18n.js":
+                return self._send(200, (ROOT / "04_web" / "i18n.js").read_text(), "text/javascript; charset=utf-8")
+            if path == "/i18n.json":
+                return self._send(200, (ROOT / "04_web" / "i18n.json").read_text(), "application/json; charset=utf-8")
             if path == "/arena.js":
                 return self._send(200, (ROOT / "04_web" / "arena.js").read_text(), "text/javascript; charset=utf-8")
             if path == "/api/arena/catalog":
