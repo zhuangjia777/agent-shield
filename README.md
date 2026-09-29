@@ -290,6 +290,15 @@ The arena page uses red/blue agents by default: each side has its own context, t
 
 Install, run and output locations: [integration guide](09_integrations/README.md).
 
+## Roadmap
+
+Next steps, roughly in order:
+
+1. **More rule-arena scenarios** — RAG knowledge-base poisoning and container privilege-boundary scenarios, extending the existing declarative scenario framework.
+2. **More live drill scripts** — an nmap reconnaissance script and a sqlmap automation script as named one-click scenarios alongside the current three.
+3. **OpenShell gateway testing** — complete the isolated-execution gateway so dynamic Skill review runs against real sandboxes.
+4. **Adaptive presentation** — automatic recognition of the user's expertise level instead of the current manual depth toggle.
+
 ## Project layout
 
 ```text
