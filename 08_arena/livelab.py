@@ -21,6 +21,11 @@ import subprocess
 import time
 from pathlib import Path
 
+try:
+    from . import red_exec_guard
+except ImportError:  # livelab 也被按脚本/裸模块加载
+    import red_exec_guard
+
 ROOT = Path(__file__).resolve().parent.parent
 LOGDIR = ROOT / "logs" / "arena_live"
 
@@ -268,7 +273,22 @@ def _await_waf_mode(mode: str, timeout: float = 3.0) -> bool:
     return False
 
 
-def stop() -> dict:
+def stop(dry_run: bool = False) -> dict:
+    if dry_run:
+        # 预览模式：列出将被销毁的对象，不动任何东西，供确认时念给用户。
+        present = []
+        code, out = _sh(["docker", "ps", "-a", "--format", "{{.Names}}"], timeout=20)
+        names = set(out.split()) if code == 0 else set()
+        for name in (RED_NAME, BLUE_NAME, TARGET_NAME):
+            if name in names:
+                present.append({"kind": "container", "name": name})
+        code, out = _sh(["docker", "network", "ls", "--format", "{{.Name}}"], timeout=15)
+        net_names = set(out.split()) if code == 0 else set()
+        for name in (NET_ISOLATED, NET_LAN):
+            if name in net_names:
+                present.append({"kind": "network", "name": name})
+        return {"ok": True, "dry_run": True, "will_remove": present,
+                "msg": f"以上 {len(present)} 项将被销毁（含演练日志容器内部分）；宿主 logs/ 目录保留。"}
     errors = []
     # Remove individually: absent resources are harmless on repeated stops.
     for kind, names in (("container", (RED_NAME, BLUE_NAME, TARGET_NAME)),
@@ -284,8 +304,13 @@ def stop() -> dict:
     return {"ok": ok, "msg": "演练场已销毁" if ok else "；".join(errors)}
 
 
-def red_exec(cmd: str) -> dict:
-    """在红队容器内执行一条命令。只允许打白名单靶机；全量落盘。"""
+def red_exec(cmd: str, timeout: int = 120) -> dict:
+    """在红队容器内执行一条命令。只允许打白名单靶机；全量落盘。
+
+    timeout：单条命令墙钟上限（秒，10–300）。长任务（sqlmap 全量跑）
+    建议调低让模型分步跑，超时输出照常落日志便于复盘。
+    """
+    timeout = max(10, min(int(timeout or 120), 300))
     cmd = cmd.strip()
     # 防御：聊天客户端会把粘贴的 URL/路径包成 `@url:`http://...`` / `@file:`path`` 检索语法，模型有时原样抄进命令。
     # 只吃"带反引号壳"的形式，且必须带协议或斜杠开头；绝不碰 curl 的 @file 语义（如 -d @/tmp/p.json）。
@@ -293,6 +318,11 @@ def red_exec(cmd: str) -> dict:
     cmd = cmd.replace("`", "")
     if not cmd:
         return {"ok": False, "msg": "空命令"}
+    # 纵深黑名单：主边界是目标白名单+确认闸+网络隔离，
+    # 这里只挡 docker.sock 逃逸、命名空间注入、反弹 shell、拉脚本执行这类越出演练场意图的动作。
+    why = red_exec_guard.check(cmd)
+    if why:
+        return {"ok": False, "msg": f"命令被纵深黑名单拒绝：{why}"}
     # 目标白名单：出现的 URL/主机必须是靶机或本机回环（容器内），禁止任意外部主机
     hosts = set(re.findall(r"(?:https?://|/dev/tcp/)([A-Za-z0-9_.\-]+)", cmd))
     hosts |= set(re.findall(r"\b(?:nmap|curl|wget|sqlmap|hydra|nc|ncat)\b[^|;&]*?\s+([a-zA-Z0-9][\w.\-]*\.[a-z]{2,}|\d{1,3}(?:\.\d{1,3}){3})", cmd))
@@ -319,7 +349,7 @@ def red_exec(cmd: str) -> dict:
     if not st["running"]:
         return {"ok": False, "msg": "演练场未启动，先 start"}
     t0 = time.time()
-    code, out = _sh(["docker", "exec", RED_NAME, "bash", "-c", cmd], timeout=120)
+    code, out = _sh(["docker", "exec", RED_NAME, "bash", "-c", cmd], timeout=timeout)
     _log({"at": time.strftime("%F %T"), "evt": "red_exec", "cmd": cmd,
           "exit": code, "out": out[:2000], "secs": round(time.time() - t0, 1)})
     return {"ok": code == 0, "exit": code, "out": out[:4000]}
