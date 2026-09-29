@@ -106,7 +106,7 @@ test -f config.json || cp config.json.example config.json  # 已有配置不覆�
 
 [NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) 配备 128 GB 统一内存，系统、模型权重、KV cache 和 Docker 容器共享这部分内存。建议先用 27B 完成接入，再尝试 Flash-Next；一次只加载一个模型。
 
-**平替机型——华硕 ASUS Ascent GX10**：同为 NVIDIA GB10 Grace Blackwell 平台的 OEM 整机——同款 20 核 Arm CPU（10× Cortex-X925 + 10× Cortex-A725）、1 PFLOP FP4 张量性能、128 GB LPDDR5x 统一内存，出厂即 NVIDIA DGX OS（[华硕规格页](https://www.asus.com/networking-iot-servers/desktop-ai-supercomputer/ultra-small-ai-supercomputers/asus-ascent-gx10/techspec/)）。本节所有步骤对 GX10 原样适用，差别只在存储（1 TB / 2 TB / 4 TB 可选）和接口细节。同样声明：本项目未在 GX10 实机上做过验收。
+**平替机型——华硕 ASUS Ascent GX10**：同为 NVIDIA GB10 Grace Blackwell 平台的 OEM 整机——同款 20 核 Arm CPU（10× Cortex-X925 + 10× Cortex-A725）、1 PFLOP FP4 张量性能、128 GB LPDDR5x 统一内存，出厂即 NVIDIA DGX OS（[华硕规格页](https://www.asus.com/networking-iot-servers/desktop-ai-supercomputer/ultra-small-ai-supercomputers/asus-ascent-gx10/techspec/)）。本节所有步骤对 GX10 原样适用，差别只在存储（1 TB / 2 TB / 4 TB 可选）和接口细节。
 
 | 模型 | 本地起步方案 | 选择说明 |
 | --- | --- | --- |
@@ -288,7 +288,7 @@ NVIDIA SkillSpector 的风险分越高，表示风险越大，与本地健康分
 - **OpenShell 执行适配器**已提供限定工具、严格文件/网络策略及操作日志。真实隔离运行需要可用网关，当前尚未完成网关实测。
 - **SkillEvaluator Tier 3**已接入官方工具和四组有无 Skill 对照任务。数据格式校验通过，效果结论须以两组完整实验结果为准；运行失败不生成提升分数。
 
-安装、运行与结果位置见 [集成使用说明](09_integrations/README.md)。DGX Spark 实机迁移仍待完成；当前可使用已有私有模型接口。
+安装、运行与结果位置见 [集成使用说明](09_integrations/README.md)。
 
 ## 项目目录
 

@@ -106,7 +106,7 @@ Run inference on **DGX Spark and connect AgentShield through a local OpenAI-comp
 
 [NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) has 128 GB of unified memory shared by the OS, weights, KV cache and Docker containers. Start with 27B, then try Flash-Next; load only one model at a time.
 
-**Drop-in alternative — ASUS Ascent GX10**: an OEM build of the same NVIDIA GB10 Grace Blackwell platform — same 20-core Arm CPU (10× Cortex-X925 + 10× Cortex-A725), 1 PFLOP FP4 tensor performance, 128 GB LPDDR5x unified memory, and it ships NVIDIA DGX OS ([ASUS tech specs](https://www.asus.com/networking-iot-servers/desktop-ai-supercomputer/ultra-small-ai-supercomputers/asus-ascent-gx10/techspec/)). Everything in this section applies to the GX10 unchanged; only storage (1 TB / 2 TB / 4 TB options) and I/O details differ. Same disclaimer: not validated on physical GX10 hardware by this project.
+**Drop-in alternative — ASUS Ascent GX10**: an OEM build of the same NVIDIA GB10 Grace Blackwell platform — same 20-core Arm CPU (10× Cortex-X925 + 10× Cortex-A725), 1 PFLOP FP4 tensor performance, 128 GB LPDDR5x unified memory, and it ships NVIDIA DGX OS ([ASUS tech specs](https://www.asus.com/networking-iot-servers/desktop-ai-supercomputer/ultra-small-ai-supercomputers/asus-ascent-gx10/techspec/)). Everything in this section applies to the GX10 unchanged; only storage (1 TB / 2 TB / 4 TB options) and I/O details differ.
 
 | Model | Starting configuration | Selection notes |
 | --- | --- | --- |
@@ -288,7 +288,7 @@ The arena page uses red/blue agents by default: each side has its own context, t
 - **The OpenShell execution adapter** provides scoped tools, strict file/network policies and operation logs. Real isolated execution needs an available gateway; gateway testing is not yet complete.
 - **SkillEvaluator Tier 3** uses the official tool with four with/without-Skill task pairs. Data-format validation passes; effectiveness conclusions must come from complete experiment results on both groups; failed runs never produce a lift score.
 
-Install, run and output locations: [integration guide](09_integrations/README.md). DGX Spark migration on real hardware is still pending; an existing private model endpoint works meanwhile.
+Install, run and output locations: [integration guide](09_integrations/README.md).
 
 ## Project layout
 
