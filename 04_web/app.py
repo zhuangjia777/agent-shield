@@ -336,6 +336,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--f
 .overlay.agent-mini .modal { width: min(430px, 92vw) !important; height: auto !important; pointer-events: auto; box-shadow: 0 10px 32px rgba(0,0,0,.35); }
 .overlay.agent-mini .mbody, .overlay.agent-mini .agentinput { display: none; }
 .overlay.agent-mini .mhead { cursor: pointer; }
+.modal .mhead.agent-drag { cursor: grab; user-select: none; }
+.modal .mhead.agent-drag:active { cursor: grabbing; }
 /* reticle 角标：瞄准框语汇 */
 .reticle { position: absolute; width: 12px; height: 12px; pointer-events: none; }
 .reticle.tl { top: -7px; left: -7px; border-top: 2px solid var(--fg); border-left: 2px solid var(--fg); }
@@ -1335,8 +1337,8 @@ function openAgent(prefill) {
   }
   $('#agent-host').innerHTML = `
   <div class="overlay" onclick="if(event.target===this)closeAgent()">
-    <div class="modal" style="width:min(780px,94vw);height:min(660px,84vh)">
-      <div class="mhead" onclick="if(this.closest('.overlay').classList.contains('agent-mini'))toggleAgentMini()">
+    <div class="modal" id="agent-modal" style="width:min(780px,94vw);height:min(660px,84vh)">
+      <div class="mhead agent-drag" onclick="if(this.closest('.overlay').classList.contains('agent-mini'))toggleAgentMini()">
         <h3>AgentShield 智能体 <span class="tip mono" style="font-weight:400">ReAct · 本地工具 · 流式</span></h3>
         <div class="hbtns">
           <select id="agent-mode" title="权限模式：观察=只看不动；逐步确认=写操作逐个批；自动=标准剧本与 WAF 免确认（攻击/清理/陌生命令永远要批）"
@@ -1497,9 +1499,59 @@ function closeAgent() {
 function toggleAgentMini() {
   const ov = document.querySelector('#agent-host .overlay');
   if (!ov) return;
+  const modal = ov.querySelector('.modal');
   ov.classList.toggle('agent-mini');
+  if (ov.classList.contains('agent-mini')) {
+    if (modal) {  // 收起时回到右下角停靠；暂存拖过的位置供恢复
+      modal.dataset.px = modal.style.left || ''; modal.dataset.py = modal.style.top || '';
+      modal.style.position=''; modal.style.left=''; modal.style.top='';
+    }
+  } else if (modal) {
+    modal.style.position='fixed';
+    if (modal.dataset.px) { modal.style.left = modal.dataset.px; modal.style.top = modal.dataset.py; }
+    else if (!modal.dataset.placed) {
+      const r = modal.getBoundingClientRect();
+      modal.style.left = Math.round((innerWidth - r.width)/2) + 'px';
+      modal.style.top = Math.round((innerHeight - r.height)/2) + 'px';
+      modal.dataset.placed = '1';
+    }
+  }
   if (!ov.classList.contains('agent-mini')) setTimeout(()=>{ const i=$('#agent-input'); i && i.focus(); }, 50);
 }
+// 标题栏拖拽移动（pointer events；移动>4px 判定为拖，吞掉随后的 click，不影响点击恢复最小化）
+(function(){
+  let sx=0, sy=0, ox=0, oy=0, dragging=false, moved=false, pid=null;
+  document.addEventListener('pointerdown', e => {
+    const head = e.target.closest('.agent-drag');
+    if (!head || e.target.closest('button,select,input')) return;
+    const modal = head.closest('.modal'); const ov = head.closest('.overlay');
+    if (!modal || ov.classList.contains('agent-mini')) return;  // 最小化态点标题是恢复，不拖
+    if (!modal.style.left) {  // 首次拖动：flex 居中转绝对定位
+      const r = modal.getBoundingClientRect();
+      modal.style.position='fixed'; modal.style.left=r.left+'px'; modal.style.top=r.top+'px'; modal.dataset.placed='1';
+    }
+    dragging=true; moved=false; pid=e.pointerId;
+    sx=e.clientX; sy=e.clientY; ox=parseFloat(modal.style.left); oy=parseFloat(modal.style.top);
+    head.setPointerCapture(pid);
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove', e => {
+    if (!dragging || e.pointerId!==pid) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if (!moved && Math.abs(dx)+Math.abs(dy) < 4) return;
+    moved=true;
+    const modal = document.querySelector('#agent-host .modal'); if (!modal) return;
+    const w=modal.offsetWidth, h=modal.offsetHeight;
+    modal.style.left = Math.min(Math.max(ox+dx, 4), innerWidth-w-4) + 'px';
+    modal.style.top  = Math.min(Math.max(oy+dy, 4), innerHeight-h-4) + 'px';
+  });
+  const up = e => { if (!dragging || e.pointerId!==pid) return; dragging=false; pid=null;
+    if (moved) { const block = ev => { ev.stopPropagation(); ev.preventDefault(); };
+      document.addEventListener('click', block, {capture:true, once:true});
+      setTimeout(()=>document.removeEventListener('click', block, {capture:true}), 250); } };
+  document.addEventListener('pointerup', up);
+  document.addEventListener('pointercancel', up);
+})();
 window.toggleAgentMini = toggleAgentMini;
 function setAgentMode(mode) {
   if (!agentId) return;
