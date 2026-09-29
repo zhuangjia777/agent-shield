@@ -55,6 +55,7 @@ NVIDIA 审查使用原版 SkillSpector 2.12.0，结果与本地检查分开展�
 
 - **环境**：需要 Docker（不需要安装 Kali 系统，攻击机用 Kali 官方 arm64 容器镜像）。红队容器 + 内置漏洞靶机（OWASP Juice Shop）跑在一个禁止出网的内部网络里，攻击打不到你的路由器和互联网。
 - **打法**：红队模型调用容器内的真实工具（nmap/sqlmap/curl 等），每个攻击动作先展示完整命令、经你确认才执行；蓝队的防护动作是开启/关闭靶机前的 WAF（红队在网络拓扑上无法绕过 WAF 直打靶机）；战果由 HTTP 探针实测判定，不靠模型自评。演练结束一键销毁全部容器，命令与输出全程落盘。
+- **命名剧本**：三条一键演示剧本，判定全部有客观依据——SQL 注入会话劫持（`sqli_session`）、XSS 编码绕过 WAF（`xss_encoded_bypass`）、越权枚举用户（`bac_enumeration`）。演练场卡片里的「快速剧本」下拉（或命令行 `livelab.py run <剧本>`）会自动打一遍、切 WAF、复测、按靶机自身记录裁决，结束后把 WAF 恢复为拦截。详见[演练场剧本说明](01_specs/live-drill-scenarios-2026-09-29.md)。
 - **边界**：只覆盖网络和 Web 应用层。Wi-Fi 射频类场景（中间人、deauth）做不了——Apple Silicon 内置网卡不支持 monitor mode，需要外置 USB 网卡加完整 Kali 虚拟机，属于后续可选项。靶机自带真实漏洞，只能在隔离网络内使用，绝不能暴露到可达网络；红队弹药仅对隔离网内目标放行，隔离失效时宁可拒绝启动。
 - **合法性**：演练对象仅限本机容器内的靶机。对任何不属于你或未获书面授权的系统发起测试都是违法行为，本项目不提供也不协助此类能力。
 
@@ -97,11 +98,15 @@ test -f config.json || cp config.json.example config.json  # 已有配置不覆�
 
 也可以启动后在网页的“设置”中填写。规则检查和固定流程演示不需要模型；红蓝智能体、AI 解释和文字复盘需要连接模型服务。红蓝双方默认沿用主模型，也可在设置中各自配置接口、模型及密钥。`config.json` 已被 Git 忽略，不要将密钥写入示例配置。
 
-### DGX Spark 本地模型：Qwen3.8-27B / Qwen3.8-Flash-Next
+任何兼容 OpenAI API 的服务商都能用，项目不关心 `base_url` 背后是谁。**阶跃星辰 StepFun** 是可选的云端供应商：`base_url` 填 `https://api.stepfun.com/v1`，`model` 填当前在售的 Step 模型 ID（如 `step-3.7-flash`，见 [StepFun 快速开始](https://platform.stepfun.com/docs/zh/quickstart/overview)），密钥在 [StepFun 开放平台接口密钥页](https://platform.stepfun.com/interface-key)创建。丑话说在前：云端推理会把提示词和演练上下文发到你的机器外面，介意的话优先用下面的本地方案。
+
+### DGX Spark / 华硕 Ascent GX10 本地模型：Qwen3.8-27B / Qwen3.8-Flash-Next
 
 可让 **DGX Spark 负责模型推理，AgentShield 通过本地兼容 OpenAI 的接口调用**，用于 Agent 引导、红蓝双方决策和报告解释。模型服务与 Docker 演练场是两个独立进程；停止演练不会卸载模型。以下是部署参考，**尚未完成本项目的 DGX Spark 实机验收，不代表已测性能或兼容性保证**。
 
 [NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) 配备 128 GB 统一内存，系统、模型权重、KV cache 和 Docker 容器共享这部分内存。建议先用 27B 完成接入，再尝试 Flash-Next；一次只加载一个模型。
+
+**平替机型——华硕 ASUS Ascent GX10**：同为 NVIDIA GB10 Grace Blackwell 平台的 OEM 整机——同款 20 核 Arm CPU（10× Cortex-X925 + 10× Cortex-A725）、1 PFLOP FP4 张量性能、128 GB LPDDR5x 统一内存，出厂即 NVIDIA DGX OS（[华硕规格页](https://www.asus.com/networking-iot-servers/desktop-ai-supercomputer/ultra-small-ai-supercomputers/asus-ascent-gx10/techspec/)）。本节所有步骤对 GX10 原样适用，差别只在存储（1 TB / 2 TB / 4 TB 可选）和接口细节。同样声明：本项目未在 GX10 实机上做过验收。
 
 | 模型 | 本地起步方案 | 选择说明 |
 | --- | --- | --- |
@@ -252,6 +257,8 @@ uv pip install --python .venv-skillspector/bin/python \
 ```bash
 .venv/bin/python 08_arena/livelab.py start   # 起场（自动做网络隔离校验）
 .venv/bin/python 08_arena/livelab.py status  # 容器与 WAF 状态
+.venv/bin/python 08_arena/livelab.py scenario            # 列出命名剧本
+.venv/bin/python 08_arena/livelab.py run sqli_session    # 演示并裁决一条剧本
 .venv/bin/python 08_arena/livelab.py stop    # 一键销毁
 ```
 

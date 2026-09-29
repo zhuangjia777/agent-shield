@@ -55,6 +55,7 @@ The regular arena is a simulation. **Live drills** move the duel into a Docker-i
 
 - **Requirements**: Docker (no Kali installation needed — the attacker box is the official Kali arm64 container image). The red-team container plus a deliberately vulnerable target (OWASP Juice Shop) run inside an internal network with no egress; attacks cannot reach your router or the internet.
 - **How it plays**: the red-team model invokes real in-container tools (nmap/sqlmap/curl etc.); every attack action shows the full command and executes only after your confirmation. Blue team's moves are enabling/disabling the WAF in front of the target (red team cannot route around the WAF at the network level). Wins are judged by HTTP probes against the target, not model self-assessment. One click destroys all containers afterwards; every command and output is persisted.
+- **Named scenario scripts**: three one-click drills with objective oracles — SQL injection session hijack (`sqli_session`), XSS encoded WAF bypass (`xss_encoded_bypass`), broken access-control user enumeration (`bac_enumeration`). The range card's scenario picker (or `livelab.py run <scenario>`) demos the attack, flips the WAF, re-fires, judges from the target's own records, and restores the WAF to `block`. See [live drill scenarios spec](01_specs/live-drill-scenarios-2026-09-29.md).
 - **Boundaries (the ugly truth first)**: network and web-application layers only. Wi-Fi RF scenarios (MITM, deauth) are out — Apple Silicon's built-in Wi-Fi has no monitor mode; that needs an external USB adapter plus a full Kali VM, a possible future option. The target ships with real vulnerabilities and must only ever run inside the isolated network, never exposed to any reachable network; red-team munitions are allowed only against in-range targets — if isolation fails, the lab refuses to start.
 - **Legality**: only the targets inside your own containers may be engaged. Testing any system you don't own or lack written authorization for is illegal; this project neither provides nor assists such capability.
 
@@ -97,11 +98,15 @@ Edit the three fields under `cloud` in `config.json`:
 
 You can also fill this in via the web UI's Settings after startup. Rule scans and scripted demos need no model; red/blue agents, AI explanations and narrative reports do. Both arena sides inherit the main model by default, and each can be configured with its own endpoint, model and key in Settings. `config.json` is Git-ignored — never put real keys in the example config.
 
-### Local inference on DGX Spark: Qwen3.8-27B / Qwen3.8-Flash-Next
+Any OpenAI-compatible provider works; AgentShield doesn't care who is behind the URL. **StepFun (阶跃星辰)** is a supported cloud option: set `base_url` to `https://api.stepfun.com/v1` and `model` to a current Step model ID (e.g. `step-3.7-flash`; see [StepFun quick start](https://platform.stepfun.com/docs/zh/quickstart/overview)), with the key created in the [StepFun console](https://platform.stepfun.com/interface-key). Honest caveat: cloud inference sends prompts and drill context off your machine — prefer the local options below if that's a problem.
+
+### Local inference on DGX Spark (or the ASUS Ascent GX10): Qwen3.8-27B / Qwen3.8-Flash-Next
 
 Run inference on **DGX Spark and connect AgentShield through a local OpenAI-compatible endpoint** for agent guidance, red/blue decisions and report explanations. The model server and Docker range are separate processes; stopping a range does not unload the model. This is a deployment reference: **AgentShield has not yet been validated on physical DGX Spark hardware, and no performance or compatibility result is claimed**.
 
 [NVIDIA DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) has 128 GB of unified memory shared by the OS, weights, KV cache and Docker containers. Start with 27B, then try Flash-Next; load only one model at a time.
+
+**Drop-in alternative — ASUS Ascent GX10**: an OEM build of the same NVIDIA GB10 Grace Blackwell platform — same 20-core Arm CPU (10× Cortex-X925 + 10× Cortex-A725), 1 PFLOP FP4 tensor performance, 128 GB LPDDR5x unified memory, and it ships NVIDIA DGX OS ([ASUS tech specs](https://www.asus.com/networking-iot-servers/desktop-ai-supercomputer/ultra-small-ai-supercomputers/asus-ascent-gx10/techspec/)). Everything in this section applies to the GX10 unchanged; only storage (1 TB / 2 TB / 4 TB options) and I/O details differ. Same disclaimer: not validated on physical GX10 hardware by this project.
 
 | Model | Starting configuration | Selection notes |
 | --- | --- | --- |
@@ -252,6 +257,8 @@ The live range can also be driven without the web UI:
 ```bash
 .venv/bin/python 08_arena/livelab.py start   # bring up the range (runs network-isolation checks)
 .venv/bin/python 08_arena/livelab.py status  # container & WAF status
+.venv/bin/python 08_arena/livelab.py scenario            # list the named scenario scripts
+.venv/bin/python 08_arena/livelab.py run sqli_session    # demo + judge one scenario
 .venv/bin/python 08_arena/livelab.py stop    # tear everything down
 ```
 
