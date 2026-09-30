@@ -90,6 +90,44 @@ class PromptPrefixTests(unittest.TestCase):
         self.assertNotIn('observer', seen[0][0]['content'])
 
 
+class ExecConfirmAutoAnswerTests(unittest.TestCase):
+    """auto 档的 Ask 硬闸：执行确认型代答，提问型照弹，拆场确认保留。"""
+
+    def test_classify(self):
+        self.assertTrue(agent._is_exec_confirm_ask("确认执行这条 SQLi 攻击命令？", ["确认执行", "取消"]))
+        self.assertTrue(agent._is_exec_confirm_ask("是否同意起场？", ["同意", "不同意"]))
+        self.assertFalse(agent._is_exec_confirm_ask("你要看哪份报告？", ["报告A", "报告B"]))
+        # 拆场/销毁类确认必须留给真人
+        self.assertFalse(agent._is_exec_confirm_ask("确认销毁演练场全部容器？", ["确认", "取消"]))
+
+    def _run_with_ask(self, mode):
+        replies = ["Thought: 先问\nAction: Ask\nActionInput: {\"question\":\"确认执行攻击命令？\",\"choices\":[\"确认执行\",\"取消\"]}",
+                   "Final Answer: 完成 [DONE]" if mode == "auto" else "Final Answer: 完成"]
+        it = iter(replies)
+        def stream(messages, **kwargs):
+            yield 'token', next(it)
+        asked = []
+        with patch.object(agent, '_observations',
+                          return_value='{"recent_reports": [], "available_skill_samples": []}'), \
+             patch.object(agent, 'livelab') as lab, \
+             patch.object(agent, 'chat_stream', stream):
+            lab.status.return_value = {"running": True, "waf": "block", "containers": {}}
+            agent.ReActAgent([]).run("打一发", lambda k, v: asked.append((k, v)),
+                                     lambda q, c: (_ for _ in ()).throw(AssertionError("不该打扰用户"))
+                                     if mode == "auto" else "确认执行", mode=mode)
+        return asked
+
+    def test_auto_mode_never_bothers_user_for_exec_confirm(self):
+        asked = self._run_with_ask("auto")
+        asks = [ev for k, ev in asked if k == "ask"]
+        self.assertTrue(asks and all(ev.get("auto") for ev in asks))
+        self.assertTrue(any(k == "ask_answered" and "自动" in ev.get("answer", "") for k, ev in asked))
+
+    def test_confirm_mode_still_asks(self):
+        asked = self._run_with_ask("confirm")
+        self.assertTrue(any(k == "ask" and not ev.get("auto") for k, ev in asked))
+
+
 class AutoLoopTests(unittest.TestCase):
     def _scripted_stream(self, replies):
         it = iter(replies)

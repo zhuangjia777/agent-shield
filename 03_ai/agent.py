@@ -171,7 +171,7 @@ class ReActAgent:
         # 挪到紧随其后的独立 user 消息里，保住 provider 前缀缓存命中。
         mode_note = {
             "observer": "当前权限模式：observer（观察）——只读工具可用，任何写操作（起停演练场、攻击、改防护、执行命令）会被系统直接拒绝。不要反复尝试写操作。",
-            "auto": "当前权限模式：auto（自动，全开）——起场、切 WAF、跑剧本、lab_attack 攻击命令均直接执行，无需逐步确认；攻击仍受目标白名单与纵深黑名单约束（只能打演练场内靶机）。lab_stop 拆场与宿主非白名单命令仍需你 Ask 确认。演练场状态见系统快照 lab 字段。你可以自主连续推进：侦察→攻击→验证→汇报，不必每步停下。",
+            "auto": "当前权限模式：auto（自动，全开）——起场、切 WAF、跑剧本、lab_attack 攻击命令均直接执行。此模式下禁止对演练场动作发 Ask 确认（系统会替你自动批准演练场内确认，但别指望它处理别的事）；缺用户意图才 Ask，lab_stop 拆场确认保留。你可以自主连续推进：侦察→攻击→验证→汇报，不必每步停下。演练场状态见系统快照。上一句『lab_attack 前先 Ask』仅适用于逐步确认模式，本模式作废。",
         }.get(mode, "")
         dynamic = f"当前可得信息: {json.dumps(json.loads(_observations()), ensure_ascii=False)}（系统快照，不必回应本条）"
         # 自动嗅探：动态快照附带演练场实况（一次 docker ps + WAF 状态，亚秒级只读），
@@ -250,6 +250,24 @@ class ReActAgent:
                 messages.append({"role": "user", "content": f"Observation: (llm 流提前结束)\n{buffer}"})
                 break
             kind = decision["kind"]  # think_action | final | ask
+            if kind in ("think_action", "ask"):
+                # 自动模式硬闸：模型在协议层发"执行确认"型 Ask 时不再打扰用户，
+                # 直接代答"确认执行"（lab_stop 拆场类除外——不可逆动作保留人工闸）。
+                # 提问型 Ask（缺意图、选报告）照常弹给用户。
+                if mode == "auto":
+                    q, ch = "", []
+                    if kind == "think_action" and _normalize_tool(decision["tool"]) == "ask":
+                        t = decision["input"]
+                        q = str(t.get("question") or t.get("text") or "").strip()
+                        ch = t.get("choices") or []
+                    elif kind == "ask":
+                        q = decision.get("text", "").strip()
+                        ch = decision.get("choices") or []
+                    if q and _is_exec_confirm_ask(q, ch):
+                        on_event("ask", {"step": step, "question": q, "choices": ch[:4], "auto": True})
+                        on_event("ask_answered", {"answer": "确认执行（自动）"})
+                        messages.append({"role": "user", "content": "用户选择了: 确认执行"})
+                        continue
             if kind == "think_action":
                 if decision["thought"]:
                     on_event("think", {"step": step, "thought": decision["thought"]})
@@ -438,6 +456,21 @@ WRITE_TOOLS = {"lab_start", "lab_attack", "lab_waf", "lab_stop", "lab_scenario",
 # 攻击命令）直接执行——纵深约束仍在执行层：目标白名单、红队纵深黑名单、硬禁 sudo/管道。
 # 唯一保留的确认是 lab_stop（不可逆销毁，附清单预览）与宿主非白名单 run_command。
 AUTO_OK = {"lab_start", "lab_waf", "lab_scenario"}
+
+
+def _is_exec_confirm_ask(question: str, choices) -> bool:
+    """判断 Ask 是不是"要不要执行这个动作"的确认题（auto 档可代答）。
+
+    判据双保险：选项里出现确认词（确认/执行/同意/是），且问题不在拆场/删除/破坏类语境。
+    提问型 Ask（"你要看哪份报告？"选项是报告名）不会命中——选项里没有确认词。
+    """
+    chs = choices if isinstance(choices, list) else re.split(r"[|,，、]", str(choices))
+    chs = [str(c).strip() for c in chs if str(c).strip()]
+    has_confirm_choice = any(re.match(r"^(确认|执行|同意|是|好的|继续)", c) for c in chs)
+    if not has_confirm_choice:
+        return False
+    danger = re.search(r"拆场|销毁|删除|清理演练场|lab_stop|rm -|userdel|drop ", question, re.I)
+    return not danger
 
 
 def _execute(tool: str, tin: dict, mode: str = "confirm"):

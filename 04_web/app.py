@@ -1449,14 +1449,18 @@ function handleAgentEvent(ev) {
     }
   }
   if (ev.type === 'ask') {
+    if (ev.auto) {  // 自动模式代答的执行确认：只记一行，不给按钮
+      push(`<div class="step tip"><span class="lbl">自动批准</span> ${escHtml(ev.question)}</div>`);
+    } else {
     const opts = agentQuestionChoices(ev).map(c=>`<button class="btn small accent" style="margin:3px 3px 0 0" onclick="answerAgent(this.dataset.t)" data-t="${escAttr(c)}">${escHtml(c)}</button>`).join('');
     push(`<div class="step" style="border-left-color:var(--accent)"><span class="lbl tool">问你一下</span>
       <div style="margin-top:4px">${escHtml(ev.question)}</div>
       <div style="margin-top:8px">${opts}
         <input id="ask-other" type="text" placeholder="输入你的回答（回车发送）" onkeydown="if(event.key==='Enter'&&this.value.trim())answerAgent(this.value.trim())">
         <button class="btn small" data-t="" onclick="answerAgent(document.getElementById('ask-other')?.value.trim())">提交回答</button></div></div>`);
+    }
   }
-  if (ev.type === 'ask_answered') push(`<div class="step tip">你的回答：<b>${escHtml(ev.answer)}</b></div>`);
+  if (ev.type === 'ask_answered' && !/（自动）$/.test(ev.answer||'')) push(`<div class="step tip">你的回答：<b>${escHtml(ev.answer)}</b></div>`);
   if (ev.type === 'final_delta') {
     // 打字机：答案边生成边上屏，final 事件到达后整体换成 renderMd 完整版
     let el = document.getElementById('final-live');
