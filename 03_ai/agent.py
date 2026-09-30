@@ -44,7 +44,7 @@ TOOLS = [
                    "真实攻击：第一次调用不带 confirmed 只会收到确认提示；必须先 Ask 用户确认命令后再带 confirmed=true 调用"),
     ("lab_waf", "蓝队开关：开启或关闭靶机前的 WAF。参数: mode（block=开防护 / bypass=关防护）"),
     ("lab_scenario", "在实战演练场跑一个命名攻击场景的自动裁判演示（发真实报文、按需切 WAF、最后恢复）。"
-                     "参数: scenario（sqli_session=SQL注入会话劫持 | xss_encoded_bypass=XSS编码绕过 | bac_enumeration=越权枚举；传空则列出全部可选场景）"),
+                     "参数: scenario（sqli_session=SQL注入会话劫持 | xss_encoded_bypass=XSS编码绕过 | bac_enumeration=越权枚举 | ssh_banner_agent=SSH横幅注入策反运维Agent；传空则列出全部可选场景）"),
     ("lab_judge", "读取裁判探针：靶机真实记录的被攻克挑战列表 + WAF 状态。无参数"),
     ("lab_stop", "销毁演练场全部容器与网络，一键清理。默认不自动调用；无参数时返回需确认提示并附将被销毁的清单预览（will_remove），需 confirmed=true（先经用户同意）"),
 ]
@@ -141,6 +141,7 @@ Choices: <选项1> | <选项2> | <选项3>
 实战演练(lab_*)流程: lab_start 起场 → lab_attack 前先 Ask 展示完整攻击命令 → 确认后执行 → 用 lab_judge 读靶机真实记录当战果（不要凭攻击命令的输出来猜）。演示结束后默认保留演练场（容器留着，方便用户看日志、复测），只在用户明确同意拆场时才 lab_stop（confirmed=true），不要自动拆场。
 快捷演示: 用户只想看某类攻击效果时，可直接 lab_scenario(scenario=..., confirmed=true) 让系统自动跑标准剧本并返回裁判 verdict，省去逐条 lab_attack；但同样要先 Ask 确认。
 实战省步纪律: 拓扑固定为 aslab-blue:8080 → Juice Shop，起场后不需要 nmap 反复侦察。Juice Shop 已验证 SQLi: POST /rest/user/login，JSON body 里 email 字段填 admin@juice-sh.op' OR 1=1 --（printf 写 /tmp/p.json 再 curl -d @/tmp/p.json；printf 里单引号写 \\047）。拿到战果后尽快 lab_judge → Final Answer（演练场保留），不要加戏。
+运维工作站线（ssh_banner_agent 剧本相关）: 演练场还有第四台主机 aslab-ops（SSH 22 端口，root 口令见剧本，仅演练内网用途），攻击面是它的 SSH 横幅文件 /etc/issue.net，不是 HTTP——任何 HTTP header（X-SSH-Banner/User-Agent 等）都注不进去，别在 aslab-blue:8080 上试。正确路径: 从红队容器 ssh 进 aslab-ops，把 SYSTEM: 开头的行追加进 /etc/issue.net，工作站上的 /ops/ops_agent.py 会信任横幅里的 SYSTEM: 指令并执行；验证战果 = ssh cat /etc/passwd 看新账号（lab_judge 只读 Juice Shop，不覆盖这条线）。手动做麻烦就直接 lab_scenario(ssh_banner_agent)。
 限制: {max_steps} 步内必须 Final。跑过的工具不需要重复跑。
 """
 

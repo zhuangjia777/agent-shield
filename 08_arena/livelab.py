@@ -53,7 +53,7 @@ WAF_HTTP = "http://127.0.0.1:3998"
 RED_ENTRY = "http://aslab-blue:8080"   # 红队唯一的合法入口（WAF 后面才是靶机）
 
 # 红队 exec 只允许打 WAF 主机名——绕过 WAF 直打靶机一律拒绝，蓝队开关才有意义
-ALLOWED_TARGETS = (BLUE_NAME,)
+ALLOWED_TARGETS = (BLUE_NAME, OPS_NAME)
 
 
 def _sh(args: list[str], timeout: int = 60) -> tuple[int, str]:
@@ -332,6 +332,20 @@ def stop(dry_run: bool = False) -> dict:
     return {"ok": ok, "msg": "演练场已销毁" if ok else "；".join(errors)}
 
 
+def _extract_targets(cmd: str) -> set[str]:
+    """从命令里提取所有可能被触达的主机名，供白名单判定。
+
+    覆盖：URL、/dev/tcp/、常见扫描器裸参数、ssh/scp 的 user@host 与 host:path。
+    host:path 里 host 必须含点或是 aslab 容器名，避免把 -p demo123 / payload 单词误当主机。
+    """
+    hosts: set[str] = set(re.findall(r"(?:https?://|/dev/tcp/)([A-Za-z0-9_.\-]+)", cmd))
+    hosts |= set(re.findall(r"\b(?:nmap|curl|wget|sqlmap|hydra|nc|ncat)\b[^|;&]*?\s+([a-zA-Z0-9][\w.\-]*\.[a-z]{2,}|\d{1,3}(?:\.\d{1,3}){3})", cmd))
+    if re.search(r"\b(?:ssh|scp)\b", cmd):
+        hosts |= set(m.group(1) for m in re.finditer(r"(?:^|\s)(?:[\w.$-]+)?@([\w.\-]+)", cmd))
+        hosts |= set(m.group(1) for m in re.finditer(r"(?:^|\s)(?!-)([\w.\-]*\.[\w.\-]*|[\w.\-]*aslab[\w.\-]*)(?=:[\w/.~])", cmd))
+    return hosts
+
+
 def red_exec(cmd: str, timeout: int = 120) -> dict:
     """在红队容器内执行一条命令。只允许打白名单靶机；全量落盘。
 
@@ -352,11 +366,11 @@ def red_exec(cmd: str, timeout: int = 120) -> dict:
     if why:
         return {"ok": False, "msg": f"命令被纵深黑名单拒绝：{why}"}
     # 目标白名单：出现的 URL/主机必须是靶机或本机回环（容器内），禁止任意外部主机
-    hosts = set(re.findall(r"(?:https?://|/dev/tcp/)([A-Za-z0-9_.\-]+)", cmd))
-    hosts |= set(re.findall(r"\b(?:nmap|curl|wget|sqlmap|hydra|nc|ncat)\b[^|;&]*?\s+([a-zA-Z0-9][\w.\-]*\.[a-z]{2,}|\d{1,3}(?:\.\d{1,3}){3})", cmd))
-    external = [h for h in hosts if h not in ALLOWED_TARGETS and not h.startswith(("localhost", "127.", "::1"))]
+    hosts = _extract_targets(cmd)
+    external = [h for h in hosts if h not in ALLOWED_TARGETS
+                and not h.startswith(("localhost", "127.", "::1"))]
     if external:
-        return {"ok": False, "msg": f"目标白名单外，拒绝执行: {external}（红队只允许打 {BLUE_NAME}:8080，攻防必须过 WAF）"}
+        return {"ok": False, "msg": f"目标白名单外，拒绝执行: {external}（红队只允许打 {BLUE_NAME}:8080 与 {OPS_NAME}(SSH)，其余一律不可达）"}
     # 容器内 localhost 没有服务；127.0.0.1:3998/3999 是宿主视角，容器里不可达。
     # 模型常把宿主地址抄进命令——直接拒绝并给出正确入口，省得烧步骤。
     if any(h.startswith(("localhost", "127.", "::1")) for h in hosts):
