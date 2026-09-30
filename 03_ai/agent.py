@@ -171,9 +171,20 @@ class ReActAgent:
         # 挪到紧随其后的独立 user 消息里，保住 provider 前缀缓存命中。
         mode_note = {
             "observer": "当前权限模式：observer（观察）——只读工具可用，任何写操作（起停演练场、攻击、改防护、执行命令）会被系统直接拒绝。不要反复尝试写操作。",
-            "auto": "当前权限模式：auto（自动）——lab_scenario 标准剧本与 WAF 开关无需逐步确认；lab_attack、非白名单 run_command、lab_stop 仍必须先 Ask 确认。",
+            "auto": "当前权限模式：auto（自动，全开）——起场、切 WAF、跑剧本、lab_attack 攻击命令均直接执行，无需逐步确认；攻击仍受目标白名单与纵深黑名单约束（只能打演练场内靶机）。lab_stop 拆场与宿主非白名单命令仍需你 Ask 确认。演练场状态见系统快照 lab 字段。你可以自主连续推进：侦察→攻击→验证→汇报，不必每步停下。",
         }.get(mode, "")
         dynamic = f"当前可得信息: {json.dumps(json.loads(_observations()), ensure_ascii=False)}（系统快照，不必回应本条）"
+        # 自动嗅探：动态快照附带演练场实况（一次 docker ps + WAF 状态，亚秒级只读），
+        # 免得模型每轮花一步调 lab_start 试错——容器已在跑就直接接着干。
+        if mode != "observer":
+            try:
+                st = livelab.status()
+                dynamic += "\n演练场实况: " + json.dumps(
+                    {"running": st.get("running"), "waf": st.get("waf"),
+                     "containers": sorted(st.get("containers", {})),
+                     "note": "running=true 时不要重复 lab_start"}, ensure_ascii=False)
+            except Exception:
+                pass
         if mode_note:
             dynamic += "\n" + mode_note
         messages = [{"role": "system", "content": SYSTEM.format(
@@ -185,6 +196,28 @@ class ReActAgent:
         buffer = ""
         pending_user = user_msg
         final_text = ""
+        # 自动 loop（仅 auto 档且本轮真的调过工具时生效）：final 先当阶段性总结，
+        # 系统追问一次"没干完就继续"；模型确认收工须在答案末尾打 [DONE]。
+        # 上限 2 轮追问，防无限自我循环。
+        auto_loops_left = 2 if mode == "auto" else 0
+
+        def _auto_continue(text: str, step: int) -> bool:
+            """返回 True 表示继续循环（本条 final 只是阶段总结）。"""
+            nonlocal auto_loops_left, final_text
+            if mode != "auto" or auto_loops_left <= 0 or not self.transcript:
+                final_text = text
+                return False
+            if re.search(r"\[?DONE\]?\s*$", text) and ("DONE" in text[-40:]):
+                final_text = re.sub(r"\s*\[?DONE\]?\s*$", "", text)
+                auto_loops_left = 0
+                return False
+            auto_loops_left -= 1
+            on_event("final", {"text": text, "step": step, "interim": True})
+            messages.append({"role": "user", "content":
+                "系统（自动循环）：任务若已全部完成，输出 Final Answer: 并用 [DONE] 结尾收工；"
+                "若还有没做完的，不要停，直接继续下一个 Action。"})
+            return True
+
         for step in range(1, MAX_STEPS + 1):
             buffer = ""
             # v1.9 流式：检测到 "Final Answer:" 标记后，把标记之后的增量作为 final_delta
@@ -243,6 +276,8 @@ class ReActAgent:
                     # 模型用 Action: Final Answer 给答案（工具协议格式）→ 当作 final 收尾
                     final_text = str(tin.get("answer") or tin.get("text") or tin.get("content") or "").strip()
                     if final_text:
+                        if _auto_continue(final_text, step):
+                            continue
                         on_event("final", {"text": final_text, "step": step})
                         break
                     messages.append({"role": "user", "content": "Observation: Final Answer 缺少 answer 参数"})
@@ -257,6 +292,8 @@ class ReActAgent:
                 continue
             if kind == "final":
                 final_text = decision.get("text", "").strip()
+                if _auto_continue(final_text, step):
+                    continue
                 on_event("final", {"text": final_text, "step": step})
                 break
             if kind == "ask":
@@ -397,8 +434,9 @@ def _parse(buf: str, messages: list) -> dict | None:
 # ---------- 工具执行 ----------
 
 WRITE_TOOLS = {"lab_start", "lab_attack", "lab_waf", "lab_stop", "lab_scenario", "run_command"}
-# auto 模式下可免逐步确认的写工具；lab_attack / lab_stop / 非白名单
-# run_command 是硬底线，任何模式都要 Ask 确认（对应各自分支里的 confirmed 闸）。
+# auto 模式下可免逐步确认的写工具。auto 是全开档：演练场内动作（含 lab_attack
+# 攻击命令）直接执行——纵深约束仍在执行层：目标白名单、红队纵深黑名单、硬禁 sudo/管道。
+# 唯一保留的确认是 lab_stop（不可逆销毁，附清单预览）与宿主非白名单 run_command。
 AUTO_OK = {"lab_start", "lab_waf", "lab_scenario"}
 
 
@@ -408,7 +446,7 @@ def _execute(tool: str, tin: dict, mode: str = "confirm"):
                            "当前为观察模式（observer）：只允许查看报告、扫描与诊断等只读操作，"
                            "写操作被系统拒绝。请改用只读工具完成任务，或让用户切换权限模式。"},
                           ensure_ascii=False), False
-    if mode == "auto" and tool in AUTO_OK:
+    if mode == "auto" and (tool in AUTO_OK or tool == "lab_attack"):
         tin = {**tin, "confirmed": True}
     try:
         if tool == "list_reports":

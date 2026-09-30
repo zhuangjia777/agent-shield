@@ -1355,7 +1355,7 @@ function openAgent(prefill) {
       <div class="mhead agent-drag" onclick="if(this.closest('.overlay').classList.contains('agent-mini'))toggleAgentMini()">
         <h3>AgentShield 智能体 <span class="tip mono" style="font-weight:400">ReAct · 本地工具 · 流式</span></h3>
         <div class="hbtns">
-          <select id="agent-mode" title="权限模式：观察=只看不动；逐步确认=写操作逐个批；自动=标准剧本与 WAF 免确认（攻击/清理/陌生命令永远要批）"
+          <select id="agent-mode" title="权限模式：观察=只看不动；逐步确认=写操作逐个批；自动=攻击/剧本/切防护全开自动跑（拆场与宿主陌生命令仍要批）"
                   onchange="setAgentMode(this.value)" style="font-size:12px">
             <option value="observer">观察</option>
             <option value="confirm" selected>逐步确认</option>
@@ -1467,8 +1467,9 @@ function handleAgentEvent(ev) {
   }
   if (ev.type === 'final') {
     const live = document.getElementById('final-live');
-    if (live) { live.removeAttribute('id'); live.innerHTML = renderMd(ev.text); }
-    else push(`<div class="answer">${renderMd(ev.text)}</div>`);
+    const body = ev.interim ? `<div class="step"><span class="lbl">阶段小结</span></div>` + renderMd(ev.text) : renderMd(ev.text);
+    if (live) { live.removeAttribute('id'); live.innerHTML = body; }
+    else push(`<div class="answer">${body}</div>`);
     log.scrollTop = log.scrollHeight;
     reconcileReportCards();  // 每轮回答完兜底对账：删过没删过、同步没同步，都以服务器为准
   }

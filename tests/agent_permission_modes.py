@@ -34,11 +34,19 @@ class AutoModeTests(unittest.TestCase):
             lab.run_scenario.assert_called_once()
 
     def test_hardlines_still_need_confirmation_in_auto(self):
+        # auto 全开后仍保留的两道确认：不可逆拆场、宿主非白名单命令
         with patch.object(agent, "livelab"):
-            for tool, tin in [("lab_attack", {"cmd": "curl evil"}), ("lab_stop", {})]:
-                with self.subTest(tool=tool):
-                    obs, ok = agent._execute(tool, tin, "auto")
-                    self.assertTrue(json.loads(obs).get("need_confirm"))
+            obs, ok = agent._execute("lab_stop", {}, "auto")
+            self.assertTrue(json.loads(obs).get("need_confirm"))
+
+    def test_lab_attack_auto_executes_without_ask(self):
+        # auto 档攻击命令直接执行（confirmed 由执行层注入），不再弹确认
+        with patch.object(agent, "livelab") as lab:
+            lab.red_exec.return_value = {"ok": True, "exit": 0, "out": ""}
+            obs, ok = agent._execute("lab_attack", {"cmd": "curl -s http://aslab-blue:8080/"}, "auto")
+            self.assertTrue(ok)
+            self.assertFalse(json.loads(obs).get("need_confirm"))
+            lab.red_exec.assert_called_once()
 
     def test_confirm_mode_unchanged(self):
         with patch.object(agent, "livelab") as lab:
@@ -80,6 +88,51 @@ class PromptPrefixTests(unittest.TestCase):
             agent.ReActAgent([]).run('hi', lambda k, v: None, lambda q, c: '', mode='observer')
         self.assertIn('observer', seen[0][1]['content'])
         self.assertNotIn('observer', seen[0][0]['content'])
+
+
+class AutoLoopTests(unittest.TestCase):
+    def _scripted_stream(self, replies):
+        it = iter(replies)
+        def stream(messages, **kwargs):
+            text = next(it)
+            yield 'token', text
+        return stream
+
+    def _patched_obs(self):
+        return patch.object(agent, '_observations',
+                            return_value='{"recent_reports": [], "available_skill_samples": []}')
+
+    def test_auto_loops_until_done_sentinel(self):
+        # 调过工具后第一次 final 没打 [DONE] → 系统追问 → 第二次带 [DONE] 收工
+        replies = ["Thought: 先看战果\nAction: lab_judge\nActionInput: {}",
+                   "Final Answer: 第一幕", "Final Answer: 第二幕 [DONE]"]
+        seen = []
+        with self._patched_obs(), \
+             patch.object(agent, 'livelab') as lab, \
+             patch.object(agent, 'chat_stream', self._scripted_stream(replies)):
+            lab.status.return_value = {"running": True, "waf": "block", "containers": {}}
+            lab.judge_http.return_value = {"ok": True, "solved": []}
+            lab.waf_get.return_value = {"waf": "block"}
+            a = agent.ReActAgent([])
+            a.run("做任务", lambda k, v: seen.append((k, v)), lambda q, c: '', mode="auto")
+        finals = [ev for k, ev in seen if k == "final"]
+        self.assertEqual(len(finals), 2)
+        self.assertTrue(finals[0].get("interim"))
+        self.assertNotIn("interim", finals[1])
+        self.assertIn("第二幕", a.history[-1]["content"])
+        self.assertNotIn("DONE", a.history[-1]["content"])
+
+    def test_confirm_mode_final_ends_immediately(self):
+        replies = ["Final Answer: 一步收工"]
+        seen = []
+        with self._patched_obs(), \
+             patch.object(agent, 'livelab') as lab, \
+             patch.object(agent, 'chat_stream', self._scripted_stream(replies)):
+            lab.status.return_value = {"running": False, "waf": None, "containers": {}}
+            agent.ReActAgent([]).run("hi", lambda k, v: seen.append((k, v)), lambda q, c: '', mode="confirm")
+        finals = [ev for k, ev in seen if k == "final"]
+        self.assertEqual(len(finals), 1)
+        self.assertNotIn("interim", finals[0])
 
 
 if __name__ == "__main__":
