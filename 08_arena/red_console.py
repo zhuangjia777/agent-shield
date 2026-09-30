@@ -13,9 +13,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-for _p in ("02_scan", "05_skill_eval", "08_arena"):
+for _p in ("02_scan", "05_skill_eval", "08_arena", "03_ai"):
     sys.path.insert(0, str(ROOT / _p))
 import livelab  # noqa: E402
+import agent  # noqa: E402
 
 DIM, YEL, GRN, RED, CYA, RST = "\033[2m", "\033[33m", "\033[32m", "\033[31m", "\033[36m", "\033[0m"
 
@@ -148,6 +149,83 @@ def freestyle() -> None:
         print(r.get("out") or r.get("msg") or f"exit={r.get('exit')}")
 
 
+def autonomous() -> None:
+    """自主进攻：交给 Agent，ReAct loop 自己选工具；某轮不调工具即收工汇报。
+    默认 confirm 档：每条攻击报文亮完整命令、你点头才打；切 auto 可全开。"""
+    print("\n选择进攻方向（目标随方向定，均在演练场隔离网内）：")
+    for num, key, (name, how) in {
+        "1": ("sqli", ("SQL 注入 / 会话劫持", "打 aslab-blue:8080 登录接口")),
+        "2": ("xss", ("XSS 编码绕过 / WAF 盲区", "字面 vs URL 编码对照")),
+        "3": ("bac", ("越权 / 跨用户枚举", "顾客 token 拉全量用户表")),
+        "4": ("ssh", ("SSH 横幅注入 / 策反运维 Agent", "投毒 aslab-ops 的 /etc/issue.net")),
+        "5": ("recon", ("自由侦察", "不设方向，先把动静摸清楚")),
+    }.items():
+        print(f"  {num}. {name}\n     {DIM}{how}{RST}")
+    try:
+        pick = input("输入编号: ").strip()
+    except EOFError:
+        return
+    key = {"1": "sqli", "2": "xss", "3": "bac", "4": "ssh", "5": "recon"}.get(pick)
+    if not key:
+        print("无此选项")
+        return
+    mode = input("权限档 [confirm 逐条确认 / auto 全开]: ").strip().lower() or "confirm"
+    if mode not in ("confirm", "auto"):
+        mode = "confirm"
+    try:
+        note = input("补充要求（可空，如\"先侦察再打\"/\"只用 batch 工具\"）: ").strip()
+    except EOFError:
+        note = ""
+    print(f"\n{GRN}▶ 自主进攻 · {agent.VECTORS[key]['name']} → {agent.VECTORS[key]['target']} · 权限档 {mode}{RST}")
+    print(f"{DIM}模型每轮自己选工具；某轮不打收工汇报。攻击报文都会展示完整命令等确认（confirm 档）。{RST}\n")
+    try:
+        agent.ReActAgent([]).run("开始自主进攻", on_event_cli, answer_cb_cli,
+                                 mode=mode, objective={"vector": key, "note": note})
+    except KeyboardInterrupt:
+        print(f"\n{RED}（已中断本轮）{RST}")
+    except Exception as e:
+        print(f"{RED}出错: {type(e).__name__}: {e}{RST}")
+    print(f"\n{DIM}战果以裁判探针（靶机自身记录）为准；事件全量落盘 logs/arena_live/events.jsonl。{RST}")
+
+
+def on_event_cli(kind, p):
+    if kind == "objective":
+        print(f"{CYA}◆ 任务书: {p['vector']} → {p['target']}（步数上限 {p['max_steps']}）{RST}")
+    elif kind == "think":
+        print(f"{DIM}[思考] {str(p.get('thought') or p.get('text') or '').strip()[:160]}{RST}")
+    elif kind == "tool_call":
+        print(f"{YEL}▶ {p['tool']}{RST} {str(p.get('input', ''))[:220]}")
+    elif kind == "tool_result":
+        mark = GRN if p.get("ok") else RED
+        print(f"{mark}  ← {str(p.get('obs', ''))[:400]}{RST}")
+    elif kind == "ask":
+        print(f"{CYA}◆ {p.get('question', '')[:600]}{RST}")
+    elif kind == "ask_answered":
+        print(f"{DIM}  （{p.get('answer')}）{RST}")
+    elif kind == "final_delta":
+        sys.stdout.write(p["text"]); sys.stdout.flush()
+    elif kind == "final":
+        print()
+        if p.get("interim"):
+            print(f"{DIM}—（阶段小结，自动模式将继续）—{RST}")
+    elif kind == "error":
+        print(f"{RED}出错: {p.get('text', '')}{RST}")
+
+
+def answer_cb_cli(question, choices):
+    print(f"\n{YEL}Agent 问你:{RST} {question}")
+    for i, c in enumerate(choices, 1):
+        print(f"  {i}. {c}")
+    hint = "选择编号或直接输入回答" if choices else "输入回答"
+    try:
+        s = input(f"{hint}: ").strip()
+    except EOFError:
+        return choices[0] if choices else ""
+    if choices and s.isdigit() and 1 <= int(s) <= len(choices):
+        return choices[int(s) - 1]
+    return s or (choices[0] if choices else "")
+
+
 def main() -> None:
     st = livelab.status()
     if not st.get("running"):
@@ -164,7 +242,7 @@ def main() -> None:
     st = livelab.status()
     print(f"演练场 {GRN}运行中{RST} · WAF={st.get('waf')} · 容器: {', '.join(sorted(st.get('containers', {})))}")
     while True:
-        print(f"\n{YEL}红队控制台{RST}  1) 引导式攻击  2) 自由开火  3) 切WAF  4) 裁判核验  0) 退出")
+        print(f"\n{YEL}红队控制台{RST}  1) 引导式攻击  2) 自由开火  3) 切WAF  4) 裁判核验  5) 自主进攻(Agent)  0) 退出")
         try:
             c = input("> ").strip()
         except (EOFError, KeyboardInterrupt):
@@ -180,6 +258,8 @@ def main() -> None:
                 print(livelab.waf_set(m).get("waf"))
         elif c == "4":
             print(json.dumps(livelab.judge_http(), ensure_ascii=False)[:400])
+        elif c == "5":
+            autonomous()
         elif c == "0":
             return
 

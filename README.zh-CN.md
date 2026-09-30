@@ -56,7 +56,7 @@ NVIDIA 审查使用原版 SkillSpector 2.12.0，结果与本地检查分开展�
 - **环境**：需要 Docker（不需要安装 Kali 系统，攻击机用 Kali 官方 arm64 容器镜像）。红队容器 + 内置漏洞靶机（OWASP Juice Shop）跑在一个禁止出网的内部网络里，攻击打不到你的路由器和互联网。
 - **打法**：红队模型调用容器内的真实工具（nmap/sqlmap/curl 等），每个攻击动作先展示完整命令、经你确认才执行；蓝队的防护动作是开启/关闭靶机前的 WAF（红队在网络拓扑上无法绕过 WAF 直打靶机）；战果由 HTTP 探针实测判定，不靠模型自评。演练结束后现场默认保留，可以继续看日志、复测，确认完再一键销毁全部容器；命令与输出全程落盘。
 - **命名剧本**：四条一键演示剧本，判定全部有客观依据——SQL 注入会话劫持（`sqli_session`）、XSS 编码绕过 WAF（`xss_encoded_bypass`）、越权枚举用户（`bac_enumeration`）、SSH 横幅注入策反运维 Agent（`ssh_banner_agent`）。演练场卡片里的「快速剧本」下拉（或命令行 `livelab.py run <剧本>`）会自动打一遍、需要时切 WAF、复测、按靶机/工作站自身记录裁决，结束后把 WAF 恢复为拦截。详见[演练场剧本说明](01_specs/live-drill-scenarios-2026-09-29.md)。
-- **自己动手当红队**：不想让模型代打时，跑 `08_arena/red_console.py` 引导式控制台——选攻击方向（SQLi / XSS 绕过 / 越权 / SSH 横幅策反）、看每步意图和完整命令、确认后才在 Kali 容器里开火；也可以 `livelab.py attack "命令"` 单发直打，或 `docker exec -it aslab-red bash` 进容器自由操作。人和模型走同一套目标白名单与落盘审计，蓝队开关（`livelab.py waf`）你也能按。
+- **自己动手当红队**：不想让模型代打时，跑 `08_arena/red_console.py` 引导式控制台——选攻击方向（SQLi / XSS 绕过 / 越权 / SSH 横幅策反）、看每步意图和完整命令、确认后才在 Kali 容器里开火；也可以 `livelab.py attack "命令"` 单发直打，或 `docker exec -it aslab-red bash` 进容器自由操作。也可以把整件事交给 Agent：`chat_cli.py --objective sqli|xss|bac|ssh|recon` 自主进攻——它 ReAct 循环里自己选工具（端口侦察/批量注入/单发报文/SSH 横幅）、打真实报文、用裁判探针核对战果再收工汇报；同一动作打两回没有新信息会被系统提醒换打法，步数封顶 20。默认 confirm 档：每条攻击报文亮完整命令、你点头才打。
 - **边界**：只覆盖网络和 Web 应用层。Wi-Fi 射频类场景（中间人、deauth）做不了——Apple Silicon 内置网卡不支持 monitor mode，需要外置 USB 网卡加完整 Kali 虚拟机，属于后续可选项。靶机自带真实漏洞，只能在隔离网络内使用，绝不能暴露到可达网络；红队弹药仅对隔离网内目标放行，隔离失效时宁可拒绝启动。
 - **合法性**：演练对象仅限本机容器内的靶机。对任何不属于你或未获书面授权的系统发起测试都是违法行为，本项目不提供也不协助此类能力。
 
@@ -287,6 +287,10 @@ uv pip install --python .venv-skillspector/bin/python \
 
 # 红队交互控制台：引导你选攻击方式与目标，逐条确认后在 Kali 容器内打真实报文
 .venv/bin/python 08_arena/red_console.py
+
+# 自主进攻：交给 Agent 跑 ReAct loop（它自己选工具/打真实报文/裁判对账/收工汇报）
+.venv/bin/python 03_ai/chat_cli.py --objective sqli
+.venv/bin/python 03_ai/chat_cli.py --objective ssh -m auto
 ```
 
 `attack` 的命令在 Kali 红队容器内真实执行（nmap/sqlmap/curl/ssh 都可用），与模型走同一套目标白名单、纵深黑名单和落盘审计；目标只能写 `aslab-blue:8080`（必过 WAF）或 `aslab-ops`（SSH 线），外部地址一律拒绝。蓝队开关 `livelab.py waf block|bypass`，战果核验 `livelab.py judge`。`red_console.py` 是它的人机引导版：列出攻击方向（SQLi / XSS 绕过 / 越权 / SSH 横幅策反），每步讲意图、亮完整命令、你点头才开火。

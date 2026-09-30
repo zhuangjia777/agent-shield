@@ -4,9 +4,12 @@
 用法:
   .venv/bin/python 03_ai/chat_cli.py                      # 交互模式（多轮，history 保留）
   .venv/bin/python 03_ai/chat_cli.py -m auto "跑一遍 sqli 剧本并汇报战果"   # 一次性
+  .venv/bin/python 03_ai/chat_cli.py --objective sqli     # 一次性自主进攻（ReAct loop）
+  .venv/bin/python 03_ai/chat_cli.py --objective ssh -m auto -- "banner 先读后写"
   .venv/bin/python 03_ai/chat_cli.py --help
 
-交互命令: /quit /exit 退出；/mode observer|confirm|auto 切权限模式。
+交互命令: /quit /exit 退出；/mode observer|confirm|auto 切权限模式；
+/objective sqli|xss|bac|ssh|recon 开始一次自主进攻（下一个输入作为补充要求）。
 Ask 确认直接在终端里选编号回答；auto 模式下执行确认会被系统代答（与网页行为一致）。
 """
 from __future__ import annotations
@@ -21,7 +24,7 @@ for p in (ROOT / "02_scan", ROOT / "05_skill_eval", ROOT / "03_ai", ROOT / "08_a
 
 import agent as A  # noqa: E402
 
-DIM, YEL, GRN, RED, RST = "\033[2m", "\033[33m", "\033[32m", "\033[31m", "\033[0m"
+DIM, YEL, GRN, RED, CYA, RST = "\033[2m", "\033[33m", "\033[32m", "\033[31m", "\033[36m", "\033[0m"
 
 
 def main() -> int:
@@ -29,15 +32,28 @@ def main() -> int:
     ap.add_argument("message", nargs="*", help="一次性消息（省略则进入交互模式）")
     ap.add_argument("-m", "--mode", choices=["observer", "confirm", "auto"],
                     default="confirm", help="权限模式（默认 confirm=逐步确认）")
+    ap.add_argument("--objective", choices=sorted(A.VECTORS),
+                    help="自主进攻方向（sqli/xss/bac/ssh/recon）：交给 Agent 跑 ReAct loop，"
+                         "本轮结束后退出")
     args = ap.parse_args()
     mode = args.mode
+    objective = {"vector": args.objective} if args.objective else None
+    if args.objective:
+        rest = " ".join(args.message).strip()
+        msg = ("开始自主进攻：方向 " + args.objective
+               + ("，补充要求：" + rest if rest else ""))
+    else:
+        msg = " ".join(args.message)
 
     a = A.ReActAgent([])
     streamed_final = False
 
+    # on_event 收到 objective 事件时先打任务书（自主进攻场景）
     def on_event(kind, p):
         nonlocal streamed_final
-        if kind == "think":
+        if kind == "objective":
+            print(f"{CYA}◆ 任务书: {p.get('name')} → {p.get('target')}（步数上限 {p.get('max_steps')}）{RST}")
+        elif kind == "think":
             print(f"{DIM}[思考] {(p.get('thought') or p.get('text') or '').strip()[:160]}{RST}")
         elif kind == "tool_call":
             print(f"{YEL}▶ {p['tool']}{RST} {str(p.get('input', ''))[:200]}")
@@ -72,23 +88,25 @@ def main() -> int:
             return choices[int(s) - 1]
         return s or (choices[0] if choices else "")
 
-    def turn(msg):
+    def turn(m, obj=None):
         try:
-            a.run(msg, on_event, answer_cb, mode=mode)
+            a.run(m, on_event, answer_cb, mode=mode, objective=obj)
         except KeyboardInterrupt:
             print(f"\n{RED}（已中断本轮）{RST}")
         except Exception as e:
             print(f"{RED}出错: {type(e).__name__}: {e}{RST}")
 
-    print(f"{DIM}AgentShield 终端壳 · 模式={mode} · /mode observer|confirm|auto 切换 · /quit 退出{RST}")
+    print(f"{DIM}AgentShield 终端壳 · 模式={mode} · /mode observer|confirm|auto 切换 · "
+          f"/objective sqli|xss|bac|ssh|recon 自主进攻 · /quit 退出{RST}")
 
-    if args.message:
-        turn(" ".join(args.message))
+    if args.objective or (message := " ".join(args.message).strip()):
+        turn(msg, objective)
         return 0
 
+    pending_objective = None
     while True:
         try:
-            line = input("\n你 > ").strip()
+            line = input(f"\n你 > ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             return 0
@@ -103,6 +121,20 @@ def main() -> int:
                 print(f"{DIM}模式已切换: {mode}{RST}")
             else:
                 print(f"{DIM}用法: /mode observer|confirm|auto{RST}")
+            continue
+        if line.startswith("/objective"):
+            parts = line.split(None, 1)
+            if len(parts) < 2 or parts[1].strip() not in A.VECTORS:
+                print(f"{DIM}用法: /objective sqli | xss | bac | ssh | recon{RST}")
+                continue
+            pending_objective = parts[1].strip()
+            print(f"{DIM}下一句话将作为补充要求开始自主进攻（空行=无要求）{RST}")
+            continue
+        if pending_objective:
+            note = "" if line.startswith("/") else line
+            turn("开始自主进攻：方向 " + pending_objective + (f"，补充要求：{note}" if note else ""),
+                 {"vector": pending_objective, "note": note})
+            pending_objective = None
             continue
         turn(line)
 
