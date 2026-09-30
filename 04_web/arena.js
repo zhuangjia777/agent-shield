@@ -352,6 +352,7 @@ function rcNote(text){
 }
 function rcBusy(v){
   rcStartBtn().disabled = v; $('#rc-vector').disabled = v; $('#rc-mode').disabled = v; $('#rc-note').disabled = v;
+  const ms=$('#rc-maxsteps'); if(ms) ms.disabled = v;
   $('#rc-stop').classList.toggle('hidden', !v);
 }
 function rcStartBtn(){ return $('#rc-start'); }
@@ -373,19 +374,19 @@ function rcAnswer(text){
 function boxGone(){ const b=$('#rc-ask'); if(b){ b.classList.add('hidden'); b.innerHTML=''; } }
 function rcEvent(ev){
   if(ev.type==='objective'){
-    rcPush('<div style="border-left:3px solid var(--accent);padding:6px 10px;margin:8px 0;background:var(--card);border-radius:4px"><b>◆ 任务书</b> '+escapeHTML(ev.name)+' → '+escapeHTML(ev.target)+'（步数上限 '+ev.max_steps+'）</div>');
+    rcPush('<div style="border-left:3px solid var(--accent);padding:6px 10px;margin:8px 0;background:#1e2a36;border-radius:4px"><b>◆ 任务书</b> '+escapeHTML(ev.name)+' → '+escapeHTML(ev.target)+'（步数上限 '+ev.max_steps+'）</div>');
   } else if(ev.type==='thinking'){
-    rcPush('<div class="tip" style="margin:2px 0 2px 10px;font-style:italic;opacity:.75">…'+escapeHTML(String(ev.text||'').slice(-80))+'</div>');
+    rcPush('<div class="tip" style="margin:2px 0 2px 10px;font-style:italic;color:#a8bccb">…'+escapeHTML(String(ev.text||'').slice(-80))+'</div>');
   } else if(ev.type==='think'){
-    rcPush('<div style="margin:6px 0"><b>思考 #'+ev.step+'</b> <span style="opacity:.85">'+escapeHTML(ev.thought)+'</span></div>');
+    rcPush('<div style="margin:6px 0"><b>思考 #'+ev.step+'</b> <span style="color:#c9d6e2">'+escapeHTML(ev.thought)+'</span></div>');
   } else if(ev.type==='tool_call'){
     const raw=JSON.stringify(ev.input);
     const short=raw.length>240 ? raw.slice(0,240)+' …' : raw;
-    rcPush('<div style="margin:6px 0"><span class="badge" style="margin-right:6px">⚔ '+escapeHTML(ev.tool)+'</span><code style="font-size:12px;word-break:break-all;display:inline-block;max-width:100%">'+escapeHTML(short)+'</code></div>');
+    rcPush('<div style="margin:6px 0"><span class="badge" style="margin-right:6px;background:#243244;border-color:var(--accent);color:#eaf2f8">⚔ '+escapeHTML(ev.tool)+'</span><code style="font-size:12px;word-break:break-all;display:inline-block;max-width:100%;color:#9cd2ff">'+escapeHTML(short)+'</code></div>');
   } else if(ev.type==='tool_result'){
     const obs=String(ev.obs||'').trim();
     const head=obs.length>260 ? obs.slice(0,260)+' …（共 '+obs.length+' 字）' : obs;
-    rcPush('<div class="tip" style="margin:2px 0 2px 12px;white-space:pre-wrap;max-height:120px;overflow:auto;font-size:12px">'+escapeHTML(head)+'</div>');
+    rcPush('<div class="tip" style="margin:2px 0 2px 12px;white-space:pre-wrap;max-height:120px;overflow:auto;font-size:12px;color:#b9c6d4">'+escapeHTML(head)+'</div>');
   } else if(ev.type==='ask'){
     rcState('等你确认', true);
     rcAskRender(ev.question, ev.choices);
@@ -395,12 +396,12 @@ function rcEvent(ev){
   } else if(ev.type==='final_delta'){
     // 累积到同一个 div
     let el=document.getElementById('rc-final');
-    if(!el){ el=document.createElement('div'); el.id='rc-final'; el.style.cssText='white-space:pre-wrap;margin:8px 0;padding:8px 10px;border-left:3px solid var(--accent);background:var(--card)'; rcPush(''); rcLogEl().appendChild(el); }
+    if(!el){ el=document.createElement('div'); el.id='rc-final'; el.style.cssText='white-space:pre-wrap;margin:8px 0;padding:8px 10px;border-left:3px solid var(--accent);background:#1e2a36'; rcPush(''); rcLogEl().appendChild(el); }
     el.textContent += ev.text;
     rcLogEl().scrollTop=rcLogEl().scrollHeight;
   } else if(ev.type==='final' && !ev.interim){
     const el=document.getElementById('rc-final');
-    if(!el){ rcPush('<div id="rc-final" style="white-space:pre-wrap;margin:8px 0;padding:8px 10px;border-left:3px solid var(--accent);background:var(--card)">'+escapeHTML(ev.text)+'</div>'); }
+    if(!el){ rcPush('<div id="rc-final" style="white-space:pre-wrap;margin:8px 0;padding:8px 10px;border-left:3px solid var(--accent);background:#1e2a36">'+escapeHTML(ev.text)+'</div>'); }
     rcPush('<div class="tip">— 红方 Agent 收工 —</div>');
     // 本轮自主进攻结束：解锁按钮、收尾会话（想续聊可在新会话里继续）
     setTimeout(()=>{ rcState('已收工', false); window.rcStop(true); }, 600);
@@ -411,13 +412,17 @@ function rcEvent(ev){
 async function rcStart(){
   rcStopRound(true); // 先清掉上一轮（若有）
   const vector=$('#rc-vector').value, mode=$('#rc-mode').value, note=$('#rc-note').value.trim();
-  const msg='开始自主进攻：方向 '+vector+(note?'，补充要求：'+note:'');
+  const maxRaw=($('#rc-maxsteps')||{}).value;
+  const maxSteps = (maxRaw===''||maxRaw==null) ? undefined : Math.max(4, Math.min(60, parseInt(maxRaw,10)||20));
+  const msg='开始自主进攻：方向 '+vector+(maxSteps?'（步数上限 '+maxSteps+'）':'')+(note?'，补充要求：'+note:'');
   rcLogEl().innerHTML=''; boxGone();
   $('#rc-log-wrap').classList.remove('hidden');
-  rcPush('<div class="tip">目标已锁定（方向带目标，白名单内），权限档：<b>'+escapeHTML(mode)+'</b>。Agent 现在开始选工具…</div>');
+  rcPush('<div class="tip">目标已锁定（方向带目标，白名单内），权限档：<b>'+escapeHTML(mode)+'</b>'+
+    (maxSteps?' · 步数上限：'+maxSteps:' · 步数上限：'+20)+'。Agent 现在开始选工具…</div>');
   rcBusy(true); rcState('连接中', true);
   try{
-    const j=await post('/api/agent/new', {message:msg, objective:vector, objective_note:note, mode});
+    const j=await post('/api/agent/new', {message:msg, objective:vector, objective_note:note, mode,
+      max_steps: maxSteps ?? ''});
     rc.id=j.agent_id;
     rcState('行动中', true);
     // app.js 里的 sse() 依赖 agent 窗的 DOM。 arena 页对红方控制台用独立轻量 EventSource

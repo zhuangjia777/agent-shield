@@ -1095,7 +1095,15 @@ class Handler(BaseHTTPRequestHandler):
                     vec = (body.get("objective") or "").strip()
                     if vec:
                         if vec in agent_mod.VECTORS:
-                            sess.objective = {"vector": vec, "note": (body.get("objective_note") or "").strip()}
+                            obj = {"vector": vec, "note": (body.get("objective_note") or "").strip()}
+                            # 步数上限用户可调（留空=默认 20）
+                            ms = body.get("max_steps")
+                            try:
+                                if ms not in (None, ""):
+                                    obj["max_steps"] = int(ms)
+                            except (TypeError, ValueError):
+                                pass
+                            sess.objective = obj
                     _run_agent_turn(sess, msg)
                 return self._json(200, {"ok": True, "agent_id": sess.id})
             m = re.fullmatch(r"/api/agent/([^/]+)/(answer|message)", path)

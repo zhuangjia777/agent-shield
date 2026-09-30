@@ -66,7 +66,7 @@ The regular arena is a simulation. **Live drills** move the duel into a Docker-i
 2. Choose from the shared scenario list. **SQL injection and XSS encoding-bypass Docker scenarios appear first.**
 3. Click **“Let the Agent guide me”**. The Agent checks or starts the range and plans each step from tool feedback. Review the complete command, then confirm, cancel, or enter your own response.
 4. Refresh the range status to check containers and WAF mode. Use **“Stop and clean up range”** to finish; closing the page does not stop containers.
-5. Expand the **“🔴 Red Team Console · Launch an autonomous attack with the red agent”** card and click **Activate the red agent** after choosing the direction, permission level, and additional requirements. In confirm mode, each strike first displays the complete command and waits for a nod inside a box; when it stops making strikes in a single turn, it wraps up (ReAct convergence, cap of 20). Stops at any time; the scene is preserved.
+5. Expand the **“🔴 Red Team Console · Launch an autonomous attack with the red agent”** card and click **Activate the red agent** after choosing the direction, permission level, and extra requirements. In confirm mode each shot shows the full command first and waits for your nod in the box; when a round calls no tools, the loop ends and it wraps up with a report (ReAct convergence; step cap 20, adjustable 4–60 in the “max steps” field — hitting the cap forces a wrap-up and is marked in the report). Spoils are judged by target probes, not the model. Stoppable at any time; the scene is kept after.
 
 | Scenario | Docker coverage |
 | --- | --- |

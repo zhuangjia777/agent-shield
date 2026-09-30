@@ -10,7 +10,7 @@ import app
 class LabStopTests(unittest.TestCase):
     def test_confirmation_timeout_does_not_execute_pending_action(self):
         sess = app.AgentSession()
-        def run(agent, message, on_event, answer, execute_callback, mode='confirm'):
+        def run(agent, message, on_event, answer, execute_callback, mode='confirm', **_kw):
             answer('Confirm attack?', ['确认执行', '取消'])
             execute_callback('lab_attack', {'confirmed': True})
         with patch.object(app.agent_mod.ReActAgent, 'run', run), \
@@ -48,7 +48,7 @@ class LabStopTests(unittest.TestCase):
         old = app.LAB_GENERATION
         with patch.object(app.lab_mod, 'stop', return_value={'ok': True}):
             app._stop_lab()
-        def run(agent, message, on_event, answer, execute_callback, mode='confirm'):
+        def run(agent, message, on_event, answer, execute_callback, mode='confirm', **_kw):
             execute_callback('lab_start', {})
         sess = app.AgentSession()
         with patch.object(app.agent_mod.ReActAgent, 'run', run), patch.object(app.agent_mod, '_execute') as execute:
@@ -59,7 +59,7 @@ class LabStopTests(unittest.TestCase):
     def test_waiting_agent_exits_after_stop(self):
         waiting = threading.Event()
         sess = app.AgentSession()
-        def run(agent, message, on_event, answer, execute_callback, mode='confirm'):
+        def run(agent, message, on_event, answer, execute_callback, mode='confirm', **_kw):
             execute_callback('lab_start', {})
             waiting.set()
             answer('Continue?', [])

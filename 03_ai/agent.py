@@ -347,7 +347,8 @@ class ReActAgent:
         """generator 友好的同步执行：
         answer_callback(question, choices) -> str  （由 web 端实现，等待用户点选）
         mode: observer（只读）/ confirm（逐步确认，默认）/ auto（自动，硬底线仍确认）
-        objective: 自主进攻目标 {"vector": VECTORS 键, "note": 用户可选补充}——
+        objective: 自主进攻目标 {"vector": VECTORS 键, "note": 用户可选补充,
+                   "max_steps": 可选 int（默认 OBJECTIVE_MAX_STEPS，允许 4..60）}——
                    开局注入任务书，模型自主选工具 loop，某轮不调工具即退出、以 Final Answer 收尾
         """
         # system 消息保持全静态（工具表与规则均不随轮次变化），llama.cpp 等
@@ -384,7 +385,12 @@ class ReActAgent:
                 vec_note = f"未知进攻方向 {key}，可选: {list(VECTORS)}。请向用户确认方向后再进攻。"
                 user_msg = user_msg + "\n（系统：进攻方向无效——" + vec_note + "）"
             else:
-                cap = OBJECTIVE_MAX_STEPS
+                # 步数上限用户可调（Web 红方控制台暴露该设置）；非法值落回默认
+                try:
+                    cap = int(objective.get("max_steps") or OBJECTIVE_MAX_STEPS)
+                except (TypeError, ValueError):
+                    cap = OBJECTIVE_MAX_STEPS
+                cap = max(4, min(cap, 60))
                 note = str(objective.get("note") or "").strip()
                 user_msg = (
                     "[目标] 你当红方，自主进攻（ReAct loop，每轮只出一个动作；某轮不调工具即以 Final Answer 收尾）\n"

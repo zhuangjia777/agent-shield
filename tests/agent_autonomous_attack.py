@@ -183,6 +183,32 @@ class ObjectiveRunTests(unittest.TestCase):
         self.assertEqual(obj["note"], "用户备注：先侦察")
         self.assertGreaterEqual(agent.OBJECTIVE_MAX_STEPS, 15)
 
+    def test_objective_max_steps_user_override(self):
+        # 用户自定步数上限：7 生效；前端会传字符串 "12"，也要吃
+        for given, want in [(7, 7), ("12", 12)]:
+            with self.subTest(given=given):
+                events = self._run(["Thought: 打一发\nAction: http_req\nActionInput: {\"url\":\"http://aslab-blue:8080/x\",\"confirmed\":true}",
+                                    "Thought: 够了\nFinal Answer: 打穿了"],
+                                   {"vector": "sqli", "max_steps": given})
+                obj = next(p for k, p in events if k == "objective")
+                self.assertEqual(obj["max_steps"], want)
+
+    def test_objective_max_steps_blank_falls_back_to_default(self):
+        # Web 端留空传 "" / 缺失，都回落默认 20
+        for given in [{}, {"max_steps": ""}, {"max_steps": None}]:
+            with self.subTest(given=given):
+                events = self._run(["Final Answer: 完事"], dict({"vector": "recon"}, **given))
+                obj = next(p for k, p in events if k == "objective")
+                self.assertEqual(obj["max_steps"], agent.OBJECTIVE_MAX_STEPS)
+
+    def test_objective_max_steps_out_of_range_clamped(self):
+        # 低于 4 提到 4，高于 60 压到 60，非数字回落默认
+        for given, want in [(2, 4), (99, 60), ("abc", agent.OBJECTIVE_MAX_STEPS)]:
+            with self.subTest(given=given):
+                events = self._run(["Final Answer: 完事"], {"vector": "recon", "max_steps": given})
+                obj = next(p for k, p in events if k == "objective")
+                self.assertEqual(obj["max_steps"], want)
+
     def test_loop_exits_when_agent_stops_calling_tools(self):
         # 第二轮直接 Final Answer（不调工具）-> 退出循环
         events = self._run(["Thought: 打一发\nAction: http_req\nActionInput: {\"url\":\"http://aslab-blue:8080/x\",\"confirmed\":true}",

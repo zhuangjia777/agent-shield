@@ -58,6 +58,9 @@
           <option value="auto">auto 全开</option>
         </select>
       </div>
+      <div style="width:120px"><label for="rc-maxsteps" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">最大步数</label>
+        <input id="rc-maxsteps" type="number" min="4" max="60" value="20" title="Agent 自主进攻的步数上限：达到即强制收工汇报；留空用默认 20（范围 4–60）" style="font:inherit;padding:8px;width:100%;border:1px solid var(--border);background:var(--card);color:var(--fg)">
+      </div>
       <div style="flex:2 1 200px"><label for="rc-note" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">补充要求（可空）</label>
         <input id="rc-note" type="text" placeholder="例如：先侦察，再挑最脆弱的一条打穿" style="font:inherit;padding:8px;width:100%;border:1px solid var(--border);background:var(--card);color:var(--fg)">
       </div>
