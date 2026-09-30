@@ -710,6 +710,11 @@ if __name__ == "__main__":
             print(json.dumps({"ok": True, "scenarios": scenario_list()}, ensure_ascii=False, indent=1))
     elif fn == "run":
         print(json.dumps(run_scenario(sys.argv[2]), ensure_ascii=False, indent=1))
+    elif fn == "attack":
+        # 人手当红队：命令在 Kali 红队容器内执行（真实报文），
+        # 走与 agent 相同的白名单+纵深黑名单+落盘审计。用法: livelab.py attack "nmap -sT aslab-blue"
+        print(json.dumps(red_exec(" ".join(sys.argv[2:]), timeout=int(__import__("os").environ.get("LAB_TIMEOUT", "120"))),
+                         ensure_ascii=False, indent=1))
     else:
         print(json.dumps({"start": start, "stop": stop, "status": status,
                           "judge": judge_http}.get(fn, status)(), ensure_ascii=False, indent=1))
