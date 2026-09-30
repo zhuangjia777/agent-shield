@@ -283,9 +283,12 @@ The live range can also be driven without the web UI:
 # drive the agent from a terminal, no browser ( -m observer|confirm|auto )
 .venv/bin/python 03_ai/chat_cli.py
 .venv/bin/python 03_ai/chat_cli.py -m auto "run the sqli_session scenario and report the verdict"
+
+# guided red-team console: pick an attack vector and target, confirm each shot
+.venv/bin/python 08_arena/red_console.py
 ```
 
-Commands passed to `attack` run inside the Kali container for real (nmap/sqlmap/curl/ssh available) under the same target allowlist, defense-in-depth blocklist and audit trail as the agent; targets are restricted to `aslab-blue:8080` (traffic must cross the WAF) and `aslab-ops` (the SSH line) — anything external is refused. Blue-team toggle: `livelab.py waf block|bypass`; win check: `livelab.py judge`.
+Commands passed to `attack` run inside the Kali container for real (nmap/sqlmap/curl/ssh available) under the same target allowlist, defense-in-depth blocklist and audit trail as the agent; targets are restricted to `aslab-blue:8080` (traffic must cross the WAF) and `aslab-ops` (the SSH line) — anything external is refused. Blue-team toggle: `livelab.py waf block|bypass`; win check: `livelab.py judge`. `red_console.py` wraps the same channel interactively: it lists attack vectors (SQLi / XSS bypass / broken access control / SSH banner poisoning), explains each step, shows the full command and fires only after you confirm.
 
 ### Docker consoles and logs
 

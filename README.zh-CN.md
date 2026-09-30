@@ -283,9 +283,12 @@ uv pip install --python .venv-skillspector/bin/python \
 # 不开浏览器，在终端里直接跟智能体对话（-m observer|confirm|auto 切权限档）
 .venv/bin/python 03_ai/chat_cli.py
 .venv/bin/python 03_ai/chat_cli.py -m auto "跑一遍 sqli_session 剧本并汇报裁判判词"
+
+# 红队交互控制台：引导你选攻击方式与目标，逐条确认后在 Kali 容器内打真实报文
+.venv/bin/python 08_arena/red_console.py
 ```
 
-`attack` 的命令在 Kali 红队容器内真实执行（nmap/sqlmap/curl/ssh 都可用），与模型走同一套目标白名单、纵深黑名单和落盘审计；目标只能写 `aslab-blue:8080`（必过 WAF）或 `aslab-ops`（SSH 线），外部地址一律拒绝。蓝队开关 `livelab.py waf block|bypass`，战果核验 `livelab.py judge`。
+`attack` 的命令在 Kali 红队容器内真实执行（nmap/sqlmap/curl/ssh 都可用），与模型走同一套目标白名单、纵深黑名单和落盘审计；目标只能写 `aslab-blue:8080`（必过 WAF）或 `aslab-ops`（SSH 线），外部地址一律拒绝。蓝队开关 `livelab.py waf block|bypass`，战果核验 `livelab.py judge`。`red_console.py` 是它的人机引导版：列出攻击方向（SQLi / XSS 绕过 / 越权 / SSH 横幅策反），每步讲意图、亮完整命令、你点头才开火。
 
 ### 查看 Docker 控制台与日志
 
