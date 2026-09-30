@@ -39,6 +39,40 @@
     </div>
     <p id="lab-log-status" class="note" role="status" aria-live="polite"></p>
   </details>
+  <details id="red-console" class="details-card" open style="margin-top:10px">
+    <summary>🔴 红方控制台 · 激活红方 Agent 自主进攻</summary>
+    <p class="note">红方 Agent 在 Kali 容器里自己选工具（端口侦察/批量注入/单发报文/SSH 横幅）打真实报文，某轮不出手就收工汇报；战果以裁判探针（靶机真实记录）为准。每条攻击报文默认先展示完整命令、等你点头（confirm 档）。</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+      <div style="flex:1 1 200px;min-width:0"><label for="rc-vector" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">进攻方向</label>
+        <select id="rc-vector" style="font:inherit;padding:8px;width:100%;border:1px solid var(--border);background:var(--card);color:var(--fg)">
+          <option value="sqli">SQL 注入 / 会话劫持 → aslab-blue:8080</option>
+          <option value="xss">XSS 编码绕过 / WAF 盲区 → aslab-blue:8080</option>
+          <option value="bac">越权 / 跨用户枚举 → aslab-blue:8080</option>
+          <option value="ssh">SSH 横幅注入 / 策反运维 Agent → aslab-ops</option>
+          <option value="recon">自由侦察 → 先摸清动态</option>
+        </select>
+      </div>
+      <div style="width:140px"><label for="rc-mode" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">权限档</label>
+        <select id="rc-mode" style="font:inherit;padding:8px;width:100%;border:1px solid var(--border);background:var(--card);color:var(--fg)">
+          <option value="confirm" selected>confirm 逐条确认</option>
+          <option value="auto">auto 全开</option>
+        </select>
+      </div>
+      <div style="flex:2 1 200px"><label for="rc-note" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">补充要求（可空）</label>
+        <input id="rc-note" type="text" placeholder="例如：先侦察，再挑最脆弱的一条打穿" style="font:inherit;padding:8px;width:100%;border:1px solid var(--border);background:var(--card);color:var(--fg)">
+      </div>
+      <button class="btn primary compact" id="rc-start" onclick="rcStart()">激活红方 Agent</button>
+      <button class="btn outline compact hidden" id="rc-stop" onclick="rcStop()">停止本轮</button>
+    </div>
+    <div id="rc-log-wrap" class="hidden" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <b>红方行动日志 <span class="badge" id="rc-state"><span class="dot"></span> 待命</span></b>
+        <span class="note" id="rc-step" role="status" aria-live="polite"></span>
+      </div>
+      <pre class="lab-log-output" id="rc-log" tabindex="0" style="max-height:340px;overflow:auto" aria-label="红方 Agent 行动日志"></pre>
+      <div id="rc-ask" class="hidden" role="group" aria-label="待确认动作"></div>
+    </div>
+  </details>
 </section>
 <div id="virtual-arena"><details class="details-card"><summary>本轮攻击目标与前置条件</summary><p class="note" id="scenario-focus"></p><ol id="case-list"></ol></details>
 <div id="skill-workflow" class="details-card hidden"><b>从 Skill 审查到攻防推演</b><p class="note">先用 NVIDIA 引擎审查内置样本，再观察下方四个合成请求的权限边界，最后对照修复和正常业务。审查报告与演练证据分别保留，扫描线索不会自动判定攻击成功。</p><a class="btn outline small" href="/nvidia?sample=vulnerable-skill">打开 NVIDIA 样本审查 ↗</a></div>

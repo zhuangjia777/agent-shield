@@ -329,4 +329,113 @@ if($('#lab-scenario')){
   $('#lab-scenario').addEventListener('change', labScenarioUpdate);
 
 }
+
+// ── 红方控制台：在页面里激活红方 Agent 自主进攻 ─────────────
+// 走现成后端：POST /api/agent/new {message, objective} + SSE /api/agent/<id>/event
+const RC_VECTORS = {sqli:'SQL 注入 / 会话劫持', xss:'XSS 编码绕过', bac:'越权 / 跨用户枚举', ssh:'SSH 横幅注入 / 策反运维 Agent', recon:'自由侦察'};
+const rc = {id:null, es:null, log:null};
+function rcLogEl(){
+  if(!rc.log) rc.log = $('#rc-log');
+  return rc.log;
+}
+function rcPush(html){
+  const log = rcLogEl(); if(!log) return;
+  log.insertAdjacentHTML('beforeend', html);
+  log.scrollTop = log.scrollHeight;
+}
+function rcState(text, on=false){
+  const el=$('#rc-state'); if(!el) return;
+  el.innerHTML=(on?'<span class="dot"></span> ':'')+text;
+}
+function rcNote(text){
+  const el=$('#rc-step'); if(el) el.textContent=text;
+}
+function rcBusy(v){
+  rcStartBtn().disabled = v; $('#rc-vector').disabled = v; $('#rc-mode').disabled = v; $('#rc-note').disabled = v;
+  $('#rc-stop').classList.toggle('hidden', !v);
+}
+function rcStartBtn(){ return $('#rc-start'); }
+function rcAskRender(q, choices){
+  const box=$('#rc-ask'); if(!box) return;
+  box.classList.remove('hidden');
+  box.innerHTML='<div class="ask" style="margin-top:10px;padding:10px 12px;border:1px solid var(--accent);border-radius:8px;background:var(--card);font-size:13px"><p style="white-space:pre-wrap;margin:0 0 8px">'+escapeHTML(q)+'</p>'+
+    (choices||[]).slice(0,4).map((c,i)=>`<button class="btn outline compact" style="margin:2px 4px 2px 0" data-rc-choice="${i}">${escapeHTML(c)}</button>`).join('')+'</div>';
+  box.querySelectorAll('[data-rc-choice]').forEach(b=>b.onclick=()=>rcAnswer((choices||[])[Number(b.dataset.rcChoice)] || '确认执行'));
+}
+function rcAnswer(text){
+  if(!rc.id) return;
+  boxGone();
+  rcPush('<div style="margin:6px 0"><b>你（指挥官）:</b> '+escapeHTML(text)+'</div>');
+  fetch(`/api/agent/${rc.id}/answer`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})})
+    .then(r=>r.json()).then(()=>{ /* 后续事件经 SSE 回流 */ })
+    .catch(e=>rcPush('<div class="tip">回答发送失败：'+escapeHTML(e.message)+'</div>'));
+}
+function boxGone(){ const b=$('#rc-ask'); if(b){ b.classList.add('hidden'); b.innerHTML=''; } }
+function rcEvent(ev){
+  if(ev.type==='objective'){
+    rcPush('<div style="border-left:3px solid var(--accent);padding:6px 10px;margin:8px 0;background:var(--card);border-radius:4px"><b>◆ 任务书</b> '+escapeHTML(ev.name)+' → '+escapeHTML(ev.target)+'（步数上限 '+ev.max_steps+'）</div>');
+  } else if(ev.type==='thinking'){
+    rcPush('<div class="tip" style="margin:2px 0 2px 10px;font-style:italic;opacity:.75">…'+escapeHTML(String(ev.text||'').slice(-80))+'</div>');
+  } else if(ev.type==='think'){
+    rcPush('<div style="margin:6px 0"><b>思考 #'+ev.step+'</b> <span style="opacity:.85">'+escapeHTML(ev.thought)+'</span></div>');
+  } else if(ev.type==='tool_call'){
+    const raw=JSON.stringify(ev.input);
+    const short=raw.length>240 ? raw.slice(0,240)+' …' : raw;
+    rcPush('<div style="margin:6px 0"><span class="badge" style="margin-right:6px">⚔ '+escapeHTML(ev.tool)+'</span><code style="font-size:12px;word-break:break-all;display:inline-block;max-width:100%">'+escapeHTML(short)+'</code></div>');
+  } else if(ev.type==='tool_result'){
+    const obs=String(ev.obs||'').trim();
+    const head=obs.length>260 ? obs.slice(0,260)+' …（共 '+obs.length+' 字）' : obs;
+    rcPush('<div class="tip" style="margin:2px 0 2px 12px;white-space:pre-wrap;max-height:120px;overflow:auto;font-size:12px">'+escapeHTML(head)+'</div>');
+  } else if(ev.type==='ask'){
+    rcState('等你确认', true);
+    rcAskRender(ev.question, ev.choices);
+  } else if(ev.type==='ask_answered'){
+    rcPush('<div class="tip" style="margin:2px 0 2px 12px">↳ 指挥官选择了：'+escapeHTML(ev.answer)+'</div>');
+    rcState('行动中', true);
+  } else if(ev.type==='final_delta'){
+    // 累积到同一个 div
+    let el=document.getElementById('rc-final');
+    if(!el){ el=document.createElement('div'); el.id='rc-final'; el.style.cssText='white-space:pre-wrap;margin:8px 0;padding:8px 10px;border-left:3px solid var(--accent);background:var(--card)'; rcPush(''); rcLogEl().appendChild(el); }
+    el.textContent += ev.text;
+    rcLogEl().scrollTop=rcLogEl().scrollHeight;
+  } else if(ev.type==='final' && !ev.interim){
+    const el=document.getElementById('rc-final');
+    if(!el){ rcPush('<div id="rc-final" style="white-space:pre-wrap;margin:8px 0;padding:8px 10px;border-left:3px solid var(--accent);background:var(--card)">'+escapeHTML(ev.text)+'</div>'); }
+    rcPush('<div class="tip">— 红方 Agent 收工 —</div>');
+    // 本轮自主进攻结束：解锁按钮、收尾会话（想续聊可在新会话里继续）
+    setTimeout(()=>{ rcState('已收工', false); window.rcStop(true); }, 600);
+  } else if(ev.type==='error'){
+    rcPush('<div style="margin:6px 0;color:var(--accent)"><b>⚠</b> '+escapeHTML(ev.text)+'</div>');
+  }
+}
+async function rcStart(){
+  rcStopRound(true); // 先清掉上一轮（若有）
+  const vector=$('#rc-vector').value, mode=$('#rc-mode').value, note=$('#rc-note').value.trim();
+  const msg='开始自主进攻：方向 '+vector+(note?'，补充要求：'+note:'');
+  rcLogEl().innerHTML=''; boxGone();
+  $('#rc-log-wrap').classList.remove('hidden');
+  rcPush('<div class="tip">目标已锁定（方向带目标，白名单内），权限档：<b>'+escapeHTML(mode)+'</b>。Agent 现在开始选工具…</div>');
+  rcBusy(true); rcState('连接中', true);
+  try{
+    const j=await post('/api/agent/new', {message:msg, objective:vector, objective_note:note, mode});
+    rc.id=j.agent_id;
+    rcState('行动中', true);
+    // app.js 里的 sse() 依赖 agent 窗的 DOM。 arena 页对红方控制台用独立轻量 EventSource
+    rc.es=new EventSource(`/api/agent/${rc.id}/event`);
+    rc.es.onmessage=m=>{ try{ rcEvent(JSON.parse(m.data)); }catch(e){} };
+    rc.es.onerror=()=>{ rcState('断线', false); };
+  }catch(e){
+    rcState('失败', false); rcPush('<div style="margin:6px 0;color:var(--accent)"><b>启动失败</b> '+escapeHTML(e.message)+'</div>');
+    rcBusy(false);
+  }
+}
+async function rcStopRound(silent){
+  if(rc.id){ try{ await fetch('/api/agent/close',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent_id:rc.id})}); }catch(e){} }
+  if(rc.es){ rc.es.close(); rc.es=null; }
+  rc.id=null;
+  if(!silent){ rcState('已停止', false); rcNote(''); }
+  rcBusy(false); boxGone();
+}
+window.rcStart=rcStart;
+window.rcStop=rcStopRound;
 })();

@@ -641,6 +641,7 @@ class AgentSession:
         self.running = False
         self.closed = False
         self.mode = "confirm"  # observer | confirm | auto
+        self.objective: dict | None = None  # 自主进攻方向 {"vector": "sqli", "note": "..."}
 
     def close(self):
         self.closed = True
@@ -674,7 +675,8 @@ def _agent_worker(sess: AgentSession, message: str, lab_generation=None):
     def execute(tool, tin, mode="confirm"):
         nonlocal used_lab
         check_cancelled()
-        if tool.startswith("lab_"):
+        # lab_* 与红队宏观工具都打 Docker 演练场，拆场时要走同一把锁并生效代际检查
+        if tool.startswith("lab_") or tool in ("recon", "http_req", "sqli_batch", "banner"):
             used_lab = True
             with LAB_ACTION_LOCK:
                 check_cancelled()
@@ -696,7 +698,8 @@ def _agent_worker(sess: AgentSession, message: str, lab_generation=None):
         sess.q.put({"type": kind, **payload})
 
     try:
-        a.run(message, on_event, answer_cb, execute_callback=execute, mode=sess.mode)
+        a.run(message, on_event, answer_cb, execute_callback=execute, mode=sess.mode,
+              objective=sess.objective)
         sess.history = a.history
     except Exception as e:
         sess.q.put({"type": "error", "text": str(e)[:300]})
@@ -1083,8 +1086,16 @@ class Handler(BaseHTTPRequestHandler):
                     sess = AgentSession()
                     AGENT_SESSIONS[sess.id] = sess
                 # v1.8：打开窗口不再自动跑默认问题——有消息才执行一轮，没消息就等着用户输入
+                mode = (body.get("mode") or "").strip()
+                if mode in ("observer", "confirm", "auto"):
+                    sess.mode = mode
                 msg = (body.get("message") or "").strip()
                 if msg:
+                    # 可选：自主进攻方向（红队内部工具/目标由 agent_mod.VECTORS 锁定）
+                    vec = (body.get("objective") or "").strip()
+                    if vec:
+                        if vec in agent_mod.VECTORS:
+                            sess.objective = {"vector": vec, "note": (body.get("objective_note") or "").strip()}
                     _run_agent_turn(sess, msg)
                 return self._json(200, {"ok": True, "agent_id": sess.id})
             m = re.fullmatch(r"/api/agent/([^/]+)/(answer|message)", path)
