@@ -277,8 +277,15 @@ The live range can also be driven without the web UI:
 .venv/bin/python 08_arena/livelab.py status  # container & WAF status
 .venv/bin/python 08_arena/livelab.py scenario            # list the named scenario scripts
 .venv/bin/python 08_arena/livelab.py run sqli_session    # demo + judge one scenario
+.venv/bin/python 08_arena/livelab.py attack "nmap -sT -Pn -p 8080 aslab-blue | grep open"   # be the red team yourself
 .venv/bin/python 08_arena/livelab.py stop    # tear everything down
+
+# drive the agent from a terminal, no browser ( -m observer|confirm|auto )
+.venv/bin/python 03_ai/chat_cli.py
+.venv/bin/python 03_ai/chat_cli.py -m auto "run the sqli_session scenario and report the verdict"
 ```
+
+Commands passed to `attack` run inside the Kali container for real (nmap/sqlmap/curl/ssh available) under the same target allowlist, defense-in-depth blocklist and audit trail as the agent; targets are restricted to `aslab-blue:8080` (traffic must cross the WAF) and `aslab-ops` (the SSH line) — anything external is refused. Blue-team toggle: `livelab.py waf block|bypass`; win check: `livelab.py judge`.
 
 ### Docker consoles and logs
 
@@ -291,6 +298,7 @@ Start the range first, then run `docker ps` in a host terminal to check these co
 | `aslab-red` | Kali attacker |
 | `aslab-blue` | WAF |
 | `aslab-target` | OWASP Juice Shop target |
+| `aslab-ops` | ops workstation (sshd; landing spot of the SSH banner scenario) |
 
 Open an interactive shell in the Kali container:
 

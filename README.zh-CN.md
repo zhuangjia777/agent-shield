@@ -277,8 +277,15 @@ uv pip install --python .venv-skillspector/bin/python \
 .venv/bin/python 08_arena/livelab.py status  # 容器与 WAF 状态
 .venv/bin/python 08_arena/livelab.py scenario            # 列出命名剧本
 .venv/bin/python 08_arena/livelab.py run sqli_session    # 演示并裁决一条剧本
+.venv/bin/python 08_arena/livelab.py attack "nmap -sT -Pn -p 8080 aslab-blue | grep open"   # 自己动手当红队
 .venv/bin/python 08_arena/livelab.py stop    # 一键销毁
+
+# 不开浏览器，在终端里直接跟智能体对话（-m observer|confirm|auto 切权限档）
+.venv/bin/python 03_ai/chat_cli.py
+.venv/bin/python 03_ai/chat_cli.py -m auto "跑一遍 sqli_session 剧本并汇报裁判判词"
 ```
+
+`attack` 的命令在 Kali 红队容器内真实执行（nmap/sqlmap/curl/ssh 都可用），与模型走同一套目标白名单、纵深黑名单和落盘审计；目标只能写 `aslab-blue:8080`（必过 WAF）或 `aslab-ops`（SSH 线），外部地址一律拒绝。蓝队开关 `livelab.py waf block|bypass`，战果核验 `livelab.py judge`。
 
 ### 查看 Docker 控制台与日志
 
@@ -291,6 +298,7 @@ uv pip install --python .venv-skillspector/bin/python \
 | `aslab-red` | Kali 攻击机 |
 | `aslab-blue` | WAF 防护 |
 | `aslab-target` | OWASP Juice Shop 靶机 |
+| `aslab-ops` | 运维工作站（sshd，SSH 横幅剧本的落点） |
 
 进入 Kali 容器的交互终端：
 
