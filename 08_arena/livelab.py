@@ -698,6 +698,40 @@ def scenario_list() -> list[dict]:
              "oracle": v["oracle"], "boundary": v["boundary"]} for k, v in SCENARIOS.items()]
 
 
+def _cmd_web(sys):
+    """起攻防演练 Web 控制台（04_web/app.py）。
+    前景跑（Ctrl-C 停，或 `web --open` 顺便开浏览器）；`web --bg` 后台跑。
+    演练场景页 http://127.0.0.1:8787/arena（端口 WEB_PORT 可覆盖）。"""
+    import os
+    import socket
+    import subprocess
+    port = int(os.environ.get("WEB_PORT", "8787"))
+    target = Path(__file__).resolve().parent.parent / "04_web" / "app.py"
+    with socket.socket() as _s:
+        if _s.connect_ex(("127.0.0.1", port)) == 0:
+            print(json.dumps({"ok": False,
+                              "msg": f"端口 {port} 已占用（可能已有一个 `livelab.py web` 在跑）；杀法: lsof -ti:{port} | xargs kill"},
+                             ensure_ascii=False, indent=1))
+            return
+    if "--bg" in sys.argv[2:]:
+        out = open(os.path.expanduser(f"~/.hermes/cache/scratch/web_{port}.log"), "ab")
+        subprocess.Popen([sys.executable, str(target), "--port", str(port)],
+                         cwd=str(target.parent), stdout=out, stderr=subprocess.STDOUT,
+                         start_new_session=True)
+        out.close()
+        print(json.dumps({"ok": True, "console": f"http://127.0.0.1:{port}/arena",
+                          "log": str(out.name)}, ensure_ascii=False, indent=1))
+    else:
+        try:
+            import runpy
+            sys.argv = [str(target), "--port", str(port)]
+            if "--open" in sys.argv[2:]:
+                sys.argv.append("--open")
+            runpy.run_path(str(target), run_name="__main__")
+        except KeyboardInterrupt:
+            print(json.dumps({"ok": True, "msg": "web stopped"}, ensure_ascii=False))
+
+
 if __name__ == "__main__":
     import sys
     fn = sys.argv[1] if len(sys.argv) > 1 else "status"
@@ -715,6 +749,8 @@ if __name__ == "__main__":
         # 走与 agent 相同的白名单+纵深黑名单+落盘审计。用法: livelab.py attack "nmap -sT aslab-blue"
         print(json.dumps(red_exec(" ".join(sys.argv[2:]), timeout=int(__import__("os").environ.get("LAB_TIMEOUT", "120"))),
                          ensure_ascii=False, indent=1))
+    elif fn == "web":
+        _cmd_web(sys)
     else:
         print(json.dumps({"start": start, "stop": stop, "status": status,
                           "judge": judge_http}.get(fn, status)(), ensure_ascii=False, indent=1))
