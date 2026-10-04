@@ -50,6 +50,7 @@
           <option value="bac">越权 / 跨用户枚举 → aslab-blue:8080</option>
           <option value="ssh">SSH 横幅注入 / 策反运维 Agent → aslab-ops</option>
           <option value="recon">自由侦察 → 先摸清动态</option>
+          <option value="custom">目标申报 · 自由目标 → 你指定 host:port</option>
         </select>
       </div>
       <div style="width:150px"><label for="rc-mode" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">权限档</label>
@@ -60,6 +61,9 @@
       </div>
       <div style="width:120px"><label for="rc-maxsteps" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">最大步数</label>
         <input id="rc-maxsteps" type="number" min="4" max="60" value="20" title="Agent 自主进攻的步数上限：达到即强制收工汇报；留空用默认 20（范围 4–60）" style="font:inherit;padding:8px;width:100%;border:1px solid var(--border);background:var(--card);color:var(--fg)">
+      </div>
+      <div id="rc-declare-wrap" class="hidden" style="width:190px"><label for="rc-declare" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">申报目标 HOST:PORT</label>
+        <input id="rc-declare" type="text" placeholder="如 127.0.0.1:3000" title="申报一个演练场外的目标；点激活即视为同意为其开单用途中继通道（红队仍无外网，只到这一个地址；收工自动拆除）" style="font:inherit;padding:8px;width:100%;border:1px solid var(--border);background:var(--card);color:var(--fg)">
       </div>
       <div style="flex:2 1 200px"><label for="rc-note" style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px">补充要求（可空）</label>
         <input id="rc-note" type="text" placeholder="例如：先侦察，再挑最脆弱的一条打穿" style="font:inherit;padding:8px;width:100%;border:1px solid var(--border);background:var(--card);color:var(--fg)">

@@ -31,8 +31,12 @@ LOGDIR = ROOT / "logs" / "arena_live"
 
 NET_ISOLATED = "aslab-net"
 NET_LAN = "aslab-lan"
+NET_DECL = "aslab-decl"          # 目标申报专用网（非 internal，只挂申报网关容器）
 SUBNET_ISOLATED = "172.28.99.0/24"
 SUBNET_LAN = "172.28.98.0/24"
+SUBNET_DECL = "172.28.97.0/24"
+DECL_GW_NAME = "aslab-declared"  # 红队访问申报目标的固定主机名（中继容器）
+DECL_LISTEN = 8000               # 红队容器内的申报入口端口
 TARGET_NAME = "aslab-target"
 RED_NAME = "aslab-red"
 BLUE_NAME = "aslab-blue"
@@ -75,7 +79,8 @@ def _log(entry: dict):
 def status() -> dict:
     code, out = _sh(["docker", "ps", "-a", "--format", "{{.Names}}\t{{.Status}}",
                      "--filter", f"name={TARGET_NAME}", "--filter", f"name={RED_NAME}",
-                     "--filter", f"name={BLUE_NAME}", "--filter", f"name={OPS_NAME}"])
+                     "--filter", f"name={BLUE_NAME}", "--filter", f"name={OPS_NAME}",
+                     "--filter", f"name={DECL_GW_NAME}"])
     containers = {}
     for line in out.splitlines():
         if "\t" in line:
@@ -84,9 +89,12 @@ def status() -> dict:
     running = (containers.get(TARGET_NAME, "").startswith("Up") and
                containers.get(RED_NAME, "").startswith("Up") and
                containers.get(BLUE_NAME, "").startswith("Up"))
-    return {"docker_ok": code == 0, "containers": containers, "running": running,
-            "waf": waf_get().get("waf") if running else None,
-            "target_url": TARGET_HTTP, "waf_url": WAF_HTTP}
+    st = {"docker_ok": code == 0, "containers": containers, "running": running,
+          "waf": waf_get().get("waf") if running else None,
+          "target_url": TARGET_HTTP, "waf_url": WAF_HTTP}
+    if containers.get(DECL_GW_NAME, "").startswith("Up"):
+        st["declared"] = declared_target().get("declared")
+    return st
 
 
 def console_logs(source: str) -> dict:
@@ -123,7 +131,12 @@ def console_logs(source: str) -> dict:
 
 
 def _isolation_check() -> tuple[bool, str]:
-    """实测红队容器是否真上不了网。任何一条探测成功 = 隔离失效 = 失败。"""
+    """实测红队容器是否真上不了网。任何一条探测成功 = 隔离失效 = 失败。
+
+    申报目标走单用途中继容器（aslab-declared），红队容器自己不接申报网——
+    它的唯一路由仍只在 internal 隔离网内，所以 1.1.1.1/DNS 探测在申报期
+    照样必须失败，此检查常开不设例外。
+    """
     probes = [
         f"exec 3<>/dev/tcp/1.1.1.1/443 && echo LEAK",
         f"getent hosts example.com && echo DNS-LEAK",
@@ -133,6 +146,106 @@ def _isolation_check() -> tuple[bool, str]:
         if code == 0 and "LEAK" in out:
             return False, f"隔离探测失败: {cmd} -> {out[:80]}"
     return True, "红队容器无外网(实测)"
+
+
+# ---------- M3 目标申报：白名单外的目标，用户显式申报后进会话白名单 ----------
+# 用户点头申报一个宿主/外部 host:port 后，起一个单用途中继容器 aslab-declared：
+# 它双网卡（隔离网 + 申报网），只把 TCP 流量转发到申报的那一个 host:port。
+# 红队容器永远不接申报网——它的唯一路由仍只在 internal 隔离网内，
+# 外网/绕 WAF 直打靶机物理不可达，隔离不变。红队侧固定入口: aslab-declared:8000。
+# 无裁判：申报目标只出证据不定胜负。
+
+HOST_GW_IP = "192.168.65.254"   # Docker Desktop 网关，申报 127.0.0.1 时改写为它
+
+
+def _decl_file() -> Path:
+    return LOGDIR / "declared_target.json"
+
+
+def declared_target() -> dict:
+    """当前申报目标（读落盘状态，不猜）。未申报返回 {"declared": None}。"""
+    try:
+        d = json.loads(_decl_file().read_text())
+    except (OSError, ValueError):
+        return {"declared": None}
+    code, _ = _sh(["docker", "inspect", DECL_GW_NAME], timeout=10)
+    if code != 0:
+        return {"declared": None, "note": "申报记录在但中继容器不在（已清理）"}
+    return {"declared": d}
+
+
+def clear_declared(silent: bool = False) -> dict:
+    """拆申报中继与申报网，删申报记录。"""
+    _sh(["docker", "rm", "-f", DECL_GW_NAME], timeout=30)
+    _sh(["docker", "network", "rm", NET_DECL], timeout=15)
+    _decl_file().unlink(missing_ok=True)
+    if not silent:
+        _log({"evt": "clear_declared"})
+    return {"ok": True, "msg": "申报目标已清除，红队恢复纯隔离状态"}
+
+
+def declare_target(host: str, port: int, scheme: str = "http") -> dict:
+    """申报一个演练场外的目标并起单用途中继。破坏性动作：调用方必须先经用户确认。
+
+    127.0.0.1/localhost 视为申报宿主本机服务，透明改写为中继视角的网关 IP。
+    换目标 = 自动先拆旧中继。用完 lab_declare_clear 拆掉。
+    """
+    host = str(host or "").strip().rstrip("/")
+    url_port = None
+    if "://" in host:
+        host = host.split("://", 1)[1]
+    host = host.split("/", 1)[0].split("?", 1)[0]
+    if host.count(":") == 1 and host.rsplit(":", 1)[1].isdigit():
+        # 用户把 URL 里的端口带进来了：剥出并校验与 port 参数一致
+        host, url_port = host.rsplit(":", 1)
+        url_port = int(url_port)
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        port = url_port
+        if port is None:
+            return {"ok": False, "msg": "端口必须是数字"}
+    if url_port is not None and url_port != port:
+        return {"ok": False, "msg": f"URL 里的端口({url_port})与 port 参数({port})不一致"}
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.\-]{0,253}", host):
+        return {"ok": False, "msg": f"非法主机名: {host!r}（只接受主机名或 IPv4，不带路径）"}
+    if not 1 <= port <= 65535:
+        return {"ok": False, "msg": "端口范围 1-65535"}
+    if not status()["running"]:
+        return {"ok": False, "msg": "演练场未运行，先 lab_start"}
+    if host in ALLOWED_TARGETS or host in ("localhost", DECL_GW_NAME):
+        return {"ok": False, "msg": f"{host} 本就在演练场内，不需要申报"}
+    clear_declared(silent=True)
+    _sh(["docker", "network", "create", "--subnet", SUBNET_DECL, NET_DECL], timeout=15)
+    _decl_file().parent.mkdir(parents=True, exist_ok=True)
+    (LOGDIR / "decl_events.jsonl").touch(exist_ok=True)
+    real_host = HOST_GW_IP if host.startswith("127.") or host == "localhost" else host
+    rec = {"host": host, "port": port, "scheme": scheme,
+           "at": time.strftime("%F %T"),
+           "entry": f"{scheme}://{DECL_GW_NAME}:{DECL_LISTEN}"}
+    _decl_file().write_text(json.dumps(rec, ensure_ascii=False))
+    code, out = _sh(["docker", "run", "-d", "--name", DECL_GW_NAME,
+                     "--network", NET_ISOLATED, "--network-alias", DECL_GW_NAME,
+                     "--memory", "64m", "--cpus", "0.25", "--pids-limit", "64",
+                     "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+                     "--read-only", "--tmpfs", "/tmp:rw,size=16m",
+                     "-v", f"{Path(__file__).resolve().parent / 'decl_gateway.py'}:/gw.py:ro",
+                     "-v", f"{LOGDIR / 'decl_events.jsonl'}:/audit/decl_events.jsonl",
+                     "-e", f"DECL_HOST={real_host}",
+                     "-e", f"DECL_PORT={port}",
+                     "python:3.12-alpine", "python3", "/gw.py"], timeout=60)
+    if code:
+        _decl_file().unlink(missing_ok=True)
+        return {"ok": False, "msg": f"申报中继启动失败: {out[-200:]}"}
+    code, out = _sh(["docker", "network", "connect", NET_DECL, DECL_GW_NAME], timeout=20)
+    if code:
+        clear_declared(silent=True)
+        return {"ok": False, "msg": f"申报中继接入申报网失败: {out[-200:]}"}
+    _log({"evt": "declare_target", "host": host, "port": port, "entry": rec["entry"]})
+    return {"ok": True, "declared": rec,
+            "msg": f"已申报 {host}:{port}。红队入口固定为 {rec['entry']}（申报目标的路径直接接在后面），"
+                   "无裁判探针——只能出证据不能定胜负。用完 lab_declare_clear 拆掉。"}
+
 
 
 def start() -> dict:
@@ -307,20 +420,21 @@ def stop(dry_run: bool = False) -> dict:
         present = []
         code, out = _sh(["docker", "ps", "-a", "--format", "{{.Names}}"], timeout=20)
         names = set(out.split()) if code == 0 else set()
-        for name in (RED_NAME, BLUE_NAME, TARGET_NAME, OPS_NAME):
+        for name in (RED_NAME, BLUE_NAME, TARGET_NAME, OPS_NAME, DECL_GW_NAME):
             if name in names:
                 present.append({"kind": "container", "name": name})
         code, out = _sh(["docker", "network", "ls", "--format", "{{.Name}}"], timeout=15)
         net_names = set(out.split()) if code == 0 else set()
-        for name in (NET_ISOLATED, NET_LAN):
+        for name in (NET_ISOLATED, NET_LAN, NET_DECL):
             if name in net_names:
                 present.append({"kind": "network", "name": name})
         return {"ok": True, "dry_run": True, "will_remove": present,
                 "msg": f"以上 {len(present)} 项将被销毁（含演练日志容器内部分）；宿主 logs/ 目录保留。"}
     errors = []
+    _decl_file().unlink(missing_ok=True)
     # Remove individually: absent resources are harmless on repeated stops.
-    for kind, names in (("container", (RED_NAME, BLUE_NAME, TARGET_NAME, OPS_NAME)),
-                        ("network", (NET_ISOLATED, NET_LAN))):
+    for kind, names in (("container", (RED_NAME, BLUE_NAME, TARGET_NAME, OPS_NAME, DECL_GW_NAME)),
+                        ("network", (NET_ISOLATED, NET_LAN, NET_DECL))):
         for name in names:
             cmd = ["docker", "rm", "-f", name] if kind == "container" else ["docker", "network", "rm", name]
             code, out = _sh(cmd, timeout=30 if kind == "container" else 15)
@@ -367,10 +481,16 @@ def red_exec(cmd: str, timeout: int = 120) -> dict:
         return {"ok": False, "msg": f"命令被纵深黑名单拒绝：{why}"}
     # 目标白名单：出现的 URL/主机必须是靶机或本机回环（容器内），禁止任意外部主机
     hosts = _extract_targets(cmd)
-    external = [h for h in hosts if h not in ALLOWED_TARGETS
+    allowed = set(ALLOWED_TARGETS)
+    decl = declared_target().get("declared")
+    if decl:
+        allowed.add(DECL_GW_NAME)  # 申报期间放行固定入口（中继只代理申报的那一个 host:port）
+    external = [h for h in hosts if h not in allowed
                 and not h.startswith(("localhost", "127.", "::1"))]
     if external:
-        return {"ok": False, "msg": f"目标白名单外，拒绝执行: {external}（红队只允许打 {BLUE_NAME}:8080 与 {OPS_NAME}(SSH)，其余一律不可达）"}
+        hint = "；已申报目标请用固定入口 " + DECL_GW_NAME + f":{DECL_LISTEN}" if not decl else ""
+        return {"ok": False, "msg": f"目标白名单外，拒绝执行: {external}（红队只允许打 {BLUE_NAME}:8080 与 {OPS_NAME}(SSH)"
+                + (f"，其余一律不可达{hint}" if not decl else "，申报目标只走固定入口") + "）"}
     # 容器内 localhost 没有服务；127.0.0.1:3998/3999 是宿主视角，容器里不可达。
     # 模型常把宿主地址抄进命令——直接拒绝并给出正确入口，省得烧步骤。
     if any(h.startswith(("localhost", "127.", "::1")) for h in hosts):
@@ -749,6 +869,18 @@ if __name__ == "__main__":
         # 走与 agent 相同的白名单+纵深黑名单+落盘审计。用法: livelab.py attack "nmap -sT aslab-blue"
         print(json.dumps(red_exec(" ".join(sys.argv[2:]), timeout=int(__import__("os").environ.get("LAB_TIMEOUT", "120"))),
                          ensure_ascii=False, indent=1))
+    elif fn == "declare":
+        # M3 目标申报：CLI 敲下即用户显式同意。用法: livelab.py declare 127.0.0.1:3000
+        arg = sys.argv[2] if len(sys.argv) > 2 else ""
+        if fn == "declare" and arg in ("clear", ""):
+            print(json.dumps(clear_declared(), ensure_ascii=False, indent=1))
+        else:
+            hp = arg.rsplit(":", 1)
+            if len(hp) != 2:
+                print(json.dumps({"ok": False, "msg": "用法: livelab.py declare HOST:PORT（或 declare clear）"},
+                                 ensure_ascii=False, indent=1))
+            else:
+                print(json.dumps(declare_target(hp[0], hp[1]), ensure_ascii=False, indent=1))
     elif fn == "web":
         _cmd_web(sys)
     else:

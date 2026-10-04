@@ -409,20 +409,33 @@ function rcEvent(ev){
     rcPush('<div style="margin:6px 0;color:var(--accent)"><b>⚠</b> '+escapeHTML(ev.text)+'</div>');
   }
 }
+// 选"目标申报"方向时显示 HOST:PORT 输入框
+$('#rc-vector').addEventListener('change',()=>{
+  $('#rc-declare-wrap').classList.toggle('hidden', $('#rc-vector').value!=='custom');
+});
+
 async function rcStart(){
   rcStopRound(true); // 先清掉上一轮（若有）
   const vector=$('#rc-vector').value, mode=$('#rc-mode').value, note=$('#rc-note').value.trim();
+  const declare=(vector==='custom') ? ($('#rc-declare').value||'').trim() : '';
+  if(vector==='custom' && !declare){
+    rcLogEl().innerHTML=''; $('#rc-log-wrap').classList.remove('hidden');
+    rcPush('<div style="margin:6px 0;color:var(--accent)">目标申报方向需要先填 HOST:PORT（例如本机起的 vulnerable 服务 127.0.0.1:3000）。</div>');
+    $('#rc-declare').focus(); return;
+  }
   const maxRaw=($('#rc-maxsteps')||{}).value;
   const maxSteps = (maxRaw===''||maxRaw==null) ? undefined : Math.max(4, Math.min(60, parseInt(maxRaw,10)||20));
-  const msg='开始自主进攻：方向 '+vector+(maxSteps?'（步数上限 '+maxSteps+'）':'')+(note?'，补充要求：'+note:'');
+  const msg='开始自主进攻：方向 '+vector+(declare?'，申报目标 '+declare:'')+(maxSteps?'（步数上限 '+maxSteps+'）':'')+(note?'，补充要求：'+note:'');
   rcLogEl().innerHTML=''; boxGone();
   $('#rc-log-wrap').classList.remove('hidden');
-  rcPush('<div class="tip">目标已锁定（方向带目标，白名单内），权限档：<b>'+escapeHTML(mode)+'</b>'+
+  rcPush('<div class="tip">'+(declare
+    ? '申报目标 '+escapeHTML(declare)+'（点激活即同意为其开单用途中继通道；红队容器仍无外网，收工自动拆除）。'
+    : '目标已锁定（方向带目标，白名单内），')+'权限档：<b>'+escapeHTML(mode)+'</b>'+
     (maxSteps?' · 步数上限：'+maxSteps:' · 步数上限：'+20)+'。Agent 现在开始选工具…</div>');
   rcBusy(true); rcState('连接中', true);
   try{
     const j=await post('/api/agent/new', {message:msg, objective:vector, objective_note:note, mode,
-      max_steps: maxSteps ?? ''});
+      max_steps: maxSteps ?? '', declare});
     rc.id=j.agent_id;
     rcState('行动中', true);
     // app.js 里的 sse() 依赖 agent 窗的 DOM。 arena 页对红方控制台用独立轻量 EventSource

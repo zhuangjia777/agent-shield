@@ -48,6 +48,12 @@ VECTORS = {
     "recon": {"target": "aslab-blue:8080 + aslab-ops", "name": "自由侦察（不设方向）",
               "evidence": "客观侦察成果：开放端口清单、可达路径样本、WAF 拦/放行为各一例",
               "hint": "先 recon 端口扫描，再 http_req 被动探路径；尽量不做改变状态的写请求"},
+    "custom": {"target": "申报目标（lab_declare 申报后固定入口 aslab-declared:8000）",
+               "name": "目标申报 · 自由目标",
+               "evidence": "无裁判探针——申报目标只出证据不定胜负：拿到什么（响应体/凭证/文件）就摆什么，摆不出来就明说",
+               "hint": "开工先 lab_declare（host:port 由用户提供，Ask 确认后带 confirmed=true）→ "
+                       "所有请求打 http://aslab-declared:8000/...（路径接申报目标的）→ "
+                       "收工前 lab_declare_clear 拆通道"},
 }
 REPORTS = ROOT / "reports"
 SAMPLES = ROOT / "06_samples"
@@ -72,6 +78,11 @@ TOOLS = [
     ("lab_scenario", "在实战演练场跑一个命名攻击场景的自动裁判演示（发真实报文、按需切 WAF、最后恢复）。"
                      "参数: scenario（sqli_session=SQL注入会话劫持 | xss_encoded_bypass=XSS编码绕过 | bac_enumeration=越权枚举 | ssh_banner_agent=SSH横幅注入策反运维Agent；传空则列出全部可选场景）"),
     ("lab_judge", "读取裁判探针：靶机真实记录的被攻克挑战列表 + WAF 状态。无参数"),
+    ("lab_declare", "M3 目标申报：申报一个演练场白名单外的目标（用户本机/局域网服务）进本次会话的打击范围。"
+                    "参数: host + port（可选 scheme）。破坏性动作（开通道）：必须先 Ask 用户展示目标并同意，再带 confirmed=true 调用。"
+                    "成功后红队固定入口为 http://aslab-declared:8000（申报目标的路径直接接在后面），隔离不变：红队容器仍无外网。"
+                    "无裁判探针：申报目标只能出证据不能定胜负"),
+    ("lab_declare_clear", "清除申报目标，拆除中继通道，恢复纯隔离。无参数"),
     ("lab_stop", "销毁演练场全部容器与网络，一键清理。默认不自动调用；无参数时返回需确认提示并附将被销毁的清单预览（will_remove），需 confirmed=true（先经用户同意）"),
     ("recon", "红队端口扫描（容器内 nmap）：开放端口清单。参数: host（aslab-blue|aslab-ops，默认 aslab-blue）、ports（如 8080、22，缺省扫常用端口）"),
     ("http_req", "红队单发真实 HTTP 报文（容器内 curl）。参数: url（必须 aslab-blue:8080 系）、method（GET/POST…）、data（JSON 或文本）、headers、data_b64（对 data 的 base64，payload 带引号时用它，系统解码发送）。攻击动作：需 confirmed"),
@@ -408,6 +419,20 @@ class ReActAgent:
                     "6) 同一条命令打两回还没新信息 = 换打法或收工，不要发第三回\n"
                     "7) 收工时 Final Answer 必须诚实：打穿了给证据（token/账号/枚举数），没打穿说卡在哪 + 你验证过什么"
                 )
+                if key == "custom":
+                    try:
+                        d = livelab.declared_target().get("declared")
+                    except Exception:
+                        d = None
+                    if d:
+                        user_msg += (f"\n当前已申报目标 {d['host']}:{d['port']}，固定入口 {d['entry']}"
+                                     f"（可直接用，不必重复申报；换目标先 Ask 用户再 lab_declare）")
+                    else:
+                        user_msg += ("\n当前未申报目标：第一步先 Ask 用户要申报的 host:port 和要打什么，"
+                                     "用户同意后 lab_declare（confirmed=true）开通道")
+                    user_msg += ("\n申报线特别纪律：lab_declare/lab_declare_clear 任何档位都要用户点头（不自动代答）；"
+                                 "申报通道在收工时由系统自动拆除，不用你操心；"
+                                 "这条线没有裁判，Final Answer 里必须附上拿到的原始证据（响应片段/凭证），拿不到就直说")
                 on_event("objective", {"mode": "objective", "vector": key, "name": vec["name"],
                                        "target": vec["target"], "note": note,
                                        "max_steps": cap})
@@ -597,6 +622,11 @@ class ReActAgent:
                     acc = livelab.waf_set("block")
                     if acc.get("ok"):
                         final_text += "\n（收工已把 WAF 拉回 block）"
+                # 申报通道同理不靠模型自觉：演练收工确定性拆除（普通对话从不清）
+                if objective.get("vector") == "custom" and st.get("containers", {}).get(livelab.DECL_GW_NAME, "").startswith("Up"):
+                    acc = livelab.clear_declared()
+                    if acc.get("ok"):
+                        final_text += "\n（收工已拆除申报通道，红队恢复纯隔离）"
             except Exception:
                 pass
         self.history.append({"role": "user", "content": pending_user})
@@ -655,6 +685,8 @@ def _normalize_tool(name: str) -> str:
         "lab_waf": "lab_waf", "waf": "lab_waf", "blue_team": "lab_waf", "蓝队": "lab_waf",
         "lab_scenario": "lab_scenario", "scenario": "lab_scenario", "实战场景": "lab_scenario",
         "lab_judge": "lab_judge", "judge": "lab_judge", "裁判": "lab_judge",
+        "lab_declare": "lab_declare", "declare": "lab_declare", "申报": "lab_declare", "申报目标": "lab_declare",
+        "lab_declare_clear": "lab_declare_clear", "清除申报": "lab_declare_clear",
         "lab_stop": "lab_stop", "stop_lab": "lab_stop", "拆场": "lab_stop",
         "recon": "recon", "scan_ports": "recon", "scan ports": "recon", "port_scan": "recon", "侦察": "recon",
         "http_req": "http_req", "http": "http_req", "curl": "http_req", "request": "http_req", "发报文": "http_req",
@@ -727,7 +759,7 @@ def _parse(buf: str, messages: list) -> dict | None:
 # ---------- 工具执行 ----------
 
 WRITE_TOOLS = {"lab_start", "lab_attack", "lab_waf", "lab_stop", "lab_scenario", "run_command",
-               "recon", "http_req", "sqli_batch", "banner"}
+               "recon", "http_req", "sqli_batch", "banner", "lab_declare", "lab_declare_clear"}
 # auto 模式下可免逐步确认的写工具。auto 是全开档：演练场内动作（含 lab_attack
 # 攻击命令）直接执行——纵深约束仍在执行层：目标白名单、红队纵深黑名单、硬禁 sudo/管道。
 # 唯一保留的确认是 lab_stop（不可逆销毁，附清单预览）与宿主非白名单 run_command。
@@ -745,7 +777,7 @@ def _is_exec_confirm_ask(question: str, choices) -> bool:
     has_confirm_choice = any(re.match(r"^(确认|执行|同意|是|好的|继续)", c) for c in chs)
     if not has_confirm_choice:
         return False
-    danger = re.search(r"拆场|销毁|删除|清理演练场|lab_stop|rm -|userdel|drop ", question, re.I)
+    danger = re.search(r"拆场|销毁|删除|清理演练场|lab_stop|申报|declare|打开通道|rm -|userdel|drop ", question, re.I)
     return not danger
 
 
@@ -830,6 +862,19 @@ def _execute(tool: str, tin: dict, mode: str = "confirm"):
                                                    "请先用 Ask 向用户展示完整命令并说明意图，用户同意后再带 confirmed=true 调用。"},
                                           ensure_ascii=False), True
                     r = livelab.red_exec(cmd)
+                    return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
+                if tool == "lab_declare":
+                    if tin.get("confirmed") not in (True, "true", "True", "yes", "是"):
+                        return json.dumps({"need_confirm": True,
+                                           "target": f"{tin.get('host')}:{tin.get('port')}",
+                                           "note": "目标申报会给红队开一条经中继到申报目标的通道（隔离网本身不变）。"
+                                                   "请先用 Ask 向用户展示 host:port 并说明要打什么，用户同意后再带 confirmed=true 调用。"},
+                                          ensure_ascii=False), True
+                    r = livelab.declare_target(str(tin.get("host") or ""), tin.get("port"),
+                                               str(tin.get("scheme") or "http"))
+                    return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
+                if tool == "lab_declare_clear":
+                    r = livelab.clear_declared()
                     return json.dumps(r, ensure_ascii=False), bool(r.get("ok"))
                 if tool == "lab_waf":
                     mode = str(tin.get("mode") or "").strip()

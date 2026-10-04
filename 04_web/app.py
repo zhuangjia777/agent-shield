@@ -1104,6 +1104,15 @@ class Handler(BaseHTTPRequestHandler):
                             except (TypeError, ValueError):
                                 pass
                             sess.objective = obj
+                    # M3 目标申报：Web 上填了 HOST:PORT 并点激活 = 用户显式同意开通道
+                    decl = (body.get("declare") or "").strip()
+                    if decl and vec == "custom":
+                        hp = decl.rsplit(":", 1)
+                        if len(hp) != 2:
+                            return self._json(400, {"ok": False, "msg": "申报目标需要 HOST:PORT"})
+                        d = lab_mod.declare_target(hp[0], hp[1])
+                        if not d.get("ok"):
+                            return self._json(400, {"ok": False, "msg": d.get("msg", "申报失败")})
                     _run_agent_turn(sess, msg)
                 return self._json(200, {"ok": True, "agent_id": sess.id})
             m = re.fullmatch(r"/api/agent/([^/]+)/(answer|message)", path)

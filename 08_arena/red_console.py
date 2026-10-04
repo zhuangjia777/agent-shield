@@ -159,16 +159,30 @@ def autonomous() -> None:
         "3": ("bac", ("越权 / 跨用户枚举", "顾客 token 拉全量用户表")),
         "4": ("ssh", ("SSH 横幅注入 / 策反运维 Agent", "投毒 aslab-ops 的 /etc/issue.net")),
         "5": ("recon", ("自由侦察", "不设方向，先把动静摸清楚")),
+        "6": ("custom", ("目标申报 · 自由目标", "申报一个演练场外目标（本机/局域网服务），经单用途中继打它；无裁判只出证据")),
     }.items():
         print(f"  {num}. {name}\n     {DIM}{how}{RST}")
     try:
         pick = input("输入编号: ").strip()
     except EOFError:
         return
-    key = {"1": "sqli", "2": "xss", "3": "bac", "4": "ssh", "5": "recon"}.get(pick)
+    key = {"1": "sqli", "2": "xss", "3": "bac", "4": "ssh", "5": "recon", "6": "custom"}.get(pick)
     if not key:
         print("无此选项")
         return
+    if key == "custom":
+        # 申报在此处即用户显式同意（命令行点了 6 并填了地址）；填了就先起通道
+        try:
+            hp = input("申报目标 HOST:PORT（回车跳过，让 Agent 到场再问）: ").strip()
+        except EOFError:
+            hp = ""
+        if hp:
+            if ":" not in hp:
+                print("格式 HOST:PORT，跳过申报"); 
+            else:
+                h, _, prt = hp.rpartition(":")
+                d = agent.livelab.declare_target(h, prt)
+                print((GRN if d.get("ok") else RED) + d.get("msg", "") + RST)
     mode = input("权限档 [confirm 逐条确认 / auto 全开]: ").strip().lower() or "confirm"
     if mode not in ("confirm", "auto"):
         mode = "confirm"

@@ -9,7 +9,8 @@
   .venv/bin/python 03_ai/chat_cli.py --help
 
 交互命令: /quit /exit 退出；/mode observer|confirm|auto 切权限模式；
-/objective sqli|xss|bac|ssh|recon 开始一次自主进攻（下一个输入作为补充要求）。
+/objective sqli|xss|bac|ssh|recon|custom 开始一次自主进攻（下一个输入作为补充要求）。
+/declare HOST:PORT 申报演练场外目标（配 custom 用；命令行申报即视为同意）。
 Ask 确认直接在终端里选编号回答；auto 模式下执行确认会被系统代答（与网页行为一致）。
 """
 from __future__ import annotations
@@ -33,11 +34,24 @@ def main() -> int:
     ap.add_argument("-m", "--mode", choices=["observer", "confirm", "auto"],
                     default="confirm", help="权限模式（默认 confirm=逐步确认）")
     ap.add_argument("--objective", choices=sorted(A.VECTORS),
-                    help="自主进攻方向（sqli/xss/bac/ssh/recon）：交给 Agent 跑 ReAct loop，"
+                    help="自主进攻方向（sqli/xss/bac/ssh/recon/custom）：交给 Agent 跑 ReAct loop，"
                          "本轮结束后退出")
+    ap.add_argument("--declare", metavar="HOST:PORT",
+                    help="M3 目标申报：命令行直接申报即视为用户显式同意，起红队中继通道"
+                         "（常配 --objective custom；用完收工自动拆，或 lab_declare_clear）")
     args = ap.parse_args()
     mode = args.mode
     objective = {"vector": args.objective} if args.objective else None
+    if args.declare:
+        hp = args.declare.rsplit(":", 1)
+        if len(hp) != 2:
+            print("RED --declare 需要 HOST:PORT 格式，如 127.0.0.1:8799"); return 2
+        d = A.livelab.declare_target(hp[0], hp[1])
+        print((GRN if d.get("ok") else RED) + ("◆ " + d.get("msg", "")) + RST)
+        if not d.get("ok"):
+            return 1
+        if not objective:
+            objective = {"vector": "custom"}
     if args.objective:
         rest = " ".join(args.message).strip()
         msg = ("开始自主进攻：方向 " + args.objective
@@ -97,7 +111,7 @@ def main() -> int:
             print(f"{RED}出错: {type(e).__name__}: {e}{RST}")
 
     print(f"{DIM}AgentShield 终端壳 · 模式={mode} · /mode observer|confirm|auto 切换 · "
-          f"/objective sqli|xss|bac|ssh|recon 自主进攻 · /quit 退出{RST}")
+          f"/objective sqli|xss|bac|ssh|recon|custom 自主进攻 · /declare H:P 申报目标 · /quit 退出{RST}")
 
     if args.objective or (message := " ".join(args.message).strip()):
         turn(msg, objective)
@@ -122,10 +136,22 @@ def main() -> int:
             else:
                 print(f"{DIM}用法: /mode observer|confirm|auto{RST}")
             continue
+        if line.startswith("/declare"):
+            parts = line.split(None, 1)
+            arg = parts[1].strip() if len(parts) > 1 else "clear"
+            if arg == "clear":
+                d = A.livelab.clear_declared()
+            elif ":" in arg:
+                h, _, prt = arg.rpartition(":")
+                d = A.livelab.declare_target(h, prt)
+            else:
+                d = {"ok": False, "msg": "用法: /declare HOST:PORT 或 /declare clear"}
+            print((GRN if d.get("ok") else RED) + d.get("msg", "") + RST)
+            continue
         if line.startswith("/objective"):
             parts = line.split(None, 1)
             if len(parts) < 2 or parts[1].strip() not in A.VECTORS:
-                print(f"{DIM}用法: /objective sqli | xss | bac | ssh | recon{RST}")
+                print(f"{DIM}用法: /objective sqli | xss | bac | ssh | recon | custom{RST}")
                 continue
             pending_objective = parts[1].strip()
             print(f"{DIM}下一句话将作为补充要求开始自主进攻（空行=无要求）{RST}")
