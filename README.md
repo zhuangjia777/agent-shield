@@ -215,7 +215,7 @@ In the project directory:
 .venv/bin/python 04_web/app.py --open
 ```
 
-Your browser opens [AgentShield](http://127.0.0.1:8787). Keep the terminal running while in use; `Ctrl+C` stops the server. Next time, just run the same command from the project directory.
+Your browser opens [AgentShield](http://127.0.0.1:8787). Keep the terminal running while in use; `Ctrl+C` stops the server. Next time, just run the same command from the project directory — or use the one-liner `.venv/bin/python 08_arena/livelab.py web` (runs from any directory; `--bg` detaches; a busy port is reported instead of silently stacking a second instance).
 
 If port 8787 is taken:
 
